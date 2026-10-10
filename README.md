@@ -4,7 +4,7 @@ Un anotador con forma de **escritorio**. Escribís tarjetas, las dejás donde qu
 
 Es parte de la familia **Zynis**. Funciona en el celu y en la PC, se instala como app (PWA) y anda sin internet.
 
-> 🚧 **En construcción.** Hoy el repo tiene el diseño, las decisiones y las maquetas. La app se construye por etapas (ver [Roadmap](KB/roadmap.md)).
+> 🚧 **En construcción.** La base técnica ya está (etapa 1); el escritorio, el frasco y las copias de seguridad llegan por etapas (ver [Roadmap](KB/roadmap.md)).
 
 ## La idea
 
@@ -30,15 +30,21 @@ Detalle y motivos en [KB/frontend/stack.md](KB/frontend/stack.md). Las decisione
 
 ## Correr el proyecto
 
-Disponible a partir de la etapa 1 (fundación):
+Necesitás Node 22 o más nuevo.
 
 ```bash
 npm install
-npm run dev        # servidor de desarrollo
-npm test           # tests
-npm run test:e2e   # tests de gestos (Playwright)
-npm run build      # build de producción
+npx playwright install chromium   # una sola vez: el navegador de los tests e2e
+
+npm run dev        # servidor de desarrollo (http://localhost:5173)
+npm run lint       # ESLint
+npm test           # tests (Vitest)
+npm run test:e2e   # tests en navegador real, celu y PC (Playwright)
+npm run build      # build de producción en dist/
+npm run preview    # sirve el build; ahí funciona el modo sin internet
 ```
+
+Hoy la app abre una pantalla de papel con la marca y los Ajustes (idioma ES · EN). El escritorio llega en la etapa 2.
 
 ## Cómo se trabaja
 
