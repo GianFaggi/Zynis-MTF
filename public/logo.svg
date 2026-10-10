@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- MTF placeholder mark: three overlapping paper cards in the Area colors on paper. -->
+  <rect width="512" height="512" fill="#F5F1EA"/>
+  <g stroke-width="10" stroke-linejoin="round">
+    <rect x="96" y="150" width="200" height="236" rx="28" fill="#E9EDE5" stroke="#6F8F6B" transform="rotate(-12 196 268)"/>
+    <rect x="216" y="150" width="200" height="236" rx="28" fill="#EFE7D7" stroke="#B8914A" transform="rotate(10 316 268)"/>
+    <rect x="156" y="126" width="200" height="236" rx="28" fill="#FCFAF6" stroke="#5F87AD"/>
+  </g>
+  <g stroke="#5F87AD" stroke-width="12" stroke-linecap="round" opacity=".55">
+    <path d="M196 186h120M196 226h92M196 266h108"/>
+  </g>
+</svg>

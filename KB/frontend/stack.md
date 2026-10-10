@@ -5,7 +5,34 @@ description: Technology stack decisions and rationale for Zynis MTF
 
 # Stack
 
-Versions are pinned when the project is scaffolded in change 1 (foundation) and recorded here then.
+## Versions
+
+Scaffolded in change 1 with `npm create vite@latest` (`react-ts` template). `package.json` uses caret ranges; `package-lock.json` pins the exact versions below, and CI installs them with `npm ci`.
+
+| Package | Version | Notes |
+|---|---|---|
+| react, react-dom | 19.3.0 | |
+| typescript | 6.0.3 | `~6.0.2` range; `strict` is on by default since TS 6 |
+| vite | 8.3.4 | newest major; vite-plugin-pwa 2.x supports `^8` |
+| @vitejs/plugin-react | 6.1.2 | |
+| eslint | 10.12.0 | flat config in `eslint.config.js` |
+| typescript-eslint | 8.71.1 | supports TS `<6.1` |
+| eslint-plugin-react-hooks | 7.1.1 | |
+| eslint-plugin-react-refresh | 0.5.7 | |
+| tailwindcss, @tailwindcss/vite | 4.3.3 | |
+| @fontsource-variable/literata, @fontsource-variable/figtree | 5.3.0 | variable fonts, one file per style |
+| lucide-react | 1.55.0 | |
+| zustand | 5.0.15 | |
+| vite-plugin-pwa | 2.0.0 | Workbox 7.4 |
+| @vite-pwa/assets-generator | 2.0.0 | dev; `npm run generate-pwa-assets` ([pwa.md](pwa.md)) |
+| vitest | 5.0.3 | |
+| jsdom | 29.1.1 | |
+| @testing-library/react · dom · user-event · jest-dom | 16.3.3 · 10.4.2 · 14.6.7 · 7.0.1 | |
+| @playwright/test | 1.64.0 | Chromium only |
+
+`@use-gesture/react` is installed in change 2, with its first use.
+
+Node: 24 locally, 22 in CI.
 
 ## Frontend
 - **React** — UI library (components, hooks)
@@ -30,7 +57,7 @@ Versions are pinned when the project is scaffolded in change 1 (foundation) and 
 - **vite-plugin-pwa** — manifest + service worker. Unlike Pulse, MTF **precaches the full app shell** so it opens offline → [pwa.md](pwa.md)
 
 ## Utilities
-- **uuid** — ids for every entity (`v4`); sync-ready for the V2 backend
+- **No `uuid` package** — ids come from the browser's built-in `crypto.randomUUID()` (Chrome 92+, Safari 15.4+, Firefox 95+) through `newId()` in `src/lib/id.ts`, with a `crypto.getRandomValues()` fallback for insecure contexts (phone testing over plain `http://192.168.x.x`). Same v4 UUIDs the V2 sync expects, without a dependency for ~10 lines of code (decided in change 1).
 
 ## i18n
 - **Custom lightweight solution** — no library; strings in `src/i18n/locales/es.ts` + `en.ts`, language toggle ES · EN (same approach as Pulse)
@@ -47,6 +74,7 @@ Versions are pinned when the project is scaffolded in change 1 (foundation) and 
 
 ## Code quality
 - **ESLint** with `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh` (same as Pulse)
+- The current Vite template ships **oxlint** instead; MTF keeps ESLint (decided in change 1) to match Pulse and the most mature React Hooks rules. `eslint.config.js` is the standard Vite React flat config, written by hand.
 
 ## CI
 - **GitHub Actions** — `.github/workflows/ci-frontend.yml`: `npm ci`, lint, `npm test`, Playwright (created in change 1)

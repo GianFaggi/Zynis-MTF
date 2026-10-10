@@ -30,7 +30,7 @@ One screen: the **Desk**. Everything else (Card editor, Mis logros, settings) op
   React components
        |  read slices / call actions
        v
-  Zustand store  (src/store/)      <- single source of truth in memory
+  Zustand store  (src/store/appStore.ts)   <- single source of truth in memory
        |  persist on change (debounced while dragging)
        v
   Storage layer  (src/lib/storage.ts)
@@ -38,6 +38,26 @@ One screen: the **Desk**. Everything else (Card editor, Mis logros, settings) op
        +--> MVP: localStorage
        +--> V2:  .NET API (same interface, plus sync)
 ```
+
+## Source layout
+
+| Path | What |
+|---|---|
+| `src/main.tsx` | Entry: font imports, `index.css`, mounts `<App />` |
+| `src/App.tsx` | Base paper screen (change 1); hosts the Desk from change 2; keeps `<html lang>` in sync with the store |
+| `src/index.css` | Tailwind import, Paper tokens, dark overrides, base styles ([design-system.md](design-system.md)) |
+| `src/components/ui/` | Closed-API UI kit: `Button`, `IconButton`, `Segmented`, `Sheet` |
+| `src/store/appStore.ts` | `createAppStore()` + the app's `useAppStore`: `data`, `language`, `setLanguage`. Loads on create; a `subscribe` saves `data` whenever its reference changes |
+| `src/lib/storage.ts` | The only module that touches localStorage ([storage.md](storage.md)) |
+| `src/lib/id.ts` | `newId()` — v4 UUIDs |
+| `src/types/index.ts` | `Language`, `Area`, `Item`, `Card`, `WinEvent`, `MtfData` |
+| `src/i18n/locales/es.ts`, `en.ts` | Dictionaries; `en` is typed `Messages = typeof es` |
+| `src/i18n/detect.ts` | `detectLanguage(languages)` — kept apart from `index.ts` so the store can import it without an import cycle |
+| `src/i18n/index.ts` | `useT()`, `translate()`, `languageNames`, re-exports `detectLanguage` |
+| `src/test/setup.ts` | Vitest setup ([testing.md](testing.md)) |
+| `e2e/` | Playwright specs |
+
+i18n: components call `const t = useT()` and `t('key', ...args)`. UI kit components never read the store; screens pass them translated texts as props.
 
 - **Components never touch localStorage.** They talk to the store; the store talks to the storage layer.
 - **The storage layer is the seam for V2.** Swapping localStorage for API calls (plus a local cache for offline) must not change any component.

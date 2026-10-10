@@ -12,19 +12,19 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 - [x] Mockups: [design/mtf-mockup.html](../design/mtf-mockup.html) (rejected), [design/mtf-mockup-desk.html](../design/mtf-mockup-desk.html) (approved)
 - [x] Stack ([KB/frontend/stack.md](frontend/stack.md)), storage ([ADR 0002](../docs/adr/0002-local-first-storage.md)), desk approach ([ADR 0003](../docs/adr/0003-dom-desk-with-use-gesture.md))
 - [x] Project structure: CLAUDE.md, KBs, OpenSpec, commands, glossary
-- [ ] GitHub repo `GianFaggi/Zynis-MTF` (public, MIT) + first push
+- [x] GitHub repo `GianFaggi/Zynis-MTF` (public, MIT) + first push; issues #1–#4 created
 
-## Change 1 — Foundation
-- [ ] Vite + React + TypeScript project, ESLint
-- [ ] Tailwind v4 with the Paper tokens; Literata + Figtree via @fontsource; light + dark
-- [ ] Closed-API UI kit basics (`src/components/ui/`)
-- [ ] vite-plugin-pwa: manifest, icons, full offline precache
-- [ ] Storage layer (`src/lib/storage.ts`) + Zustand store skeleton + types
-- [ ] i18n ES · EN
-- [ ] Vitest + Testing Library + Playwright set up; GitHub Actions CI
+## Change 1 — Foundation ([#1](https://github.com/GianFaggi/Zynis-MTF/issues/1))
+- [x] Vite + React + TypeScript project, ESLint
+- [x] Tailwind v4 with the Paper tokens; Literata + Figtree via @fontsource; light + dark
+- [x] Closed-API UI kit basics (`src/components/ui/`)
+- [x] vite-plugin-pwa: manifest, icons, full offline precache
+- [x] Storage layer (`src/lib/storage.ts`) + Zustand store skeleton + types
+- [x] i18n ES · EN
+- [x] Vitest + Testing Library + Playwright set up; GitHub Actions CI (workflow written; first green run after the PR is pushed)
 - [ ] First deploy to Vercel
 
-## Change 2 — Desk
+## Change 2 — Desk ([#2](https://github.com/GianFaggi/Zynis-MTF/issues/2))
 - [ ] Desk with pan / zoom (@use-gesture/react), world coordinates, far zoom
 - [ ] Areas Trabajo / Vida / Recordar
 - [ ] Create, edit, delete Cards (title, text, checklist, pin); editor sheet with Place selector
@@ -32,13 +32,13 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 - [ ] Dock: jump to Area, See all, Tidy up; search
 - [ ] First-run hint
 
-## Change 3 — Wins
+## Change 3 — Wins ([#3](https://github.com/GianFaggi/Zynis-MTF/issues/3))
 - [ ] Win events (item, card, note)
 - [ ] Finished Cards; the Jar (accept / refuse, fill animation)
 - [ ] Mis logros: last 7 days, per-day bars, notes written, since you started, take out of the Jar
 - [ ] Wins counter in the floating UI
 
-## Change 4 — Backup
+## Change 4 — Backup ([#4](https://github.com/GianFaggi/Zynis-MTF/issues/4))
 - [ ] Export / Import backup file with validation and confirmation
 - [ ] Persistent storage request; install guidance
 

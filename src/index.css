@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+
+/*
+  Paper design tokens (KB/frontend/design-system.md).
+  - `static`: always emit every variable. Later changes pick Area colors at runtime
+    (`var(--color-sage)` built from data), which Tailwind's source scan cannot see.
+  - Not `inline`: utilities must read `var(--color-*)` so the dark block below can
+    swap the whole palette with no `dark:` variants anywhere.
+  - `--color-*: initial` drops Tailwind's default palette: only Paper colors exist.
+*/
+@theme static {
+  --color-*: initial;
+
+  --color-paper: #f5f1ea;
+  --color-sheet: #fcfaf6;
+  --color-ink: #2a2724;
+  --color-ink-2: #4a4540;
+  --color-pencil: #766e66;
+  --color-rule: #e3dcd1;
+
+  /* Wins only: checked Items, finished Cards, the Jar, Mis logros. */
+  --color-accent: #b85a3a;
+  --color-accent-ink: #9c4527;
+  --color-on-accent: #ffffff;
+
+  /* Area colors */
+  --color-sage: #6f8f6b;
+  --color-sand: #b8914a;
+  --color-sky: #5f87ad;
+  --color-plum: #8e6c9c;
+  --color-rose: #b86e7b;
+
+  --color-float: rgb(252 250 246 / 0.86);
+  --color-scrim: rgb(40 30 20 / 0.32);
+  --color-hover: rgb(70 50 30 / 0.07);
+  --color-danger: #b3261e;
+
+  --shadow-paper: 0 1px 2px rgb(70 50 30 / 0.07), 0 8px 20px rgb(70 50 30 / 0.07);
+  --shadow-lift: 0 18px 40px rgb(70 50 30 / 0.22);
+
+  --font-display: 'Literata Variable', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Figtree Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --animate-rise: rise 0.22s ease;
+  @keyframes rise {
+    from {
+      transform: translateY(24px);
+      opacity: 0.6;
+    }
+  }
+}
+
+@layer base {
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+
+      --color-paper: #1c1a18;
+      --color-sheet: #272421;
+      --color-ink: #ece6de;
+      --color-ink-2: #cfc7bd;
+      --color-pencil: #a39a90;
+      --color-rule: #3a3530;
+
+      --color-accent: #e07b57;
+      --color-accent-ink: #ee9677;
+      --color-on-accent: #1c1a18;
+
+      --color-sage: #93b28e;
+      --color-sand: #d3ae68;
+      --color-sky: #86a9cb;
+      --color-plum: #b293c0;
+      --color-rose: #d8909c;
+
+      --color-float: rgb(39 36 33 / 0.86);
+      --color-scrim: rgb(0 0 0 / 0.5);
+      --color-hover: rgb(255 255 255 / 0.07);
+      --color-danger: #f2948c;
+
+      --shadow-paper: 0 1px 0 rgb(255 255 255 / 0.03), 0 10px 24px rgb(0 0 0 / 0.35);
+      --shadow-lift: 0 22px 44px rgb(0 0 0 / 0.55);
+    }
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font: 400 15px/1.5 var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* Focus ring in ink, not accent: the accent is reserved for wins. */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
