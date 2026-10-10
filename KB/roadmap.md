@@ -42,6 +42,9 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 - [ ] Export / Import backup file with validation and confirmation
 - [ ] Persistent storage request; install guidance
 
+## Small tickets
+- [ ] Theme toggle in Settings: System · Light · Dark ([#5](https://github.com/GianFaggi/Zynis-MTF/issues/5)); after change 1 merges
+
 ---
 
 ## V2 Backlog (do not implement in MVP)

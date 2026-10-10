@@ -55,7 +55,7 @@
 
 - [x] 9.1 Run `command npm run lint`, `command npm test`, `command npm run build` and `command npm run test:e2e` together; verify all four pass with no warnings left to fix
 - [x] 9.2 Update [README.md](../../../README.md) ("Correr el proyecto" is now real; remove "Disponible a partir de la etapa 1") and tick change 1 items in [KB/roadmap.md](../../../KB/roadmap.md); verify the README commands run as written
-- [ ] 9.3 (User) Push the branch, open the PR and confirm CI is green on GitHub
+- [x] 9.3 (User) Push the branch, open the PR and confirm CI is green on GitHub
 - [ ] 9.4 (User) Import `GianFaggi/Zynis-MTF` in Vercel (Vite preset, production branch `main`) and open the preview deployment; verify the base paper screen loads over HTTPS and Chrome DevTools → Application shows the manifest as installable
 - [ ] 9.5 (User) On the phone: open the deployed URL, install it (Android Chrome; iOS Safari → Share → Add to Home Screen), turn on airplane mode and relaunch; verify the base paper screen opens with its fonts
 
