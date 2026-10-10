@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Más Tareas Fáciles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a quiet paper desk. Sticky header + board tabs, cards flow in balanced columns; color only marks boards (tint + dot) and wins (accent). */
+:root {
+  --paper: #F5F1EA;
+  --sheet: #FCFAF6;
+  --ink: #2A2724;
+  --ink-2: #4A4540;
+  --pencil: #766E66;
+  --rule: #E3DCD1;
+  --accent: #B85A3A;
+  --accent-ink: #9C4527;
+  --on-accent: #FFFFFF;
+  --sage: #6F8F6B;
+  --sand: #B8914A;
+  --sky: #5F87AD;
+  --plum: #8E6C9C;
+  --rose: #B86E7B;
+  --tint: 8%;
+  --shadow: 0 1px 2px rgba(70, 50, 30, .06), 0 6px 18px rgba(70, 50, 30, .05);
+  --scrim: rgba(40, 30, 20, .32);
+  --hover: rgba(70, 50, 30, .06);
+  --accent-soft: color-mix(in oklab, var(--accent) 14%, var(--paper));
+  --bar-past: color-mix(in oklab, var(--accent) 30%, var(--rule));
+
+  --font-display: "Literata", Georgia, "Times New Roman", serif;
+  --font-ui: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --gutter: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #1C1A18; --sheet: #262320; --ink: #ECE6DE; --ink-2: #CFC7BD; --pencil: #A39A90;
+    --rule: #3A3530; --accent: #E07B57; --accent-ink: #EE9677; --on-accent: #1C1A18;
+    --sage: #93B28E; --sand: #D3AE68; --sky: #86A9CB; --plum: #B293C0; --rose: #D8909C;
+    --tint: 11%; --shadow: 0 1px 0 rgba(255,255,255,.03), 0 8px 22px rgba(0,0,0,.28);
+    --scrim: rgba(0,0,0,.5); --hover: rgba(255,255,255,.06);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #1C1A18; --sheet: #262320; --ink: #ECE6DE; --ink-2: #CFC7BD; --pencil: #A39A90;
+  --rule: #3A3530; --accent: #E07B57; --accent-ink: #EE9677; --on-accent: #1C1A18;
+  --sage: #93B28E; --sand: #D3AE68; --sky: #86A9CB; --plum: #B293C0; --rose: #D8909C;
+  --tint: 11%; --shadow: 0 1px 0 rgba(255,255,255,.03), 0 8px 22px rgba(0,0,0,.28);
+  --scrim: rgba(0,0,0,.5); --hover: rgba(255,255,255,.06);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+:root { padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px); }
+html, body { min-height: 100%; margin: 0; }
+img { max-width: 100%; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+body.lock { overflow: hidden; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+svg { display: block; }
+
+.app { max-width: 1120px; margin: 0 auto; padding-inline: var(--gutter); padding-block: 0 130px; }
+@media (min-width: 720px) { :root { --gutter: 28px; } }
+
+/* Header */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--paper);
+  margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter);
+  display: flex; flex-direction: column; gap: 6px; padding-block: 14px 0;
+}
+.bar { display: flex; align-items: center; gap: 6px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; min-width: 0; }
+.brand b { font: italic 600 28px/1 var(--font-display); letter-spacing: -0.01em; }
+.brand span { font-size: 12.5px; color: var(--pencil); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+.icon-btn:hover { background: var(--hover); }
+.icon-btn[aria-pressed="true"] { background: var(--hover); color: var(--ink); }
+.wins-btn {
+  display: flex; align-items: center; gap: 6px; height: 36px; padding-inline: 10px 13px;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink);
+  font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.wins-btn.bump { animation: bump .5s ease; }
+@keyframes bump { 30% { transform: scale(1.14); } 100% { transform: scale(1); } }
+
+.search { padding-block: 4px 6px; }
+.search input {
+  width: 100%; height: 42px; padding-inline: 14px; border-radius: 12px;
+  border: 1px solid var(--rule); background: var(--sheet); outline: none;
+}
+.search input:focus { border-color: var(--accent); }
+
+.tabs-wrap { overflow-x: auto; scrollbar-width: none; margin-inline: calc(var(--gutter) * -1); padding-inline: var(--gutter); border-bottom: 1px solid var(--rule); }
+.tabs-wrap::-webkit-scrollbar { display: none; }
+.tabs { display: flex; gap: 2px; width: max-content; }
+.tab {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px 11px;
+  color: var(--pencil); font-weight: 500; font-size: 15px; white-space: nowrap;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab:hover { color: var(--ink); }
+.tab.on { color: var(--ink); border-bottom-color: var(--b); }
+.tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--b); }
+.tab .n { font-size: 12px; color: var(--pencil); font-variant-numeric: tabular-nums; }
+.tabs.searching .tab { opacity: .45; }
+.tab-add { color: var(--pencil); padding-inline: 10px; }
+.tab-input {
+  margin-block: 5px; height: 34px; width: 170px; padding-inline: 10px; border-radius: 10px;
+  border: 1px solid var(--accent); background: var(--sheet); outline: none;
+}
+
+/* Cards */
+#grid { display: flex; gap: 14px; align-items: flex-start; padding-top: 18px; }
+.col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.card {
+  position: relative;
+  background: color-mix(in oklab, var(--b) var(--tint), var(--sheet));
+  border: 1px solid color-mix(in oklab, var(--b) 16%, transparent);
+  border-radius: 14px; box-shadow: var(--shadow);
+  padding: 14px 15px 12px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 8px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.card:hover { transform: translateY(-1px); }
+.card h3 { margin: 0; padding-right: 18px; font: 600 16.5px/1.3 var(--font-display); text-wrap: balance; overflow-wrap: anywhere; }
+.card .pin { position: absolute; top: 13px; right: 12px; color: var(--pencil); }
+.card .body {
+  margin: 0; color: var(--ink-2); font-size: 14.5px; white-space: pre-line; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden;
+}
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.checks li { display: flex; gap: 9px; align-items: flex-start; font-size: 14.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.checks li.done span { color: var(--pencil); text-decoration: line-through; text-decoration-color: color-mix(in oklab, var(--pencil) 60%, transparent); }
+.check {
+  position: relative; flex: none; width: 19px; height: 19px; margin-top: 1px; border-radius: 6px;
+  border: 1.5px solid color-mix(in oklab, var(--pencil) 70%, transparent);
+  display: grid; place-items: center; color: transparent;
+  transition: background .15s ease, border-color .15s ease;
+}
+.check::before { content: ""; position: absolute; inset: -7px; }
+.check:hover { border-color: var(--accent); }
+.check[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.check.pop { animation: pop .35s ease; }
+@keyframes pop { 40% { transform: scale(1.25); } }
+.more { margin: 0; font-size: 13px; color: var(--pencil); }
+.card footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; color: var(--pencil); font-variant-numeric: tabular-nums; min-height: 20px; }
+.card footer:empty { display: none; }
+.where { display: flex; align-items: center; gap: 6px; }
+.where i { width: 7px; height: 7px; border-radius: 50%; background: var(--b); }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.card.finished > :not(footer):not(.pin) { opacity: .62; }
+.empty { width: 100%; text-align: center; color: var(--pencil); padding-block: 60px; margin: 0; }
+.sample { text-align: center; font-size: 12px; color: var(--pencil); margin-top: 36px; letter-spacing: .02em; }
+
+.fab {
+  position: fixed; z-index: 6;
+  right: max(var(--gutter), calc((100vw - 1120px) / 2 + var(--gutter)));
+  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  width: 58px; height: 58px; border-radius: 50%;
+  background: var(--ink); color: var(--paper);
+  display: grid; place-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.18);
+}
+.fab:hover { transform: translateY(-1px); }
+
+/* Overlays */
+.scrim { position: fixed; inset: 0; z-index: 20; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; padding-top: calc(24px + env(safe-area-inset-top, 0px)); }
+.sheet {
+  width: min(600px, 100%); max-height: 100%; overflow-y: auto;
+  background: var(--sheet); color: var(--ink);
+  border-radius: 20px 20px 0 0; padding: 14px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 10px;
+  animation: rise .22s ease;
+}
+.sheet.tinted { background: color-mix(in oklab, var(--b) var(--tint), var(--sheet)); }
+@media (min-width: 720px) {
+  .scrim { align-items: center; padding: 40px; }
+  .sheet { border-radius: 18px; padding-bottom: 18px; max-height: 86vh; }
+}
+@keyframes rise { from { transform: translateY(24px); opacity: .6; } }
+.sheet-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-inline: -8px; }
+.ed-title { border: 0; background: transparent; outline: none; width: 100%; font: 600 23px/1.25 var(--font-display); padding: 2px 0; border-bottom: 1px solid transparent; }
+.ed-title:focus-visible, .ed-body:focus-visible, .ed-item input:focus-visible, .ed-new input:focus-visible { border-bottom-color: var(--rule); }
+.ed-body { border: 0; background: transparent; outline: none; resize: none; width: 100%; min-height: 72px; font-size: 15.5px; line-height: 1.6; color: var(--ink-2); padding: 2px 0; border-bottom: 1px solid transparent; }
+.ed-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ed-item, .ed-new { display: flex; align-items: center; gap: 10px; }
+.ed-item input, .ed-new input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; padding: 6px 0; font-size: 15px; border-bottom: 1px solid transparent; }
+.ed-item.done input { color: var(--pencil); text-decoration: line-through; }
+.ed-item .x { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--pencil); flex: none; }
+.ed-item .x:hover { background: var(--hover); color: var(--ink); }
+.ed-new .ghost-check { width: 19px; height: 19px; border-radius: 6px; border: 1.5px dashed color-mix(in oklab, var(--pencil) 60%, transparent); flex: none; }
+.sheet-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-top: 1px solid var(--rule); padding-top: 12px; margin-top: 6px; }
+.field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--pencil); margin-right: auto; }
+.field select { height: 36px; border-radius: 10px; border: 1px solid var(--rule); background: var(--sheet); padding-inline: 10px; font-size: 14px; color: var(--ink); }
+.btn { height: 36px; padding-inline: 14px; border-radius: 10px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.btn.soft { background: var(--hover); }
+.btn.soft[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+.btn.danger { color: #B3261E; }
+:root[data-theme="dark"] .btn.danger { color: #F2948C; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.danger { color: #F2948C; } }
+.btn.solid { background: var(--ink); color: var(--paper); }
+.btn.line { border: 1px solid var(--rule); }
+
+/* Settings */
+.set-h { font: 600 21px/1.3 var(--font-display); margin: 0; }
+.set-group { display: flex; flex-direction: column; gap: 8px; padding-block: 8px; }
+.set-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--pencil); font-weight: 600; }
+.seg { display: inline-flex; gap: 4px; padding: 4px; background: var(--hover); border-radius: 12px; width: max-content; }
+.seg button { height: 32px; padding-inline: 16px; border-radius: 9px; font-weight: 600; font-size: 14px; color: var(--pencil); }
+.seg button[aria-pressed="true"] { background: var(--sheet); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.set-note { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 52ch; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Wins */
+.wins { padding-top: 14px; display: grid; gap: 18px; }
+.wins-top { display: flex; align-items: center; gap: 6px; margin-left: -8px; }
+.wins-top h2 { margin: 0; font: 600 24px/1.2 var(--font-display); }
+.wins-grid { display: grid; gap: 18px; }
+@media (min-width: 860px) { .wins-grid { grid-template-columns: 1.15fr 1fr; align-items: start; } }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.hero-n { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.hero-n b { font: 600 64px/1 var(--font-display); color: var(--accent-ink); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.hero-n span { color: var(--ink-2); font-size: 16px; max-width: 22ch; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid var(--rule); }
+.stat b { font: 600 22px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12.5px; color: var(--pencil); line-height: 1.3; }
+.stat.quiet b { color: var(--pencil); font-weight: 400; }
+.chart { width: 100%; max-width: 520px; height: auto; }
+.chart .bar-past { fill: var(--bar-past); }
+.chart .bar-today { fill: var(--accent); }
+.chart .base { stroke: var(--rule); stroke-width: 1; }
+.chart text { fill: var(--pencil); font: 500 11px var(--font-ui); font-variant-numeric: tabular-nums; }
+.chart text.today { fill: var(--accent-ink); font-weight: 700; }
+.chart text.val { fill: var(--ink-2); font-weight: 600; }
+.line { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+.panel h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--pencil); font-weight: 600; }
+.recent { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.recent li { display: flex; align-items: center; gap: 12px; padding-block: 11px; border-top: 1px solid var(--rule); }
+.recent li:first-child { border-top: 0; padding-top: 0; }
+.recent .ok { width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); display: grid; place-items: center; flex: none; }
+.recent .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.recent .t b { font-weight: 600; overflow-wrap: anywhere; }
+.recent .t span { font-size: 12.5px; color: var(--pencil); display: flex; align-items: center; gap: 6px; }
+.recent .t i { width: 7px; height: 7px; border-radius: 50%; background: var(--b); }
+.recent .when { font-size: 12.5px; color: var(--pencil); white-space: nowrap; }
+
+/* Toast + burst */
+.toast {
+  position: fixed; left: 50%; z-index: 30;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+  background: var(--ink); color: var(--paper); border-radius: 16px; padding: 12px 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center;
+  width: max-content; max-width: calc(100vw - 32px);
+  transition: transform .25s ease, opacity .25s ease;
+}
+.toast.show { transform: translate(-50%, 0); opacity: 1; }
+.toast b { font: 600 16px/1.3 var(--font-display); }
+.toast span { font-size: 13px; opacity: .8; }
+.spark { position: fixed; z-index: 31; width: 7px; height: 7px; border-radius: 50%; pointer-events: none; animation: fly .75s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes fly { to { transform: translate(var(--dx), var(--dy)) scale(.4); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="bar">
+      <div class="brand"><b>mtf</b><span>más tareas fáciles</span></div>
+      <button class="icon-btn" id="search-btn" aria-pressed="false"></button>
+      <button class="wins-btn" id="wins-btn"></button>
+      <button class="icon-btn" id="settings-btn"></button>
+    </div>
+    <div class="search" id="search" hidden><input id="q" type="search" autocomplete="off"></div>
+    <div class="tabs-wrap" id="tabs-wrap"><div class="tabs" id="tabs"></div></div>
+  </header>
+
+  <main id="board-view">
+    <div id="grid"></div>
+    <p class="sample" id="sample"></p>
+  </main>
+
+  <main id="wins-view" class="wins" hidden></main>
+</div>
+
+<button class="fab" id="fab"></button>
+
+<div class="scrim" id="editor" hidden>
+  <section class="sheet tinted" role="dialog" aria-modal="true" aria-labelledby="ed-title">
+    <div class="sheet-top">
+      <button class="icon-btn" id="ed-close"></button>
+      <button class="btn soft" id="ed-pin" aria-pressed="false"></button>
+    </div>
+    <input class="ed-title" id="ed-title" autocomplete="off">
+    <textarea class="ed-body" id="ed-body" rows="3"></textarea>
+    <ul class="ed-list" id="ed-items"></ul>
+    <div class="ed-new"><span class="ghost-check"></span><input id="ed-new" autocomplete="off"></div>
+    <div class="sheet-foot">
+      <label class="field" for="ed-board"><span id="ed-board-label"></span><select id="ed-board"></select></label>
+      <button class="btn danger" id="ed-del"></button>
+      <button class="btn solid" id="ed-done"></button>
+    </div>
+  </section>
+</div>
+
+<div class="scrim" id="settings" hidden>
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="set-h">
+    <div class="sheet-top">
+      <h2 class="set-h" id="set-h" style="padding-left:8px"></h2>
+      <button class="icon-btn" id="set-close"></button>
+    </div>
+    <div class="set-group">
+      <span class="set-label" id="set-lang"></span>
+      <div class="seg"><button id="lang-es">Español</button><button id="lang-en">English</button></div>
+    </div>
+    <div class="set-group">
+      <span class="set-label" id="set-backup"></span>
+      <p class="set-note" id="set-note"></p>
+      <div class="row">
+        <button class="btn line" id="exp"></button>
+        <button class="btn line" id="imp"></button>
+      </div>
+    </div>
+    <div class="set-group">
+      <span class="set-label" id="set-mock"></span>
+      <div class="row"><button class="btn soft" id="reset"></button></div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><b></b><span></span></div>
+
+<script>
+(() => {
+  const KEY = 'mtf-mockup-v1';
+  const DAY = 864e5;
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const startOf = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const today = () => startOf(Date.now());
+
+  const IC = {
+    check: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.3l2.3 2.2 4.7-5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    search: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.7"/><path d="M13.2 13.2l3.6 3.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    star: '<svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2.2l2.3 4.9 5.3.6-3.9 3.6 1.1 5.3L10 13.9l-4.8 2.7 1.1-5.3-3.9-3.6 5.3-.6z"/></svg>',
+    dots: '<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="4.5" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="15.5" cy="10" r="1.6"/></svg>',
+    plus: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    plusSm: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    back: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12.5 4.5L7 10l5.5 5.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    close: '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M4.5 4.5l9 9M13.5 4.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    pin: '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M10.6 1.5l3.9 3.9-1.6.6-2.4 2.4.3 3.3-1.2 1.2-2.6-2.6-3.6 3.6-.8-.8 3.6-3.6L3.6 6.9l1.2-1.2 3.3.3L10.5 3.6z"/></svg>'
+  };
+
+  const I18N = {
+    es: {
+      work: 'Trabajo', life: 'Vida', remember: 'Recordar',
+      search: 'Buscar en tus tarjetas', searchBtn: 'Buscar', winsBtn: n => `Mis logros: ${n} cosas hechas en 7 días`,
+      settings: 'Ajustes', newCard: 'Nueva tarjeta', newBoard: 'Nuevo tablero', boardName: 'Nombre del tablero',
+      empty: 'Este tablero está vacío. Tocá + para escribir tu primera tarjeta.', noResults: 'Nada coincide con tu búsqueda.',
+      more: n => `+${n} más`, done: 'Hecha', sample: 'Maqueta · datos de ejemplo guardados en este navegador',
+      title: 'Título', body: 'Escribí algo…', addItem: 'Añadir elemento', pin: 'Fijar', pinned: 'Fijada',
+      board: 'Tablero', del: 'Borrar', delConfirm: '¿Borrar? Tocá otra vez', close: 'Cerrar', ready: 'Listo', removeItem: 'Quitar elemento',
+      cardDone: '¡Tarjeta completa!', cardDoneSub: n => `Ya van ${n} cosas hechas en 7 días`,
+      wins: 'Mis logros', back: 'Volver a los tableros', thingsDone: 'cosas hechas en los últimos 7 días',
+      items: 'elementos tachados', cards: 'tarjetas terminadas', notes: 'notas escritas',
+      bestDay: (d, n) => `Tu mejor día fue el ${d}, con ${n}.`, quiet: 'Los días tranquilos también cuentan.',
+      allTime: n => `Desde que empezaste: ${n} cosas hechas.`, recent: 'Terminadas hace poco', noRecent: 'Cuando completes una tarjeta, aparece acá.',
+      today: 'hoy', yesterday: 'ayer', daysAgo: n => `hace ${n} días`, chartLabel: 'Cosas hechas por día, últimos 7 días',
+      days: ['D', 'L', 'M', 'X', 'J', 'V', 'S'],
+      lang: 'Idioma', backup: 'Copia de seguridad',
+      note: 'Tus notas se guardan en este navegador. Para pasarlas del celu a la PC (o al revés), exportá una copia y abrila en el otro dispositivo.',
+      exp: 'Exportar copia', imp: 'Importar copia', expToast: 'En la app real, esto descarga mtf-backup.json', impToast: 'En la app real, acá elegís tu archivo de copia',
+      mock: 'Maqueta', reset: 'Volver a los datos de ejemplo', resetToast: 'Datos de ejemplo restaurados', mockTag: 'Maqueta'
+    },
+    en: {
+      work: 'Work', life: 'Life', remember: 'Remember',
+      search: 'Search your cards', searchBtn: 'Search', winsBtn: n => `My wins: ${n} things done in 7 days`,
+      settings: 'Settings', newCard: 'New card', newBoard: 'New board', boardName: 'Board name',
+      empty: 'This board is empty. Tap + to write your first card.', noResults: 'Nothing matches your search.',
+      more: n => `+${n} more`, done: 'Done', sample: 'Mockup · sample data saved in this browser',
+      title: 'Title', body: 'Write something…', addItem: 'Add item', pin: 'Pin', pinned: 'Pinned',
+      board: 'Board', del: 'Delete', delConfirm: 'Delete? Tap again', close: 'Close', ready: 'Done', removeItem: 'Remove item',
+      cardDone: 'Card complete!', cardDoneSub: n => `That's ${n} things done in 7 days`,
+      wins: 'My wins', back: 'Back to boards', thingsDone: 'things done in the last 7 days',
+      items: 'items checked', cards: 'cards finished', notes: 'notes written',
+      bestDay: (d, n) => `Your best day was ${d}, with ${n}.`, quiet: 'Quiet days count too.',
+      allTime: n => `Since you started: ${n} things done.`, recent: 'Recently finished', noRecent: 'When you complete a card, it shows up here.',
+      today: 'today', yesterday: 'yesterday', daysAgo: n => `${n} days ago`, chartLabel: 'Things done per day, last 7 days',
+      days: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+      lang: 'Language', backup: 'Backup',
+      note: 'Your notes are saved in this browser. To move them between your phone and PC, export a backup and open it on the other device.',
+      exp: 'Export backup', imp: 'Import backup', expToast: 'In the real app, this downloads mtf-backup.json', impToast: 'In the real app, you pick your backup file here',
+      mock: 'Mockup', reset: 'Restore sample data', resetToast: 'Sample data restored', mockTag: 'Mockup'
+    }
+  };
+
+  /* ---------- data ---------- */
+  function seed() {
+    const now = Date.now(), t0 = today();
+    let n = 0; const id = p => p + (++n);
+    const I = (text, done = false) => ({ id: id('i'), text, done });
+    const C = (board, title, body, items = [], pinned = false) => ({ id: id('c'), board, title, body, items, pinned });
+    const cards = [
+      C('b1', 'Ideas para el sprint', 'Exportar a PDF, modo oscuro en la configuración y atajos de teclado para crear tarjetas.', [], true),
+      C('b1', 'Preguntarle a Juan', '', [I('Deploy del viernes', true), I('Presupuesto Q4'), I('Acceso al repo de diseño')]),
+      C('b1', 'Notas del standup', 'Bloqueado con la API de pagos hasta el martes.\nRevisar los logs con Caro.'),
+      C('b1', 'Revisar PRs', '', [I('#142 filtros', true), I('#145 login con Google', true)]),
+      C('b1', '', 'Llamar al contador antes del 20.'),
+      C('b2', 'Viaje a Córdoba', 'Salimos el viernes después del trabajo.', [I('Sacar pasaje de bus', true), I('Preparar el mate'), I('Preguntarle a Caro por la cabaña')], true),
+      C('b2', 'Rutina de la semana', '', [I('Lunes: piernas', true), I('Miércoles: empuje', true), I('Viernes: tirón')]),
+      C('b2', 'Libros para leer', 'Proyecto Hail Mary\nEl infinito en un junco\nLa naranja mecánica'),
+      C('b2', 'Casa', '', [I('Cambiar el foco del baño', true), I('Pagar expensas', true)]),
+      C('b3', 'Wifi del depto', 'Red: Zynis-5G\nClave: mate-con-facturas', [], true),
+      C('b3', 'Regalo para mamá', 'Cumple: 14 de noviembre.', [I('Aros'), I('Libro de cocina')]),
+      C('b3', 'Talle de zapatillas', '42 AR · 9.5 US'),
+      C('b3', 'Auto', 'Patente AE 123 XY\nEl seguro vence en marzo.')
+    ];
+    cards.forEach((c, i) => { c.created = now - i * 60000; });
+    const find = title => cards.find(c => c.title === title).id;
+    const at = (d, h) => t0 - d * DAY + h * 3600000;
+    const events = [];
+    [[6, 3], [5, 5], [4, 8], [3, 2], [2, 4], [1, 6], [0, 2]].forEach(([d, k]) => {
+      for (let j = 0; j < k; j++) events.push({ t: 'item', at: at(d, 8 + j) });
+    });
+    events.push({ t: 'card', at: at(5, 18), title: 'Presentación Q3', board: 'b1' });
+    events.push({ t: 'card', at: at(3, 20), card: find('Casa'), title: 'Casa', board: 'b2' });
+    events.push({ t: 'card', at: at(1, 17), card: find('Revisar PRs'), title: 'Revisar PRs', board: 'b1' });
+    events.push({ t: 'note', at: at(6, 10) }, { t: 'note', at: at(2, 21) }, { t: 'note', at: at(0, 8) });
+    return {
+      lang: 'es', baseTotal: 118,
+      boards: [{ id: 'b1', key: 'work', color: 'sage' }, { id: 'b2', key: 'life', color: 'sand' }, { id: 'b3', key: 'remember', color: 'sky' }],
+      cards, events
+    };
+  }
+  function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.boards ? v : null; } catch (e) { return null; } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable: keep working in memory */ } }
+
+  let S = load() || seed();
+  let view = 'board', active = S.boards[0].id, query = '', editing = null, addingBoard = false, delArmed = false;
+
+  const t = (k, ...a) => { const v = I18N[S.lang][k]; return typeof v === 'function' ? v(...a) : v; };
+  const boardOf = id => S.boards.find(b => b.id === id);
+  const boardName = b => b ? (b.name || t(b.key)) : '';
+  const boardColor = b => `var(--${b ? b.color : 'pencil'})`;
+  const card = id => S.cards.find(c => c.id === id);
+  const isFinished = c => c.items.length > 0 && c.items.every(i => i.done);
+  const isEmpty = c => !c.title.trim() && !c.body.trim() && !c.items.some(i => i.text.trim());
+  const doneEvents = evs => evs.filter(e => e.t !== 'note');
+  const lastWeek = () => { const from = today() - 6 * DAY; return S.events.filter(e => e.at >= from); };
+  const removeLast = pred => { for (let i = S.events.length - 1; i >= 0; i--) if (pred(S.events[i])) { S.events.splice(i, 1); return; } };
+
+  /* ---------- header + tabs ---------- */
+  function renderHeader() {
+    document.documentElement.lang = S.lang;
+    const n = doneEvents(lastWeek()).length;
+    const wb = $('#wins-btn');
+    wb.innerHTML = IC.star + `<span>${n}</span>`;
+    wb.setAttribute('aria-label', t('winsBtn', n));
+    wb.title = t('wins');
+    $('#search-btn').innerHTML = IC.search; $('#search-btn').setAttribute('aria-label', t('searchBtn'));
+    $('#settings-btn').innerHTML = IC.dots; $('#settings-btn').setAttribute('aria-label', t('settings'));
+    $('#q').placeholder = t('search');
+    $('#fab').innerHTML = IC.plus; $('#fab').setAttribute('aria-label', t('newCard'));
+    $('#sample').textContent = t('sample');
+  }
+
+  function renderTabs() {
+    const tabs = $('#tabs');
+    tabs.innerHTML = '';
+    tabs.classList.toggle('searching', !!query);
+    S.boards.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'tab' + (b.id === active && !query ? ' on' : '');
+      btn.style.setProperty('--b', boardColor(b));
+      btn.innerHTML = `<span class="dot"></span>${esc(boardName(b))}<span class="n">${S.cards.filter(c => c.board === b.id).length}</span>`;
+      if (b.id === active && !query) btn.setAttribute('aria-current', 'true');
+      btn.onclick = () => { active = b.id; query = ''; $('#q').value = ''; showView('board'); };
+      tabs.appendChild(btn);
+    });
+    if (addingBoard) {
+      const inp = document.createElement('input');
+      inp.className = 'tab-input'; inp.id = 'new-board'; inp.placeholder = t('boardName'); inp.setAttribute('aria-label', t('boardName'));
+      inp.onkeydown = e => {
+        if (e.key === 'Enter' && inp.value.trim()) {
+          const palette = ['plum', 'rose', 'sage', 'sand', 'sky'];
+          const b = { id: 'b' + uid(), name: inp.value.trim(), color: palette[(S.boards.length - 3 + palette.length) % palette.length] };
+          S.boards.push(b); active = b.id; addingBoard = false; save(); render();
+        } else if (e.key === 'Escape') { addingBoard = false; renderTabs(); }
+      };
+      inp.onblur = () => { if (addingBoard) { addingBoard = false; renderTabs(); } };
+      tabs.appendChild(inp);
+      requestAnimationFrame(() => inp.focus());
+    } else {
+      const add = document.createElement('button');
+      add.className = 'tab tab-add'; add.innerHTML = IC.plusSm; add.setAttribute('aria-label', t('newBoard')); add.title = t('newBoard');
+      add.onclick = () => { addingBoard = true; renderTabs(); };
+      tabs.appendChild(add);
+    }
+  }
+
+  /* ---------- cards ---------- */
+  function visibleCards() {
+    const q = query.trim().toLowerCase();
+    const list = q
+      ? S.cards.filter(c => [c.title, c.body, ...c.items.map(i => i.text)].join(' ').toLowerCase().includes(q))
+      : S.cards.filter(c => c.board === active);
+    return list.slice().sort((a, b) => (b.pinned - a.pinned) || (b.created - a.created));
+  }
+
+  function cardEl(c) {
+    const b = boardOf(c.board);
+    const el = document.createElement('article');
+    el.className = 'card' + (isFinished(c) ? ' finished' : '');
+    el.tabIndex = 0;
+    el.style.setProperty('--b', boardColor(b));
+    let h = '';
+    if (c.pinned) h += `<span class="pin" title="${esc(t('pinned'))}">${IC.pin}</span>`;
+    if (c.title) h += `<h3>${esc(c.title)}</h3>`;
+    if (c.body) h += `<p class="body">${esc(c.body)}</p>`;
+    const items = c.items.filter(i => i.text.trim());
+    if (items.length) {
+      const shown = items.slice(0, 5);
+      h += '<ul class="checks">' + shown.map(i =>
+        `<li class="${i.done ? 'done' : ''}"><button class="check" data-item="${i.id}" aria-pressed="${i.done}" aria-label="${esc(i.text)}">${IC.check}</button><span>${esc(i.text)}</span></li>`
+      ).join('') + '</ul>';
+      if (items.length > shown.length) h += `<p class="more">${t('more', items.length - shown.length)}</p>`;
+    }
+    let foot = '';
+    if (query) foot += `<span class="where"><i></i>${esc(boardName(b))}</span>`;
+    if (items.length) {
+      const d = items.filter(i => i.done).length;
+      foot += isFinished(c) ? `<span class="chip">${IC.check}${t('done')}</span>` : `<span>${d}/${items.length}</span>`;
+    }
+    h += `<footer>${foot}</footer>`;
+    el.innerHTML = h;
+    el.addEventListener('click', e => {
+      const ch = e.target.closest('.check');
+      if (ch) { e.stopPropagation(); toggleItem(c.id, ch.dataset.item, ch); return; }
+      openEditor(c.id);
+    });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target === el) openEditor(c.id); });
+    return el;
+  }
+
+  let lastCols = 0;
+  const colsFor = w => w >= 980 ? 4 : w >= 700 ? 3 : w >= 330 ? 2 : 1;
+  function renderGrid() {
+    const host = $('#grid');
+    host.innerHTML = '';
+    const list = visibleCards();
+    if (!list.length) { host.innerHTML = `<p class="empty">${esc(query ? t('noResults') : t('empty'))}</p>`; return; }
+    const k = colsFor(host.clientWidth || window.innerWidth);
+    lastCols = k;
+    const cols = Array.from({ length: k }, () => { const d = document.createElement('div'); d.className = 'col'; host.appendChild(d); return d; });
+    const hs = Array(k).fill(0);
+    list.forEach(c => {
+      const i = hs.indexOf(Math.min(...hs));
+      const el = cardEl(c);
+      cols[i].appendChild(el);
+      hs[i] += el.offsetHeight + 14;
+    });
+  }
+
+  function toggleItem(cid, iid, origin) {
+    const c = card(cid); const it = c.items.find(i => i.id === iid);
+    if (!c || !it) return;
+    const rect = origin ? origin.getBoundingClientRect() : null;
+    const wasFin = isFinished(c);
+    it.done = !it.done;
+    if (it.done) S.events.push({ t: 'item', at: Date.now(), card: cid, item: iid });
+    else removeLast(e => e.t === 'item' && e.item === iid);
+    const fin = isFinished(c);
+    if (fin && !wasFin) {
+      S.events.push({ t: 'card', at: Date.now(), card: cid, title: c.title || c.body.split('\n')[0].slice(0, 40), board: c.board });
+    } else if (!fin && wasFin) {
+      removeLast(e => e.t === 'card' && e.card === cid);
+    }
+    save(); render();
+    if (editing === cid) renderEditorItems();
+    if (it.done) {
+      bumpWins();
+      if (fin && !wasFin) { burst(rect); toast(t('cardDone'), t('cardDoneSub', doneEvents(lastWeek()).length)); }
+      else popAt(cid, iid);
+    }
+  }
+
+  function popAt(cid, iid) {
+    document.querySelectorAll(`.check[data-item="${iid}"]`).forEach(b => { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); });
+  }
+  function bumpWins() { const w = $('#wins-btn'); w.classList.remove('bump'); void w.offsetWidth; w.classList.add('bump'); }
+  function burst(rect) {
+    if (!rect || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cs = getComputedStyle(document.documentElement);
+    const colors = ['--accent', '--sage', '--sand', '--sky', '--rose'].map(v => cs.getPropertyValue(v).trim());
+    const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+    for (let i = 0; i < 14; i++) {
+      const s = document.createElement('span');
+      const a = (Math.PI * 2 * i) / 14 + Math.random() * .4, r = 34 + Math.random() * 34;
+      s.className = 'spark';
+      s.style.left = (x - 3.5) + 'px'; s.style.top = (y - 3.5) + 'px';
+      s.style.background = colors[i % colors.length];
+      s.style.setProperty('--dx', Math.cos(a) * r + 'px'); s.style.setProperty('--dy', Math.sin(a) * r + 'px');
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 800);
+    }
+  }
+  let toastTimer;
+  function toast(title, sub = '') {
+    const el = $('#toast');
+    el.querySelector('b').textContent = title;
+    el.querySelector('span').textContent = sub;
+    el.querySelector('span').hidden = !sub;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  /* ---------- editor ---------- */
+  function openEditor(id) {
+    editing = id; delArmed = false;
+    const c = card(id);
+    const sheet = $('#editor .sheet');
+    sheet.style.setProperty('--b', boardColor(boardOf(c.board)));
+    $('#ed-close').innerHTML = IC.back; $('#ed-close').setAttribute('aria-label', t('close'));
+    $('#ed-title').value = c.title; $('#ed-title').placeholder = t('title'); $('#ed-title').setAttribute('aria-label', t('title'));
+    $('#ed-body').value = c.body; $('#ed-body').placeholder = t('body'); $('#ed-body').setAttribute('aria-label', t('body'));
+    $('#ed-new').value = ''; $('#ed-new').placeholder = t('addItem'); $('#ed-new').setAttribute('aria-label', t('addItem'));
+    $('#ed-board-label').textContent = t('board');
+    $('#ed-board').innerHTML = S.boards.map(b => `<option value="${b.id}"${b.id === c.board ? ' selected' : ''}>${esc(boardName(b))}</option>`).join('');
+    $('#ed-del').textContent = t('del');
+    $('#ed-done').textContent = t('ready');
+    renderPin(c);
+    renderEditorItems();
+    $('#editor').hidden = false;
+    document.body.classList.add('lock');
+    autosize();
+    if (c.isNew) requestAnimationFrame(() => $('#ed-title').focus());
+  }
+  function renderPin(c) { const p = $('#ed-pin'); p.innerHTML = IC.pin + `<span>${c.pinned ? t('pinned') : t('pin')}</span>`; p.setAttribute('aria-pressed', c.pinned); }
+  function renderEditorItems() {
+    const c = card(editing); if (!c) return;
+    const ul = $('#ed-items');
+    ul.innerHTML = '';
+    c.items.forEach(it => {
+      const li = document.createElement('li');
+      li.className = 'ed-item' + (it.done ? ' done' : '');
+      li.innerHTML = `<button class="check" aria-pressed="${it.done}" aria-label="${esc(it.text || t('addItem'))}">${IC.check}</button><input id="item-${it.id}" value="${esc(it.text)}" aria-label="${esc(t('addItem'))}" autocomplete="off"><button class="x" aria-label="${esc(t('removeItem'))}">${IC.close}</button>`;
+      li.querySelector('.check').onclick = e => toggleItem(c.id, it.id, e.currentTarget);
+      li.querySelector('input').oninput = e => { it.text = e.target.value; save(); };
+      li.querySelector('.x').onclick = () => {
+        c.items = c.items.filter(i => i.id !== it.id);
+        save(); renderEditorItems(); render();
+      };
+      ul.appendChild(li);
+    });
+  }
+  function autosize() { const ta = $('#ed-body'); ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 360) + 'px'; }
+  function closeEditor() {
+    const c = card(editing);
+    if (c) {
+      c.items = c.items.filter(i => i.text.trim());
+      if (isEmpty(c)) S.cards = S.cards.filter(x => x.id !== c.id);
+      else if (c.isNew) { delete c.isNew; S.events.push({ t: 'note', at: Date.now(), card: c.id }); }
+    }
+    editing = null;
+    $('#editor').hidden = true;
+    document.body.classList.remove('lock');
+    save(); render();
+  }
+
+  $('#ed-title').oninput = e => { card(editing).title = e.target.value; save(); };
+  $('#ed-body').oninput = e => { card(editing).body = e.target.value; autosize(); save(); };
+  $('#ed-new').onkeydown = e => {
+    if (e.key === 'Enter' && e.target.value.trim()) {
+      e.preventDefault();
+      card(editing).items.push({ id: uid(), text: e.target.value.trim(), done: false });
+      e.target.value = ''; save(); renderEditorItems(); render();
+    }
+  };
+  $('#ed-board').onchange = e => {
+    const c = card(editing); c.board = e.target.value;
+    $('#editor .sheet').style.setProperty('--b', boardColor(boardOf(c.board)));
+    save(); render();
+  };
+  $('#ed-pin').onclick = () => { const c = card(editing); c.pinned = !c.pinned; renderPin(c); save(); render(); };
+  $('#ed-del').onclick = () => {
+    if (!delArmed) { delArmed = true; $('#ed-del').textContent = t('delConfirm'); return; }
+    S.cards = S.cards.filter(x => x.id !== editing);
+    editing = null; $('#editor').hidden = true; document.body.classList.remove('lock'); save(); render();
+  };
+  $('#ed-close').onclick = closeEditor;
+  $('#ed-done').onclick = closeEditor;
+  $('#editor').addEventListener('click', e => { if (e.target.id === 'editor') closeEditor(); });
+
+  $('#fab').onclick = () => {
+    if (view !== 'board') showView('board');
+    const board = active;
+    const c = { id: 'c' + uid(), board, title: '', body: '', items: [], pinned: false, created: Date.now(), isNew: true };
+    S.cards.push(c);
+    openEditor(c.id);
+  };
+
+  /* ---------- wins ---------- */
+  function renderWins() {
+    const wk = lastWeek();
+    const items = wk.filter(e => e.t === 'item').length;
+    const cards = wk.filter(e => e.t === 'card').length;
+    const notes = wk.filter(e => e.t === 'note').length;
+    const total = items + cards;
+    const t0 = today();
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const s = t0 - (6 - i) * DAY;
+      return { s, n: doneEvents(S.events).filter(e => e.at >= s && e.at < s + DAY).length };
+    });
+    const best = days.reduce((a, d) => d.n > a.n ? d : a, days[0]);
+    const weekday = new Date(best.s).toLocaleDateString(S.lang === 'es' ? 'es-AR' : 'en-US', { weekday: 'long' });
+
+    const W = 336, H = 176, top = 22, bottom = 26, ch = H - top - bottom, step = W / 7, bw = 26;
+    const max = Math.max(4, ...days.map(d => d.n));
+    let bars = `<line class="base" x1="0" x2="${W}" y1="${top + ch}" y2="${top + ch}"/>`;
+    days.forEach((d, i) => {
+      const x = step * i + (step - bw) / 2;
+      const h = d.n ? Math.max(4, (d.n / max) * ch) : 0;
+      const y = top + ch - h;
+      const isToday = i === 6;
+      if (h) bars += `<rect class="${isToday ? 'bar-today' : 'bar-past'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw}" height="${h.toFixed(1)}" rx="5"/>`;
+      if (d.n) bars += `<text class="val" x="${(x + bw / 2).toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle">${d.n}</text>`;
+      bars += `<text class="${isToday ? 'today' : ''}" x="${(x + bw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${t('days')[new Date(d.s).getDay()]}</text>`;
+    });
+
+    const rel = at => { const d = Math.round((t0 - startOf(at)) / DAY); return d <= 0 ? t('today') : d === 1 ? t('yesterday') : t('daysAgo', d); };
+    const recent = S.events.filter(e => e.t === 'card').sort((a, b) => b.at - a.at).slice(0, 6);
+    const recentHtml = recent.length ? recent.map(e => {
+      const b = boardOf(e.board);
+      return `<li style="--b:${boardColor(b)}"><span class="ok">${IC.check}</span><span class="t"><b>${esc(e.title || '—')}</b><span><i></i>${esc(boardName(b))}</span></span><span class="when">${rel(e.at)}</span></li>`;
+    }).join('') : `<li><span class="t"><span>${esc(t('noRecent'))}</span></span></li>`;
+
+    $('#wins-view').innerHTML = `
+      <div class="wins-top"><button class="icon-btn" id="wins-back" aria-label="${esc(t('back'))}">${IC.back}</button><h2>${esc(t('wins'))}</h2></div>
+      <div class="wins-grid">
+        <section class="panel">
+          <div class="hero-n"><b>${total}</b><span>${esc(t('thingsDone'))}</span></div>
+          <div class="stats">
+            <div class="stat"><b>${items}</b><span>${esc(t('items'))}</span></div>
+            <div class="stat"><b>${cards}</b><span>${esc(t('cards'))}</span></div>
+            <div class="stat quiet"><b>${notes}</b><span>${esc(t('notes'))}</span></div>
+          </div>
+          <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t('chartLabel'))}">${bars}</svg>
+          <p class="line">${esc(best.n ? t('bestDay', weekday, best.n) : t('quiet'))} ${best.n ? esc(t('quiet')) : ''}</p>
+          <p class="line" style="color:var(--pencil)">${esc(t('allTime', S.baseTotal + doneEvents(S.events).length))}</p>
+        </section>
+        <section class="panel">
+          <h3>${esc(t('recent'))}</h3>
+          <ul class="recent">${recentHtml}</ul>
+        </section>
+      </div>`;
+    $('#wins-back').onclick = () => showView('board');
+  }
+
+  /* ---------- settings ---------- */
+  function renderSettings() {
+    $('#set-h').textContent = t('settings');
+    $('#set-close').innerHTML = IC.close; $('#set-close').setAttribute('aria-label', t('close'));
+    $('#set-lang').textContent = t('lang');
+    $('#lang-es').setAttribute('aria-pressed', S.lang === 'es');
+    $('#lang-en').setAttribute('aria-pressed', S.lang === 'en');
+    $('#set-backup').textContent = t('backup');
+    $('#set-note').textContent = t('note');
+    $('#exp').textContent = t('exp');
+    $('#imp').textContent = t('imp');
+    $('#set-mock').textContent = t('mock');
+    $('#reset').textContent = t('reset');
+  }
+  const openSettings = () => { renderSettings(); $('#settings').hidden = false; document.body.classList.add('lock'); };
+  const closeSettings = () => { $('#settings').hidden = true; document.body.classList.remove('lock'); };
+  $('#settings-btn').onclick = openSettings;
+  $('#set-close').onclick = closeSettings;
+  $('#settings').addEventListener('click', e => { if (e.target.id === 'settings') closeSettings(); });
+  $('#lang-es').onclick = () => { S.lang = 'es'; save(); renderSettings(); render(); };
+  $('#lang-en').onclick = () => { S.lang = 'en'; save(); renderSettings(); render(); };
+  $('#exp').onclick = () => toast(t('exp'), t('expToast'));
+  $('#imp').onclick = () => toast(t('imp'), t('impToast'));
+  $('#reset').onclick = () => { const lang = S.lang; S = seed(); S.lang = lang; active = S.boards[0].id; query = ''; save(); closeSettings(); showView('board'); toast(t('resetToast')); };
+
+  /* ---------- search + views ---------- */
+  $('#search-btn').onclick = () => {
+    const box = $('#search'); const open = box.hidden;
+    box.hidden = !open; $('#search-btn').setAttribute('aria-pressed', open);
+    if (open) { if (view !== 'board') showView('board'); $('#q').focus(); }
+    else { query = ''; $('#q').value = ''; render(); }
+  };
+  $('#q').oninput = e => { query = e.target.value; render(); };
+  $('#wins-btn').onclick = () => showView(view === 'wins' ? 'board' : 'wins');
+
+  function showView(v) { view = v; render(); window.scrollTo({ top: 0 }); }
+  function render() {
+    renderHeader();
+    renderTabs();
+    $('#board-view').hidden = view !== 'board';
+    $('#wins-view').hidden = view !== 'wins';
+    $('#tabs-wrap').hidden = view !== 'board';
+    $('#fab').hidden = view !== 'board';
+    if (view === 'board') renderGrid(); else renderWins();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!$('#editor').hidden) closeEditor();
+    else if (!$('#settings').hidden) closeSettings();
+    else if (view === 'wins') showView('board');
+  });
+  new ResizeObserver(() => { if (view === 'board' && colsFor($('#grid').clientWidth) !== lastCols) renderGrid(); }).observe($('#grid'));
+  document.fonts && document.fonts.ready.then(() => { if (view === 'board') renderGrid(); });
+
+  render();
+})();
+</script>
+</body>
+</html>

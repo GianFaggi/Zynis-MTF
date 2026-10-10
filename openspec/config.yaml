@@ -1,0 +1,48 @@
+schema: spec-driven
+
+context: |
+  Language: English
+  All artifacts must be written in English.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Project: Zynis MTF ("Más Tareas Fáciles"), a mobile-first PWA notepad shaped like a desk.
+  Users write Cards (title, text, optional checklist), place them freely on one Desk grouped
+  in soft Areas, and drop finished Cards into the Jar, which feeds "Mis logros".
+  The approved direction is design/mtf-mockup-desk.html.
+  100% offline, no backend in the MVP; a .NET backend (accounts + sync) comes in V2.
+  Stack: React + TypeScript + Vite, Tailwind CSS v4, @use-gesture/react, Zustand,
+  vite-plugin-pwa (full offline precache), localStorage behind src/lib/storage,
+  lucide-react, @fontsource. Tests: Vitest + Testing Library + jsdom (`npm test`),
+  Playwright for gesture flows (`npm run test:e2e`). Hosting: Vercel.
+
+  Before writing any artifact, read CLAUDE.md and the KB for the area the change
+  touches (KB/frontend/*.md, KB/roadmap.md). The active ticket, its GitHub issue and
+  acceptance criteria are in KB/developers/active.md.
+  Use the domain terms defined in GLOSSARY.md (Desk, Area, Card, Item, Jar, Win, ...).
+
+  Change names follow the ticket branch slug: `{number}-{slug}`
+  (e.g. branch `feat/1-fundacion-pwa` -> change `1-fundacion-pwa`).
+
+rules:
+  proposal:
+    - Map every acceptance criterion of the GitHub issue to the proposal scope, and state what is out of scope.
+    - Anything that needs a server (accounts, sync, sharing) goes to the V2 backlog, never into the MVP scope.
+    - Keep the desk free; never introduce tabs, columns or grids that decide where Cards go.
+  design:
+    - When a domain term is introduced or sharpened, add or update it in GLOSSARY.md as part of the change.
+    - When a decision is hard to reverse (data model, storage schema, library choice), record it as an ADR in docs/adr/.
+    - Justify any new library against KB/frontend/stack.md before adding it.
+    - Every gesture must work with touch (press and hold, pinch) and with mouse/trackpad.
+    - New persisted entities get a uuid id and createdAt/updatedAt timestamps (sync-ready).
+  specs:
+    - Win counting is positive only; no requirement may penalize inactivity.
+  tasks:
+    - Include tasks to update the affected KBs and to keep tests green.
+    - Include Playwright tasks for any change to drag, pan, zoom or the Jar.
+    - Include a task to add or update the matching aprendizaje/ note when a new tool is introduced.
+
+operations:
+  apply:
+    guidance:
+      - Never commit, push or open PRs; the user does that.
+      - Run `npm test` (and `npm run test:e2e` when gestures changed) before marking the last task done.

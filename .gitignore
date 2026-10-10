@@ -1,0 +1,47 @@
+# Learning notes (personal, not tracked)
+aprendizaje/
+
+# Local ticket tracking (personal, not tracked)
+KB/developers/active.md
+KB/developers/done/
+
+# Local Claude Code permissions (per machine)
+.claude/settings.local.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+# npm is the package manager (package-lock.json); a pnpm install leaves this behind
+pnpm-lock.yaml
+dist
+dist-ssr
+*.local
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
