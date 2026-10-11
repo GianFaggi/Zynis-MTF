@@ -25,7 +25,19 @@ A Card SHALL be finished when it has at least one Item with text and all of thos
 ## MODIFIED Requirements
 
 ### Requirement: Card on the Desk
-A Card on the Desk SHALL show its title, its text (shortened when long), up to five Items with a "+N más" line for the rest, the number of checked Items over the total when it has Items, and a pin mark when pinned. It SHALL be tinted with its Area's color. A finished Card SHALL show a "Llevala al frasco" chip in the accent color in place of the checked count, and an accent-tinted border. Cards in the Jar SHALL NOT be shown on the Desk.
+A Card on the Desk SHALL show its title, its text (shortened when long), up to five Items with a "+N más" line for the rest, the number of checked Items over the total when it has Items, and a pin mark when pinned. It SHALL be tinted with its Area's color. A finished Card SHALL show a "Llevala al frasco" chip in the accent color in place of the checked count, and SHALL stand out with the accent: a warmed fill, an accent border with a soft halo, its title in the accent and a seal with a check on its corner, with none of its content faded. Cards in the Jar SHALL NOT be shown on the Desk.
+
+#### Scenario: Long checklist
+- **WHEN** a Card has 7 Items, 2 of them checked
+- **THEN** it shows the first 5 Items, "+2 más" and "2/7"
+
+#### Scenario: Finished Card chip
+- **WHEN** every Item of a Card is checked
+- **THEN** the Card shows "Llevala al frasco" in the accent color instead of the checked count
+
+#### Scenario: Chip goes away
+- **WHEN** the user unchecks one Item of a finished Card
+- **THEN** the chip is replaced by the checked count again
 
 #### Scenario: A finished Card stands out
 - **WHEN** a Card on the Desk is finished
@@ -40,15 +52,3 @@ A Card on the Desk SHALL show its title, its text (shortened when long), up to f
 - **WHEN** the user checks the last unchecked Item of a Card on the Desk
 - **THEN** the Card grows a little and settles back, and the seal stamps onto its corner
 - **AND** this does not play again when MTF reloads, nor when a Card becomes finished by removing an Item, nor at all under reduced motion
-
-#### Scenario: Long checklist
-- **WHEN** a Card has 7 Items, 2 of them checked
-- **THEN** it shows the first 5 Items, "+2 más" and "2/7"
-
-#### Scenario: Finished Card chip
-- **WHEN** every Item of a Card is checked
-- **THEN** the Card shows "Llevala al frasco" in the accent color instead of the checked count
-
-#### Scenario: Chip goes away
-- **WHEN** the user unchecks one Item of a finished Card
-- **THEN** the chip is replaced by the checked count again
