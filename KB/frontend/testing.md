@@ -24,7 +24,8 @@ jsdom has no layout and no real pointer gestures: never try to test dragging or 
 - **Global setup** in `src/test/setup.ts`: jest-dom matchers; unmount and clear `localStorage` after every test
 - **Explicit imports** (`import { describe, it, expect } from 'vitest'`), no globals
 - **Storage tests** hit the real `src/lib/storage.ts` against jsdom's `localStorage`, no mocking
-- **Dates**: pin today with `vi.useFakeTimers({ toFake: ['Date'] })` + `vi.setSystemTime(...)` for "last 7 days" logic
+- **Dates** (in use since change 3): pin today with `vi.useFakeTimers({ toFake: ['Date'] })` + `vi.setSystemTime(...)` for "last 7 days" logic (`stats.test.ts`, `MisLogros.test.tsx`, `WinsCounter.test.tsx`). Faking only `Date` keeps real timers, so `userEvent` still works. Build event times from calendar dates (`new Date(y, m, d - n, 12)`), never `now - n * 86 400 000`. To cross midnight (`useWinStats.test.ts`), fake all timers and `advanceTimersByTime`.
+- **Time zones**: a DST test stubs the zone with `vi.stubEnv('TZ', 'Europe/Madrid')` (Node reads `TZ` on every date calculation; `vi.unstubAllEnvs()` restores it) and first asserts that the UTC offset really changes that week, so it cannot pass by accident in a zone without DST (CI runs in UTC)
 - **Query by role and visible text**, not class names or test ids
 - **Playwright** specs in `e2e/`, projects for desktop Chrome and a phone viewport (Pixel / iPhone); start the Vite preview server via `webServer`
 - **Test data builders** in `src/test/fixtures.ts` (`makeArea`, `rowOfAreas`, `makeCard`, `makeItem`, `makeData`, `sequence`): readable ids (`a1`–`a3`, `c1`) so a failing assertion says which entity it is about. `sequence(...)` is a fixed `random` for layouts.
@@ -45,10 +46,19 @@ Shared helpers live in `e2e/helpers.ts`:
 
 - **The first-run hint is marked seen by default** in `openApp` / `seedDesk`, so it never covers a gesture; only the hint's own test passes `hintSeen: false`.
 - **Touch only through CDP.** Playwright has no touch drag or pinch API. Both projects are Chromium and the phone project emulates a touch screen, so Chrome turns CDP touches into touch and pointer events, which is what use-gesture listens to. Mouse and wheel tests skip the phone project, touch tests skip the desktop one (`test.skip(({ isMobile }) => …)`).
-- **Desktop opens zoomed out** (the whole Desk fits at ~46%, below the 55% far threshold), so tests that need a Card's checklist zoom in first with `Ctrl` + wheel.
+- **Desktop opens zoomed out**: on Playwright's 1280 × 720 window the whole Desk, Jar included, fits at ~37%, below the 55% far threshold, where Cards show only their title (their `h3` and Item boxes are `display: none`, with no bounding box). Tests that need a Card's checklist zoom in first with `Ctrl` + wheel (`zoomToNearLook` in `jar.spec.ts`).
 - After a wheel, fly (0.55 s) or Tidy up (0.5 s), wait a little before measuring: use-gesture ends a wheel gesture after a short pause.
 - Locators that could match both an Area label and its Dock button are scoped (`getByRole('navigation', { name: 'Áreas' })`).
 - iOS Safari gestures (`gesture*` pinch, long-press callout, double-tap zoom) cannot run in Playwright; they are checked by hand on a real iPhone.
+
+### The Jar (`e2e/jar.spec.ts`, change 3)
+
+- **Dropping on the Jar**: `towardJar(page, id)` is the pointer movement that puts the Card's center on the Jar's center (the same point the app tests). Cards are grabbed with `grip(page, id)`, a point near their top edge, so the press never lands on an Item box (which never starts a drag) and works in both the near and the far look.
+- Mouse drops run on desktop; the phone test flies to the Jar with the Dock's "Frasco" first, then holds 450 ms and drags with `Touch.drag`.
+- **Toasts** are read through their always-mounted region: `getByRole('status')`, whose text is the title and the detail run together.
+- The Jar is a button named "Frasco: N tarjetas…", so the Dock's "Frasco" needs `exact: true` or the Dock's `navigation` scope.
+- A finished Card seeded **without** events (a document from before change 3) gets its Card Win from the Jar, so the counter goes 0 → 1: that is how the "counted once" rule shows in e2e.
+- A test on a 360 px viewport (`page.setViewportSize`) checks that the Dock scrolls sideways and still reaches "Frasco".
 
 ## Setup
 

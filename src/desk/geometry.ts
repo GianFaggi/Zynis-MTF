@@ -1,4 +1,5 @@
 import type { Area, Card } from '../types'
+import { jarBounds, jarRect } from '../wins/jarLayout'
 
 // View math for the Desk (KB/frontend/desk.md). The numbers come from the approved
 // mockup (design/mtf-mockup-desk.html). Everything here is pure, so it is unit-tested.
@@ -110,11 +111,13 @@ export function cardView(card: Card, height: number | undefined, viewport: Viewp
   return fitRect({ x: rect.x - 200, y: rect.y - 120, w: rect.w + 400, h: rect.h + 240 }, viewport)
 }
 
-/** The union of every Area and every Card on the Desk; `null` when there is nothing. */
+/** The union of every Area, every Card on the Desk and the Jar with its caption; `null` when there is nothing. */
 export function deskBounds(areas: readonly Area[], cards: readonly Card[], heights: ReadonlyMap<string, number>): Rect | null {
+  const jar = jarRect(areas)
   const rects = [
     ...areas.map((area) => area.rect),
     ...cards.filter((card) => card.jarredAt === null).map((card) => cardRect(card, heights.get(card.id))),
+    ...(jar ? [jarBounds(jar)] : []),
   ]
   if (rects.length === 0) return null
 

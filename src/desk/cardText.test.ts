@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeCard, makeItem } from '../test/fixtures'
-import { displayTitle, isEmptyCard, usableItems } from './cardText'
+import { displayTitle, isEmptyCard, isFinished, pendingItems, usableItems } from './cardText'
 
 const items = [makeItem({ id: 'i1', text: 'Pan' }), makeItem({ id: 'i2', text: '  ' }), makeItem({ id: 'i3', text: 'Leche' })]
 
@@ -21,6 +21,32 @@ describe('isEmptyCard', () => {
     ['an Item with text', { items }],
   ])('is false with %s', (_, overrides) => {
     expect(isEmptyCard(makeCard({ id: 'c1', ...overrides }))).toBe(false)
+  })
+})
+
+describe('isFinished / pendingItems', () => {
+  it('a Card with every Item checked is finished, with nothing pending', () => {
+    const card = makeCard({ id: 'c1', items: [makeItem({ id: 'i1', text: 'Pan', done: true }), makeItem({ id: 'i2', text: 'Leche', done: true })] })
+    expect(isFinished(card)).toBe(true)
+    expect(pendingItems(card)).toEqual([])
+  })
+
+  it('one unchecked Item is pending and keeps the Card unfinished', () => {
+    const card = makeCard({ id: 'c1', items: [makeItem({ id: 'i1', text: 'Pan', done: true }), makeItem({ id: 'i2', text: 'Leche' })] })
+    expect(isFinished(card)).toBe(false)
+    expect(pendingItems(card).map((item) => item.id)).toEqual(['i2'])
+  })
+
+  it('blank Items are ignored', () => {
+    const card = makeCard({ id: 'c1', items: [makeItem({ id: 'i1', text: 'Pan', done: true }), makeItem({ id: 'i2', text: ' ' })] })
+    expect(isFinished(card)).toBe(true)
+    expect(pendingItems(card)).toEqual([])
+  })
+
+  it('a Card without Items is not finished and has nothing pending', () => {
+    const card = makeCard({ id: 'c1', title: 'Solo texto' })
+    expect(isFinished(card)).toBe(false)
+    expect(pendingItems(card)).toEqual([])
   })
 })
 

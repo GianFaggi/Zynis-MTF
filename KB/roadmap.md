@@ -5,7 +5,7 @@ description: MVP changes 1–4 and the V2 backlog for Zynis MTF
 
 # Roadmap
 
-The MVP is split into four changes, each a ticket + OpenSpec change. After change 2, MTF is already usable as a free notepad.
+The MVP is split into four changes, each a ticket + OpenSpec change. After change 2, MTF is already usable as a free notepad; after change 3 it counts and celebrates what you finish.
 
 ## Phase 0 — Exploration ✅
 - [x] Product direction: Desk + Areas + Jar ([ADR 0001](../docs/adr/0001-desk-instead-of-tabs.md))
@@ -34,10 +34,11 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 - [x] Manual check on a real Android phone and an iPhone (task 9.5)
 
 ## Change 3 — Wins ([#3](https://github.com/GianFaggi/Zynis-MTF/issues/3))
-- [ ] Win events (item, card, note)
-- [ ] Finished Cards; the Jar (accept / refuse, fill animation)
-- [ ] Mis logros: last 7 days, per-day bars, notes written, since you started, take out of the Jar
-- [ ] Wins counter in the floating UI
+- [x] Win events (item, card, note), with removals that follow the Desk ([ADR 0005](../docs/adr/0005-win-events-with-removals.md))
+- [x] Finished Cards; the Jar (accept / refuse, fill animation); "Llevar al frasco" in the editor; Dock "Frasco"
+- [x] Mis logros: last 7 days, per-day bars, notes written, since you started, take out of the Jar
+- [x] Wins counter in the floating UI; toasts and sparks
+- [x] Manual check on a real Android phone and an iPhone (task 7.6)
 
 ## Change 4 — Backup ([#4](https://github.com/GianFaggi/Zynis-MTF/issues/4))
 - [ ] Export / Import backup file with validation and confirmation
@@ -46,6 +47,7 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 ## Small tickets
 - [ ] Theme toggle in Settings: System · Light · Dark ([#5](https://github.com/GianFaggi/Zynis-MTF/issues/5)); after change 1 merges
 - [ ] Custom Areas ("Áreas propias"): create, rename, recolor, delete with a clear rule for its Cards; after change 2 ([#7](https://github.com/GianFaggi/Zynis-MTF/issues/7)). Moved from the V2 backlog during change 2: it needs no server, and change 2 builds every Desk behavior over the list of Areas so this is mostly UI. Moving/resizing Areas stays out unless that ticket decides otherwise.
+- [ ] Put Cards in the Jar at any zoom on a phone ([#10](https://github.com/GianFaggi/Zynis-MTF/issues/10)): a floating Jar drop target that appears while dragging; edge auto-pan and a larger default phone zoom to be evaluated. Found during change 3's phone check: on a phone you must zoom in to read lists, and the Jar is far from the Cards.
 
 ---
 

@@ -12,7 +12,7 @@ export const HOLD_MS = 320
 const MOUSE_DRAG_PX = 4
 /** Touch: moving this far before the hold makes the gesture a pan. Also the tap limit. */
 const TOUCH_PAN_PX = 9
-/** A pan that moved less than this is a tap on whatever is under it (an Area label). */
+/** A pan that moved less than this is a tap on whatever is under it (an Area label, the Jar). */
 const LABEL_TAP_PX = 6
 
 export interface IntentInput {
@@ -31,20 +31,23 @@ export function nextIntent({ intent, pointerType, distance, held }: IntentInput)
   return distance > TOUCH_PAN_PX ? 'pan' : 'pending'
 }
 
-/** What releasing the pointer does: open the Card, fly to an Area, drop the Card, or nothing. */
-export type ReleaseOutcome = 'open' | 'label' | 'drop' | 'none'
+/** What releasing the pointer does: open the Card, fly to an Area, open Mis logros from the Jar, drop the Card, or nothing. */
+export type ReleaseOutcome = 'open' | 'label' | 'jar' | 'drop' | 'none'
 
 export function releaseOutcome({
   intent,
   distance,
   onLabel,
+  onJar = false,
 }: {
   intent: Intent
   distance: number
   onLabel: boolean
+  onJar?: boolean
 }): ReleaseOutcome {
   if (intent === 'drag') return 'drop'
   if (intent === 'pending' && distance < TOUCH_PAN_PX) return 'open'
   if (intent === 'pan' && distance < LABEL_TAP_PX && onLabel) return 'label'
+  if (intent === 'pan' && distance < LABEL_TAP_PX && onJar) return 'jar'
   return 'none'
 }

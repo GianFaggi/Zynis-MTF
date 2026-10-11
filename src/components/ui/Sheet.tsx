@@ -15,6 +15,8 @@ type SheetProps = {
   actions?: ReactNode
   /** Keeps the title for screen readers only; the dialog is still named by it. */
   hideTitle?: boolean
+  /** A wider panel (up to 880 px) for content laid out side by side, like Mis logros. */
+  wide?: boolean
   children: ReactNode
 }
 
@@ -24,7 +26,7 @@ type SheetProps = {
  * Closes on Esc, the close button and a click/tap on the scrim; focus moves into
  * the sheet on open and back to whatever had it (the trigger) on close.
  */
-export function Sheet({ open, onClose, title, closeLabel, tint, actions, hideTitle, children }: SheetProps) {
+export function Sheet({ open, onClose, title, closeLabel, tint, actions, hideTitle, wide, children }: SheetProps) {
   const titleId = useId()
   const panelRef = useRef<HTMLElement>(null)
   const pressStartedOnScrim = useRef(false)
@@ -66,7 +68,7 @@ export function Sheet({ open, onClose, title, closeLabel, tint, actions, hideTit
         aria-labelledby={titleId}
         tabIndex={-1}
         style={tint ? ({ '--b': `var(--color-${tint})` } as CSSProperties) : undefined}
-        className={`flex max-h-full w-[min(600px,100%)] animate-rise flex-col gap-2.5 overflow-y-auto rounded-t-[20px] px-5 pt-3.5 pb-[calc(18px+env(safe-area-inset-bottom,0px))] text-ink outline-none min-[720px]:max-h-[88vh] min-[720px]:rounded-[18px] min-[720px]:pb-[18px] ${tint ? 'card-tint' : 'bg-sheet'}`}
+        className={`flex max-h-full ${wide ? 'w-[min(880px,100%)]' : 'w-[min(600px,100%)]'} animate-rise flex-col gap-2.5 overflow-y-auto rounded-t-[20px] px-5 pt-3.5 pb-[calc(18px+env(safe-area-inset-bottom,0px))] text-ink outline-none min-[720px]:max-h-[88vh] min-[720px]:rounded-[18px] min-[720px]:pb-[18px] ${tint ? 'card-tint' : 'bg-sheet'}`}
       >
         <div className="-mx-2 flex items-center justify-between gap-2">
           <h2

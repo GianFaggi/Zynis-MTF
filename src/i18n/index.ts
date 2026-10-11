@@ -18,8 +18,10 @@ export function translate<K extends MessageKey>(language: Language, key: K, ...a
   return typeof message === 'function' ? message(...args) : (message as string)
 }
 
+export type Translate = <K extends MessageKey>(key: K, ...args: MessageArgs<K>) => string
+
 /** `t(key, ...args)` in the current language; re-renders when the language changes. */
-export function useT() {
+export function useT(): Translate {
   const language = useAppStore((state) => state.language)
-  return <K extends MessageKey>(key: K, ...args: MessageArgs<K>) => translate(language, key, ...args)
+  return (key, ...args) => translate(language, key, ...args)
 }
