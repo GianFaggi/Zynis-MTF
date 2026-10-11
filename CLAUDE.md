@@ -69,6 +69,7 @@ Other commands: `/active` (current ticket summary), `/daily-summary`, `/sync-kb`
 
 **Rules:**
 - **The user commits, pushes and opens PRs — never Claude.** Claude may only run `git checkout`, `git pull` and `git branch`.
+- **`main` only moves through green PRs.** A GitHub ruleset requires the CI job `check` to pass before merging and rejects direct pushes to `main` ([KB/frontend/testing.md](KB/frontend/testing.md#merge-gate)). Suggest a separate PR, never a push to `main`, even for chores.
 - **No AI attribution.** Never add `Co-Authored-By: Claude …` trailers or "Generated with Claude Code" footers to commit messages, PR descriptions, or any commit/PR text suggested to the user.
 - GitHub issues are written in **Spanish**. Their bodies always go through a temp file with `--body-file` (never `\n` inside the string). Template: `## Objetivo` + `## Criterios de Aceptación` with checkboxes.
 - KBs, ADRs, OpenSpec artifacts and code comments are written in **English**. The UI is **Spanish + English**.

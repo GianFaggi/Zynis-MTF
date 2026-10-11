@@ -96,4 +96,15 @@ command npx playwright install chromium # once per machine, after installing dep
 8. `npm run test:e2e` (its `webServer` builds again and serves on 4173; `CI` is set, so no server reuse, 1 retry, HTML report)
 9. On failure: upload `playwright-report/` as the `playwright-report` artifact (7 days)
 
+### Merge gate
+
+A GitHub ruleset, **`main: CI must pass`** (Settings → Rules → Rulesets, active since 2026-10-11), protects the default branch:
+
+- **Required status check `check`** (the job above, source GitHub Actions). A PR cannot be merged until it is green, and a commit cannot reach `main` unless it already passed on another ref, so direct pushes to `main` are rejected: even chores like archiving a change go through a PR.
+- Branches do **not** have to be up to date with `main` before merging (one developer; re-running CI on every `main` move buys nothing).
+- **Block force pushes** and **restrict deletions** on `main`.
+- **No bypass list**: the repo admin is held to the same rules.
+
+If the job is renamed in `ci-frontend.yml`, update the required check in the ruleset too, or every PR stays blocked waiting for a check that never reports.
+
 To reproduce CI locally: `CI=1` and the same commands, starting from `command npm ci` (`--with-deps` is Linux-only; locally `command npx playwright install chromium`).
