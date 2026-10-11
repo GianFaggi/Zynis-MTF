@@ -110,10 +110,10 @@ command npx playwright install chromium # once per machine, after installing dep
 
 A GitHub ruleset, **`main: CI must pass`** (Settings → Rules → Rulesets, active since 2026-10-11), protects the default branch:
 
-- **Required status check `check`** (the job above, source GitHub Actions). A PR cannot be merged until it is green, and a commit cannot reach `main` unless it already passed on another ref, so direct pushes to `main` are rejected: even chores like archiving a change go through a PR.
+- **Required status check `check`** (the job above, source GitHub Actions). A PR cannot be merged until it is green, and a commit cannot reach `main` unless it already passed on another ref, so direct pushes to `main` are rejected for everyone outside the bypass list.
 - Branches do **not** have to be up to date with `main` before merging (one developer; re-running CI on every `main` move buys nothing).
 - **Block force pushes** and **restrict deletions** on `main`.
-- **No bypass list**: the repo admin is held to the same rules.
+- **Bypass list: Repository admin** (added 2026-10-11). It exists for one thing: pushing the OpenSpec archive commit (archived change + synced specs, history only) straight to `main` after a feature PR merges, instead of opening an archive-only PR. Everything else (code, tests, docs, chores) still goes through a green PR; the bypass is a convention kept by discipline, not enforced by GitHub.
 
 If the job is renamed in `ci-frontend.yml`, update the required check in the ruleset too, or every PR stays blocked waiting for a check that never reports.
 
