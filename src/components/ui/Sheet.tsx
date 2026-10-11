@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
-import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, type CSSProperties, type ReactNode } from 'react'
+import type { AreaColor } from '../../types'
 import { IconButton } from './IconButton'
 
 type SheetProps = {
@@ -8,6 +9,12 @@ type SheetProps = {
   title: string
   /** Accessible name of the close button, in the current language. */
   closeLabel: string
+  /** Mixes an Area color into the panel, like the Card it edits. */
+  tint?: AreaColor
+  /** Header controls shown before the close button. */
+  actions?: ReactNode
+  /** Keeps the title for screen readers only; the dialog is still named by it. */
+  hideTitle?: boolean
   children: ReactNode
 }
 
@@ -17,7 +24,7 @@ type SheetProps = {
  * Closes on Esc, the close button and a click/tap on the scrim; focus moves into
  * the sheet on open and back to whatever had it (the trigger) on close.
  */
-export function Sheet({ open, onClose, title, closeLabel, children }: SheetProps) {
+export function Sheet({ open, onClose, title, closeLabel, tint, actions, hideTitle, children }: SheetProps) {
   const titleId = useId()
   const panelRef = useRef<HTMLElement>(null)
   const pressStartedOnScrim = useRef(false)
@@ -58,13 +65,20 @@ export function Sheet({ open, onClose, title, closeLabel, children }: SheetProps
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="flex max-h-full w-[min(600px,100%)] animate-rise flex-col gap-2.5 overflow-y-auto rounded-t-[20px] bg-sheet px-5 pt-3.5 pb-[calc(18px+env(safe-area-inset-bottom,0px))] text-ink outline-none min-[720px]:max-h-[88vh] min-[720px]:rounded-[18px] min-[720px]:pb-[18px]"
+        style={tint ? ({ '--b': `var(--color-${tint})` } as CSSProperties) : undefined}
+        className={`flex max-h-full w-[min(600px,100%)] animate-rise flex-col gap-2.5 overflow-y-auto rounded-t-[20px] px-5 pt-3.5 pb-[calc(18px+env(safe-area-inset-bottom,0px))] text-ink outline-none min-[720px]:max-h-[88vh] min-[720px]:rounded-[18px] min-[720px]:pb-[18px] ${tint ? 'card-tint' : 'bg-sheet'}`}
       >
         <div className="-mx-2 flex items-center justify-between gap-2">
-          <h2 id={titleId} className="pl-2 font-display text-[23px] leading-tight font-semibold">
+          <h2
+            id={titleId}
+            className={hideTitle ? 'sr-only' : 'pl-2 font-display text-[23px] leading-tight font-semibold'}
+          >
             {title}
           </h2>
-          <IconButton label={closeLabel} icon={X} onClick={onClose} />
+          <div className="ml-auto flex items-center gap-1">
+            {actions}
+            <IconButton label={closeLabel} icon={X} onClick={onClose} />
+          </div>
         </div>
         {children}
       </section>

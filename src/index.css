@@ -51,9 +51,20 @@
 }
 
 @layer base {
+  /* How strongly an Area color shows (not theme colors, so outside @theme). */
+  :root {
+    --card-tint: 8%;
+    --area-tint: 13%;
+    --paper-grain-opacity: 0.05;
+  }
+
   @media (prefers-color-scheme: dark) {
     :root {
       color-scheme: dark;
+
+      --card-tint: 11%;
+      --area-tint: 10%;
+      --paper-grain-opacity: 0.07;
 
       --color-paper: #1c1a18;
       --color-sheet: #272421;
@@ -111,4 +122,32 @@
       transition: none !important;
     }
   }
+}
+
+/*
+  Area paint. Components set the Area color as `--b` (e.g. `var(--color-sage)`, built
+  from data) and use these utilities; they read too poorly as arbitrary values.
+*/
+
+/* A Card or the editor: the Area color mixed into the sheet. */
+@utility card-tint {
+  background-color: color-mix(in oklab, var(--b) var(--card-tint), var(--color-sheet));
+}
+
+/* An Area region: a soft, slightly irregular radial tint with no border. */
+@utility area-tint {
+  border-radius: 48% 52% 46% 54% / 52% 44% 56% 48%;
+  background-image: radial-gradient(
+    ellipse at 50% 45%,
+    color-mix(in oklab, var(--b) var(--area-tint), transparent) 0%,
+    color-mix(in oklab, var(--b) calc(var(--area-tint) * 0.5), transparent) 45%,
+    transparent 72%
+  );
+}
+
+/* Faint SVG noise; the Desk moves and scales it with the view. */
+@utility paper-grain {
+  opacity: var(--paper-grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 0 0.15 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
 }

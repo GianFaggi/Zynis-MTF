@@ -8,6 +8,7 @@ export const SCHEMA_VERSION = 1
 
 export const DATA_KEY = 'mtf_data'
 export const LANGUAGE_KEY = 'mtf_language'
+export const HINT_SEEN_KEY = 'mtf_hint_seen'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
 
 type Migration = (doc: Record<string, unknown>) => Record<string, unknown>
@@ -62,6 +63,15 @@ export function loadLanguage(): Language | null {
 
 export function saveLanguage(language: Language): void {
   write(LANGUAGE_KEY, language)
+}
+
+/** Whether the first-run hint was dismissed on this device. A device setting, like the language. */
+export function loadHintSeen(): boolean {
+  return read(HINT_SEEN_KEY) === '1'
+}
+
+export function saveHintSeen(): void {
+  write(HINT_SEEN_KEY, '1')
 }
 
 /** Runs `steps[v]` from the document's version up to `target`, one version at a time. */

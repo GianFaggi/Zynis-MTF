@@ -2,14 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MtfData } from '../types'
 import {
   DATA_KEY,
+  HINT_SEEN_KEY,
   LANGUAGE_KEY,
   RECOVERY_KEY_PREFIX,
   SCHEMA_VERSION,
   emptyData,
   loadData,
+  loadHintSeen,
   loadLanguage,
   migrate,
   saveData,
+  saveHintSeen,
   saveLanguage,
 } from './storage'
 
@@ -118,9 +121,18 @@ describe('storage', () => {
 
     expect(loadData()).toEqual(emptyData())
     expect(loadLanguage()).toBeNull()
+    expect(loadHintSeen()).toBe(false)
     expect(() => saveData(sample)).not.toThrow()
     expect(() => saveLanguage('en')).not.toThrow()
+    expect(() => saveHintSeen()).not.toThrow()
     expect(warn).toHaveBeenCalled()
+  })
+
+  it('remembers that the first-run hint was dismissed', () => {
+    expect(loadHintSeen()).toBe(false)
+    saveHintSeen()
+    expect(localStorage.getItem(HINT_SEEN_KEY)).toBe('1')
+    expect(loadHintSeen()).toBe(true)
   })
 
   it('stores and reads the language', () => {

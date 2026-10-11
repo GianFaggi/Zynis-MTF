@@ -25,12 +25,13 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 - [ ] First deploy to Vercel
 
 ## Change 2 — Desk ([#2](https://github.com/GianFaggi/Zynis-MTF/issues/2))
-- [ ] Desk with pan / zoom (@use-gesture/react), world coordinates, far zoom
-- [ ] Areas Trabajo / Vida / Recordar
-- [ ] Create, edit, delete Cards (title, text, checklist, pin); editor sheet with Place selector
-- [ ] Drag Cards (mouse + press-and-hold), Area decided on drop
-- [ ] Dock: jump to Area, See all, Tidy up; search
-- [ ] First-run hint
+- [x] Desk with pan / zoom (@use-gesture/react), world coordinates, far zoom
+- [x] Areas Trabajo / Vida / Recordar
+- [x] Create, edit, delete Cards (title, text, checklist, pin); editor sheet with Place selector
+- [x] Drag Cards (mouse + press-and-hold), Area decided on drop
+- [x] Dock: jump to Area, See all, Tidy up; search
+- [x] First-run hint
+- [x] Manual check on a real Android phone and an iPhone (task 9.5)
 
 ## Change 3 — Wins ([#3](https://github.com/GianFaggi/Zynis-MTF/issues/3))
 - [ ] Win events (item, card, note)
@@ -44,13 +45,13 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 
 ## Small tickets
 - [ ] Theme toggle in Settings: System · Light · Dark ([#5](https://github.com/GianFaggi/Zynis-MTF/issues/5)); after change 1 merges
+- [ ] Custom Areas ("Áreas propias"): create, rename, recolor, delete with a clear rule for its Cards; after change 2 ([#7](https://github.com/GianFaggi/Zynis-MTF/issues/7)). Moved from the V2 backlog during change 2: it needs no server, and change 2 builds every Desk behavior over the list of Areas so this is mostly UI. Moving/resizing Areas stays out unless that ticket decides otherwise.
 
 ---
 
 ## V2 Backlog (do not implement in MVP)
 
 - .NET backend: accounts + login, phone ↔ PC sync, offline queue
-- Custom Areas (create, rename, recolor, move/resize)
 - Sharing a Card or an Area with someone
 - Reminders on a Card
 - Export wins to a Sheet / CSV

@@ -45,9 +45,21 @@ Live in the `@theme static` block of `src/index.css` (Tailwind v4). TypeScript n
 - `index.html` has two `theme-color` metas (light `#F5F1EA`, dark `#1C1A18`) so the phone status bar matches.
 - There is no manual light/dark toggle in the MVP.
 
-- Card fill = Area color mixed into `sheet` (`color-mix(in oklab, var(--b) 8%, var(--sheet))`, 11% in dark).
-- Area region = soft radial gradient of the Area color, no border.
-- A faint paper grain (SVG noise) moves with the Desk.
+### Area paint
+
+Components set the Area color as the custom property `--b` (`var(--color-sage)`, built from data) and paint with three `@utility` rules in `src/index.css`. They are named utilities because the gradients and the SVG read too poorly as arbitrary values.
+
+| Utility | What | Strength variable (light / dark) |
+|---|---|---|
+| `card-tint` | Card and editor fill: `color-mix(in oklab, var(--b) var(--card-tint), var(--color-sheet))` | `--card-tint` 8% / 11% |
+| `area-tint` | Area region: soft, slightly irregular radial gradient of `--b`, no border | `--area-tint` 13% / 10% |
+| `paper-grain` | Faint SVG noise, 220 px tiles. Painted once on its own layer, one tile larger than the screen; the Desk moves it with a `transform` by the pan modulo 220 px, so panning never repaints it. It does not scale with the zoom: resizing the SVG noise every frame was ~85% of the paint work while moving (measured in change 2) | `--paper-grain-opacity` 0.05 / 0.07 |
+
+The strength variables live on `:root` in `@layer base` (they are not theme colors, so not in `@theme`) and the dark block redefines them.
+
+Other Desk paint, as arbitrary values in the components: Card border `color-mix(in oklab, var(--b) 18%, transparent)`; Area label `color-mix(in oklab, var(--b) 75%, var(--color-ink))`. A dragged Card previews its new Area through `--b-preview` (the Card's `--b` is `var(--b-preview, var(--color-…))`), so the drag code never touches a style React owns.
+
+**Search** outlines matching Cards with a 3 px **ink** ring and dims the rest to 18%. The mockup used the accent there; the app does not, because the accent is reserved for wins. On the Desk, the only accent is a checked Item's box.
 
 ## Typography
 
@@ -66,12 +78,14 @@ Closed API: typed props, no `className`, no accent color.
 
 | Component | Props | Notes |
 |---|---|---|
-| `Button` | `children`, `onClick?`, `variant?: 'primary' \| 'quiet'` (default `quiet`), `type?`, `disabled?` | `primary` = ink fill, `quiet` = `hover` fill |
+| `Button` | `children`, `onClick?`, `variant?: 'primary' \| 'quiet' \| 'danger'` (default `quiet`), `type?`, `disabled?`, `pressed?` | `primary` = ink fill, `quiet` = `hover` fill (ink fill when `pressed`), `danger` = danger text, no fill. `pressed` → `aria-pressed`, for toggles such as the editor's Pin. `danger` and `pressed` were added in change 2; a pressed toggle uses ink, never the accent |
 | `IconButton` | `label` (required), `icon: LucideIcon`, `onClick?`, `pressed?` | 38px round; `label` → `aria-label`; `pressed` → `aria-pressed` |
 | `Segmented<T>` | `label`, `options: { value, label }[]`, `value`, `onChange` | `role="group"`; active option has `aria-pressed="true"` |
-| `Sheet` | `open`, `onClose`, `title`, `closeLabel`, `children` | `div role="dialog" aria-modal` over a scrim (not `<dialog>`: jsdom lacks `showModal()`); bottom sheet on phones, centered from 720px; closes on Esc, close button and scrim press; focus moves in on open and back to the trigger on close |
+| `Sheet` | `open`, `onClose`, `title`, `closeLabel`, `children`, `tint?: AreaColor`, `actions?: ReactNode`, `hideTitle?: boolean` | `div role="dialog" aria-modal` over a scrim (not `<dialog>`: jsdom lacks `showModal()`); bottom sheet on phones, centered from 720px; closes on Esc, close button and scrim press; focus moves in on open and back to the trigger on close. `tint` fills the panel with `card-tint` in that Area color; `actions` render in the header before the close button; `hideTitle` keeps the `h2` for screen readers only (`sr-only`), so the dialog is still named. Change 2 added the last three for the Card editor |
 
 UI components receive their texts as props (e.g. `closeLabel`); they do not read the i18n store.
+
+Desk-only pieces live in `src/desk/`, not in the kit: `ItemCheck` (an Item's 19 px box with a widened touch target; checked = accent fill, the one accent on the Desk) is shared by `DeskCard` and `CardEditor`.
 
 ## Rules
 
