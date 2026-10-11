@@ -26,3 +26,4 @@ We chose this because the schema is the part that is hard to change once people 
 - Recovery copies are never deleted automatically; change 4 (Backup) can surface them.
 - Entities inside the lists are not validated one by one on load; they were written by MTF. Import (change 4) validates a foreign file more strictly.
 - Writing the whole document on each change is cheap at notepad size; while dragging, writes are debounced (change 2).
+  - *Updated in change 2*: no debounce was needed. A drag moves only the DOM and writes the store once, on drop (`dropCard`), so a drag is one save. If profiling ever shows jank while typing, a trailing debounce goes inside `appStore`'s subscriber, one place that changes no component.

@@ -23,14 +23,13 @@ Scaffolded in change 1 with `npm create vite@latest` (`react-ts` template). `pac
 | @fontsource-variable/literata, @fontsource-variable/figtree | 5.3.0 | variable fonts, one file per style |
 | lucide-react | 1.55.0 | |
 | zustand | 5.0.15 | |
+| @use-gesture/react | 10.3.1 | added in change 2 with its first use, the Desk ([desk.md](desk.md)) |
 | vite-plugin-pwa | 2.0.0 | Workbox 7.4 |
 | @vite-pwa/assets-generator | 2.0.0 | dev; `npm run generate-pwa-assets` ([pwa.md](pwa.md)) |
 | vitest | 5.0.3 | |
 | jsdom | 29.1.1 | |
 | @testing-library/react · dom · user-event · jest-dom | 16.3.3 · 10.4.2 · 14.6.7 · 7.0.1 | |
 | @playwright/test | 1.64.0 | Chromium only |
-
-`@use-gesture/react` is installed in change 2, with its first use.
 
 Node: 24 locally, 22 in CI.
 

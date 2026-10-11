@@ -1,43 +1,58 @@
 import { expect, test } from '@playwright/test'
+import { areaLabel, openApp } from './helpers.ts'
 
 test.use({ locale: 'es-AR' })
 
-test('shows the base paper screen with no horizontal scroll', async ({ page }) => {
-  await page.goto('/')
+test('opens to the Desk with its Areas, under the floating wordmark', async ({ page }) => {
+  await openApp(page)
   await expect(page.getByRole('heading', { name: 'mtf' })).toBeVisible()
-  await expect(page.getByText('Hola. Tu escritorio de papel ya casi está listo.')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Escritorio' })).toBeVisible()
+  await expect(areaLabel(page, 'Trabajo')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'es')
-
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-  expect(overflow).toBeLessThanOrEqual(0)
 })
 
-test('the welcome line is centered on the paper, clear of the floating wordmark', async ({ page }) => {
-  await page.goto('/')
-  const wordmark = (await page.getByRole('heading', { name: 'mtf' }).boundingBox())!
-  const welcome = (await page.getByText('Hola. Tu escritorio de papel ya casi está listo.').boundingBox())!
-  const viewport = page.viewportSize()!
+test('the screen fits the viewport: no page scroll, only the Desk moves', async ({ page }) => {
+  await openApp(page)
+  const overflow = await page.evaluate(() => ({
+    x: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    y: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+  }))
+  expect(overflow.x).toBeLessThanOrEqual(0)
+  expect(overflow.y).toBeLessThanOrEqual(0)
 
-  expect(welcome.y).toBeGreaterThan(wordmark.y + wordmark.height)
-  expect(Math.abs(welcome.y + welcome.height / 2 - viewport.height / 2)).toBeLessThan(viewport.height * 0.1)
+  await page.mouse.move(200, 400)
+  await page.mouse.wheel(0, 600)
+  expect(await page.evaluate(() => [window.scrollX, window.scrollY])).toEqual([0, 0])
 })
 
 test('switching to English survives a reload in a Spanish browser', async ({ page }) => {
-  await page.goto('/')
+  await openApp(page)
   await page.getByRole('button', { name: 'Ajustes' }).click()
   await page.getByRole('button', { name: 'English' }).click()
-  await expect(page.getByText('Hi. Your paper desk is almost ready.')).toBeVisible()
+  await expect(areaLabel(page, 'Work')).toBeVisible()
 
   await page.reload()
-  await expect(page.getByText('Hi. Your paper desk is almost ready.')).toBeVisible()
+  await expect(areaLabel(page, 'Work')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 })
 
 test('Settings closes when tapping outside it', async ({ page }) => {
-  await page.goto('/')
+  await openApp(page)
   await page.getByRole('button', { name: 'Ajustes' }).click()
   await expect(page.getByRole('dialog', { name: 'Ajustes' })).toBeVisible()
 
   await page.mouse.click(10, 10)
   await expect(page.getByRole('dialog')).toBeHidden()
+})
+
+test('the first-run hint shows once and, dismissed, stays gone after a reload', async ({ page }) => {
+  await openApp(page, { hintSeen: false })
+  const hint = page.getByRole('note')
+  await expect(hint).toContainText('Arrastrá las tarjetas a donde quieras')
+  await hint.getByRole('button', { name: 'Entendido' }).click()
+  await expect(hint).toBeHidden()
+
+  await page.reload()
+  await expect(areaLabel(page, 'Trabajo')).toBeVisible()
+  await expect(hint).toBeHidden()
 })

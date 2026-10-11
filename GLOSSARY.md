@@ -9,8 +9,12 @@ The single, endless surface where every Card lives. The user pans and zooms it. 
 _Avoid_: Board, canvas (in UI copy), workspace, page
 
 **Area**:
-A named, colored region of the Desk (by default Trabajo, Vida, Recordar). An Area groups Cards by where they sit; it is not a container, a tab or a list. A Card belongs to the Area it was dropped in and takes its color.
+A named, colored region of the Desk. Three default Areas (Trabajo, Vida, Recordar) are created on first launch; the user will be able to add their own. An Area groups Cards by where they sit; it is not a container, a tab or a list. A Card belongs to the Area it was dropped in, or to the nearest Area when dropped outside all of them, and takes its color.
 _Avoid_: Board, table, tab, list, category, folder
+
+**Place**:
+The editor's way to move a Card to another Area without dragging it (the "Lugar" selector). The Card lands somewhere inside the chosen Area and takes its color.
+_Avoid_: Move to, category, folder
 
 **Position**:
 Where a Card sits on the Desk, in Desk coordinates (independent of zoom), plus a small tilt so it looks like paper.

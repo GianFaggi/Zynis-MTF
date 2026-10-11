@@ -15,7 +15,8 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 - Areas, Cards and Items also have `createdAt` and `updatedAt` (epoch ms). `updatedAt` changes on every edit, including moves. Win events have `at` instead (they are never edited).
 - `newId()` uses the built-in `crypto.randomUUID()`; outside a secure context (phone testing over `http://192.168.x.x`) it falls back to `crypto.getRandomValues()`. No `uuid` package.
 - Keys are prefixed `mtf_` and the root document carries a `schemaVersion` for migrations.
-- Writes are debounced while dragging; a drop always writes.
+- A drag writes once, on drop: while dragging only the DOM moves. Typing in the editor writes on each change (cheap at notepad size, ADR 0004).
+- On a launch with no stored Areas, the store writes the three default Areas into `mtf_data` (`ensureDefaultAreas`), so Cards always point at Area ids that survive a reload. A document from change 1 (`areas: []`) gets them the same way; no migration.
 - Deleting a Card does **not** delete its win events: what you did still counts.
 - View state (pan/zoom, open sheets) is never part of `mtf_data`.
 
@@ -79,7 +80,7 @@ interface MtfData {         // the whole `mtf_data` document
 | `mtf_data` | `MtfData` as JSON | change 1 |
 | `mtf_language` | `'es'` or `'en'`; anything else is ignored | change 1 |
 | `mtf_data_recovery_<epochMs>` | raw text of an `mtf_data` that could not be read, kept instead of overwritten | change 1 |
-| `mtf_hint_seen` | first-run hint dismissed | change 2 (planned) |
+| `mtf_hint_seen` | `'1'` once the first-run hint is dismissed; a device setting, not part of `mtf_data` or the Backup | change 2 |
 
 ## Storage layer API (`src/lib/storage.ts`)
 
@@ -89,6 +90,8 @@ interface MtfData {         // the whole `mtf_data` document
 | `saveData(data)` | Writes the whole document. |
 | `loadLanguage(): Language \| null` | `null` when unset or unknown. |
 | `saveLanguage(language)` | |
+| `loadHintSeen(): boolean` | `true` only when `mtf_hint_seen` is `'1'`; `false` when unset or storage refuses to read |
+| `saveHintSeen()` | Writes `'1'` |
 | `migrate(doc, steps, target)` | Runs `steps[v]` (v → v + 1) up to `target`; throws if a step is missing. The `migrations` map is empty at v1. |
 | `emptyData()` | `{ schemaVersion: SCHEMA_VERSION, areas: [], cards: [], events: [] }` |
 

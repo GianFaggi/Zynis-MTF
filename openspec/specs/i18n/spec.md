@@ -29,7 +29,7 @@ The Settings sheet SHALL offer a language selector with "Español" and "English"
 
 #### Scenario: Switch to English
 - **WHEN** the UI is in Spanish and the user picks "English" in Settings
-- **THEN** all visible texts, including the welcome line and the Settings sheet, switch to English
+- **THEN** all visible texts, including the Area names, the Dock and the Settings sheet, switch to English
 - **AND** "English" is shown as the selected option
 
 ### Requirement: Language is remembered

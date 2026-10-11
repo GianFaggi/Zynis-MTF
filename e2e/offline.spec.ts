@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { areaLabel } from './helpers.ts'
 
 test.use({ locale: 'es-AR' })
 
@@ -22,10 +23,10 @@ test('opens offline after the first visit, with its fonts', async ({ page, conte
   await page.reload()
 
   await expect(page.getByRole('heading', { name: 'mtf' })).toBeVisible()
-  await expect(page.getByText('Hola. Tu escritorio de papel ya casi está listo.')).toBeVisible()
+  await expect(areaLabel(page, 'Trabajo')).toBeVisible()
   expect(await fontLoaded(page, 'italic 16px "Literata Variable"')).toBe(true)
 
-  // On a phone the base screen shows no Figtree text; the Settings labels need it.
+  // Figtree draws the Area counts and every control.
   await page.getByRole('button', { name: 'Ajustes' }).click()
   await expect(page.getByRole('group', { name: 'Idioma' })).toBeVisible()
   expect(await fontLoaded(page, '16px "Figtree Variable"')).toBe(true)
@@ -40,7 +41,7 @@ test('shows the language chosen online when opened offline', async ({ page, cont
   await context.setOffline(true)
   await page.reload()
 
-  await expect(page.getByText('Hi. Your paper desk is almost ready.')).toBeVisible()
+  await expect(areaLabel(page, 'Work')).toBeVisible()
 })
 
 test('no request leaves the MTF origin', async ({ page, baseURL }) => {
