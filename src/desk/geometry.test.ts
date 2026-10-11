@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeCard, rowOfAreas } from '../test/fixtures'
+import { jarBounds, jarRect } from '../wins/jarLayout'
 import {
   MAX_SCALE,
   MIN_SCALE,
@@ -104,17 +105,24 @@ describe('deskBounds', () => {
     expect(deskBounds(rowOfAreas(), cards, new Map([['c1', 300]]))).toEqual({ x: 80, y: 120, w: 4236 - 80, h: 2300 - 120 })
   })
 
+  it('contains the Jar and its caption', () => {
+    const bounds = deskBounds(rowOfAreas(), [], noHeights)!
+    const jar = jarBounds(jarRect(rowOfAreas())!)
+    expect(bounds).toEqual({ x: 80, y: 120, w: 3100, h: jar.y + jar.h - 120 })
+  })
+
   it('is null for an empty Desk', () => {
     expect(deskBounds([], [], noHeights)).toBeNull()
   })
 })
 
 describe('initialView', () => {
-  it('shows every Area on a desktop window', () => {
+  it('shows every Area and the Jar on a desktop window', () => {
     const viewport = { w: 1440, h: 900 }
     const result = initialView(rowOfAreas(), [], noHeights, viewport)
     expect(result).toEqual(fitRect(deskBounds(rowOfAreas(), [], noHeights)!, viewport))
-    expect(result.s).toBeGreaterThanOrEqual(0.34)
+    // The fit is width-limited (3100 px wide with or without the Jar), so the Jar costs no zoom.
+    expect(result.s).toBeCloseTo(1440 / (3100 + 60))
   })
 
   it('shows the first Area on a phone', () => {

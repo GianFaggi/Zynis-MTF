@@ -42,14 +42,17 @@ One screen: the **Desk**. Everything else (Card editor, Mis logros, settings) op
 
 ## Two stores
 
-- **`appStore`** holds what is saved: `data` (the `MtfData` document) and `language`. A `subscribe` writes `data` through the storage layer whenever its reference changes. Its actions replace `data` immutably and set `updatedAt` on what they touch:
+- **`appStore`** holds what is saved: `data` (the `MtfData` document) and `language`. A `subscribe` writes `data` through the storage layer whenever its reference changes. Its actions replace `data` immutably and set `updatedAt` on what they touch; a Card and its win events always change in the same replacement ([Wins as events](#wins-as-events)):
   - `setLanguage(language)`
   - `ensureDefaultAreas()` — runs once when the store is created
-  - `createCard(point)` → new Card id, `updateCard(id, { title?, body? })`, `togglePin(id)`, `deleteCard(id)`
-  - `addItem(cardId, afterItemId?)` → new empty Item id, `updateItem(cardId, itemId, text)`, `toggleItem(cardId, itemId)`, `removeItem(cardId, itemId)`
+  - `createCard(point)` → new Card id, `updateCard(id, { title?, body? })`, `togglePin(id)`, `deleteCard(id)` (also removes every event of the Card)
+  - `addItem(cardId, afterItemId?)` → new empty Item id, `updateItem(cardId, itemId, text)`, `removeItem(cardId, itemId)` — each keeps the Card Win in step; `removeItem` also removes the Item's Wins
+  - `toggleItem(cardId, itemId)` → `'checked' | 'finished' | 'unchecked' | undefined`: `'finished'` when this check finished the Card, `undefined` when the Item does not exist. Components turn the outcome into feedback with `useWinFeedback()`; the store never shows UI
   - `dropCard(id, position, height?)` (end of a drag), `placeCard(id, areaId)` (Place selector), `tidyUp(heights)`
-  - `closeCard(id)` — when the editor closes: drops blank Items, removes the Card if it is empty
-- **`deskStore`** holds Desk UI state that is never saved: the view `{ x, y, s }`, `flying`, `tidying`, `editingId`, `newCardId`, `searchOpen`, `query`, and the actions that change them: `setView`, `flyTo`, `animateTidy`, `openEditor(id, { isNew })`, `closeEditor`, `toggleSearch`, `setQuery`. It is shared because the Dock, the `+` button and search live outside the Desk but fly the view or open the editor.
+  - `closeCard(id, { isNew? })` — when the editor closes: drops blank Items (and their Wins), removes the Card and all its events if it is empty, and counts a kept new Card as a note. `CardEditor` passes `isNew` from `deskStore.newCardId`
+  - `jarCard(id)` → `{ ok: true } | { ok: false, pending }`: refuses, writing nothing, a Card with unchecked Items (`pending` = how many), and a missing, empty or already jarred Card (`pending: 0`); otherwise sets `jarredAt` and gives a Card without Items its Card Win
+  - `returnCard(id)` — out of the Jar: `jarredAt = null`, a `spotIn` its Area (or the Area nearest its old position when that Area is gone), on top, and the Card Win follows (a Card without Items loses it)
+- **`deskStore`** holds Desk UI state that is never saved: the view `{ x, y, s }`, `flying`, `tidying`, `editingId`, `newCardId`, `searchOpen`, `query`, and the actions that change them: `setView`, `flyTo`, `animateTidy`, `openEditor(id, { isNew })`, `closeEditor`, `toggleSearch`, `setQuery`. It is shared because the Dock, the `+` button and search live outside the Desk but fly the view or open the editor. Change 3 added the Win feedback state: `toast` (`{ id, title, detail? } | null`) with `showToast(title, detail?)` (replaces the current toast and hides it after 2.8 s; a queue would lag behind fast Wins), `winsOpen` with `openWins` / `closeWins` (the Mis logros sheet), and `winsBump` with `bumpWins` (the counter remounts its number on it to replay the bump).
 - **No React render per gesture frame.** The world `div` does not read the view through a selector: `Desk` subscribes to `deskStore` with `subscribe()` and writes `transform`, the grain layer's `transform` and `data-far` straight to the DOM. Only `transform` changes per frame, so a pan or zoom is composited by the GPU with no repaint. A dragged Card is moved the same way, through its element; the store hears about it once, on drop.
 
 ## Source layout
@@ -57,10 +60,11 @@ One screen: the **Desk**. Everything else (Card editor, Mis logros, settings) op
 | Path | What |
 |---|---|
 | `src/main.tsx` | Entry: font imports, `index.css`, mounts `<App />` |
-| `src/App.tsx` | The paper screen: composes the Desk, the floating UI (wordmark, tools pill with search and settings, Dock, `+` button, first-run hint) and the sheets (Card editor, Settings); keeps `<html lang>` in sync with the store |
-| `src/index.css` | Tailwind import, Paper tokens, dark overrides, base styles, Area paint utilities ([design-system.md](design-system.md)) |
-| `src/components/ui/` | Closed-API UI kit: `Button`, `IconButton`, `Segmented`, `Sheet` |
+| `src/App.tsx` | The paper screen: composes the Desk, the floating UI (wordmark, tools pill with search, the wins counter and settings, Dock, `+` button, first-run hint), the sheets (Card editor, Mis logros, Settings) and the toast; keeps `<html lang>` in sync with the store |
+| `src/index.css` | Tailwind import, Paper tokens, dark overrides, base styles, Win keyframes, Area paint utilities ([design-system.md](design-system.md)) |
+| `src/components/ui/` | Closed-API UI kit: `Button`, `IconButton`, `Segmented`, `Sheet`, `Toast` |
 | `src/desk/` | The Desk feature: pure helpers (`geometry`, `areas`, `tidy`, `search`, `cardText`, `intent`), `deskStore`, `dom`, and the components `Desk`, `AreaRegion`, `DeskCard`, `ItemCheck`, `CardEditor`, `Dock`, `SearchBox`, `FirstRunHint` ([desk.md](desk.md)) |
+| `src/wins/` | Wins and the Jar (change 3): pure `rules`, `stats` and `jarLayout`; `useWinStats`, `feedback` (`useWinFeedback`), `sparks`; the components `Jar`, `JarIcon`, `WinsCounter`, `MisLogros`, `WinsChart` ([desk.md](desk.md#files-srcwins)) |
 | `src/store/appStore.ts` | `createAppStore()` + the app's `useAppStore`: `data`, `language` and the actions above. Loads on create, then runs `ensureDefaultAreas`; a `subscribe` saves `data` whenever its reference changes |
 | `src/lib/storage.ts` | The only module that touches localStorage ([storage.md](storage.md)) |
 | `src/lib/id.ts` | `newId()` — v4 UUIDs |
@@ -81,7 +85,29 @@ i18n: components call `const t = useT()` and `t('key', ...args)`. UI kit compone
 
 ## Wins as events
 
-Mis logros is computed from an append-only list of **win events** (`item`, `card`, `note`) with timestamps, not from counters. Unchecking an Item removes its event; taking a Card out of the Jar removes the Card's event if it is no longer finished. This keeps "last 7 days", "per day" and "since you started" consistent and makes V2 sync a merge of event lists.
+Mis logros, the wins counter and the Jar caption are computed from a list of **win events** (`MtfData.events`: `item`, `card`, `note`, each with an `id` and the moment `at`), never from stored counters. The list is **not append-only**: events are removed when what they count goes away ([ADR 0005](../../docs/adr/0005-win-events-with-removals.md)).
+
+Two invariants hold after every store action:
+
+- **A Card on the Desk has one `card` event exactly while it is finished** (`isFinished`: at least one Item with text, all checked). A Card in the Jar always has one.
+- **A Win exists only while the Card or Item it counts exists.**
+
+The rules are pure functions in `src/wins/rules.ts`; the store only wires them in, changing the Card and `events` in one `data` replacement:
+
+| Rule | When | Effect on `events` |
+|---|---|---|
+| `itemToggled` | `toggleItem` | Check → append an `item` event. Uncheck → remove the most recent `item` event for that Item. Then `syncCardWin` |
+| `syncCardWin` | After any change to a Desk Card's Items (`toggleItem`, `addItem`, `updateItem`, `removeItem`, `closeCard`) and on `returnCard` | Finished and no Card Win → append a `card` event; not finished and has one → remove it |
+| `itemsRemoved` | `removeItem`, and `closeCard` when it drops blank Items | Remove those Items' `item` events |
+| `cardDeleted` | `deleteCard`, and `closeCard` when it discards an empty Card | Remove every event with that `cardId` (`item`, `card`, `note`) |
+| `cardJarred` | `jarCard` | Append a `card` event only if the Card has none (a Card without Items) |
+| `noteWritten` | `closeCard` of a new Card that is kept | Append a `note` event |
+
+New events carry `cardId`, a `title` snapshot (`displayTitle(card)`) and the `areaId`; `itemId` only on `item` events. Title and text edits, moves, Place and Tidy up never touch `events`, and time never removes anything. `jarVerdict(card)` (accept when no Item is pending) gates the Jar before anything is written.
+
+"Things done" = `item` + `card` events; `note` events are counted apart. `src/wins/stats.ts` turns the list into numbers: `winStats(events, now)` → `days` (the last 7 local calendar days, oldest first, built from dates so a DST change never shifts a day), `week` (`items`, `cards`, `notes`, `done`), `best` (ties → most recent day, `null` for a quiet week) and `total` (all things done ever). `daysAgo(time, now)` counts calendar days for "hoy" / "ayer" / "hace N días".
+
+Removing events makes V2 sync need tombstones or a deletion log next to `events`; that cost is recorded in ADR 0005.
 
 ## MVP vs V2
 

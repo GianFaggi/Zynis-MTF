@@ -150,4 +150,60 @@ describe('CardEditor', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cerrar' }))
     expect(stored(id)).toBeUndefined()
   })
+
+  it('closing a new Card that was written counts a note', async () => {
+    const id = useAppStore.getState().createCard({ x: 500, y: 500 })!
+    openEditor(id, true)
+    await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Idea')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    expect(useAppStore.getState().data.events.map((event) => [event.type, event.cardId])).toEqual([['note', id]])
+  })
+
+  it('checking an Item in the editor counts it, and the last one celebrates', async () => {
+    resetStores({ cards: [makeCard({ id: 'c1', items: [makeItem({ id: 'i1', text: 'Pan', done: true }), makeItem({ id: 'i2', text: 'Leche' })] })] })
+    openEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Leche' }))
+    expect(useDeskStore.getState().toast?.title).toBe('¡Tarjeta completa!')
+    expect(useDeskStore.getState().winsBump).toBe(1)
+  })
+
+  describe('"Llevar al frasco"', () => {
+    const pending = Array.from({ length: 3 }, (_, i) => makeItem({ id: `p${i}`, text: `Falta ${i}` }))
+
+    it('refuses a Card with unchecked Items: the editor stays open and says how many are left', async () => {
+      resetStores({ cards: [makeCard({ id: 'c1', title: 'Mudanza', items: pending })] })
+      openEditor()
+      await userEvent.click(screen.getByRole('button', { name: 'Llevar al frasco' }))
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(useDeskStore.getState().toast).toMatchObject({ title: 'Todavía no', detail: 'Te faltan 3 elementos' })
+      expect(stored()!.jarredAt).toBeNull()
+    })
+
+    it('puts a finished Card in the Jar and closes the editor', async () => {
+      resetStores({ cards: [makeCard({ id: 'c1', title: 'Compras', items: [makeItem({ id: 'i1', text: 'Pan', done: true })] })] })
+      openEditor()
+      await userEvent.click(screen.getByRole('button', { name: 'Llevar al frasco' }))
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(stored()!.jarredAt).not.toBeNull()
+      expect(useDeskStore.getState().toast?.title).toBe('¡Al frasco!')
+    })
+
+    it('a new Card put in the Jar from the editor also counts its note', async () => {
+      const id = useAppStore.getState().createCard({ x: 500, y: 500 })!
+      openEditor(id, true)
+      await userEvent.type(screen.getByRole('textbox', { name: 'Título' }), 'Llamar al banco')
+      await userEvent.click(screen.getByRole('button', { name: 'Llevar al frasco' }))
+
+      expect(stored(id)!.jarredAt).not.toBeNull()
+      expect(useAppStore.getState().data.events.map((event) => event.type).sort()).toEqual(['card', 'note'])
+    })
+
+    it('is unavailable while the Card is empty', () => {
+      const id = useAppStore.getState().createCard({ x: 500, y: 500 })!
+      openEditor(id, true)
+      expect(screen.getByRole('button', { name: 'Llevar al frasco' })).toBeDisabled()
+    })
+  })
 })

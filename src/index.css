@@ -22,6 +22,9 @@
   --color-accent: #b85a3a;
   --color-accent-ink: #9c4527;
   --color-on-accent: #ffffff;
+  /* Built from the tokens above, so the dark block needs no lines for them. */
+  --color-accent-soft: color-mix(in oklab, var(--color-accent) 14%, var(--color-paper));
+  --color-bar: color-mix(in oklab, var(--color-accent) 30%, var(--color-rule));
 
   /* Area colors */
   --color-sage: #6f8f6b;
@@ -34,6 +37,8 @@
   --color-scrim: rgb(40 30 20 / 0.32);
   --color-hover: rgb(70 50 30 / 0.07);
   --color-danger: #b3261e;
+  /* The Jar's glass. */
+  --color-glass: rgb(255 255 255 / 0.45);
 
   --shadow-paper: 0 1px 2px rgb(70 50 30 / 0.07), 0 8px 20px rgb(70 50 30 / 0.07);
   --shadow-lift: 0 18px 40px rgb(70 50 30 / 0.22);
@@ -46,6 +51,62 @@
     from {
       transform: translateY(24px);
       opacity: 0.6;
+    }
+  }
+
+  /* Win feedback. The global reduced-motion rule below turns all of them off. */
+  /* A paper piece falling into the Jar. */
+  --animate-drop: drop 0.6s cubic-bezier(0.4, 0, 0.6, 1.4);
+  @keyframes drop {
+    from {
+      transform: translateY(-190px);
+    }
+  }
+  /* The wins counter on each new Win (restarted by remounting, see WinsCounter). */
+  --animate-bump: bump 0.5s ease;
+  @keyframes bump {
+    30% {
+      transform: scale(1.14);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  /* A Card just finished: it grows a little with a fading glow. `scale`, not `transform`,
+     so it never fights the Card's tilt or a drag. */
+  --animate-pop: pop 0.6s cubic-bezier(0.3, 1.6, 0.5, 1);
+  @keyframes pop {
+    0% {
+      scale: 1;
+      box-shadow:
+        0 0 0 0 color-mix(in oklab, var(--color-accent) 40%, transparent),
+        var(--shadow-paper);
+    }
+    35% {
+      scale: 1.06;
+    }
+    100% {
+      scale: 1;
+      box-shadow:
+        0 0 0 14px transparent,
+        var(--shadow-paper);
+    }
+  }
+  /* The finished Card's seal landing on its corner. */
+  --animate-stamp: stamp 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) 0.12s both;
+  @keyframes stamp {
+    from {
+      scale: 2.2;
+      opacity: 0;
+      rotate: -30deg;
+    }
+  }
+  /* One spark flying out to (--dx, --dy). */
+  --animate-spark: spark 0.75s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  @keyframes spark {
+    to {
+      transform: translate(var(--dx), var(--dy)) scale(0.4);
+      opacity: 0;
     }
   }
 }
@@ -87,6 +148,7 @@
       --color-scrim: rgb(0 0 0 / 0.5);
       --color-hover: rgb(255 255 255 / 0.07);
       --color-danger: #f2948c;
+      --color-glass: rgb(255 255 255 / 0.05);
 
       --shadow-paper: 0 1px 0 rgb(255 255 255 / 0.03), 0 10px 24px rgb(0 0 0 / 0.35);
       --shadow-lift: 0 22px 44px rgb(0 0 0 / 0.55);
@@ -132,6 +194,26 @@
 /* A Card or the editor: the Area color mixed into the sheet. */
 @utility card-tint {
   background-color: color-mix(in oklab, var(--b) var(--card-tint), var(--color-sheet));
+}
+
+/*
+  A finished Card: the Area tint warmed with the accent, an accent border and a soft
+  halo. The halo is a pseudo-element, so it never fights the Card's own shadows (lifted,
+  search hit) or the ink focus ring.
+*/
+@utility card-won {
+  background-color: color-mix(in oklab, var(--color-accent) 10%, color-mix(in oklab, var(--b) var(--card-tint), var(--color-sheet)));
+  border-width: 1.5px;
+  border-color: color-mix(in oklab, var(--color-accent) 70%, transparent);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -5.5px;
+    border: 4px solid color-mix(in oklab, var(--color-accent) 12%, transparent);
+    border-radius: 18px;
+    pointer-events: none;
+  }
 }
 
 /* An Area region: a soft, slightly irregular radial tint with no border. */

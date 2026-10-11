@@ -235,6 +235,202 @@ describe('Card actions', () => {
     store.getState().dropCard('nope', { x: 0, y: 0 })
     store.getState().placeCard('nope', 'a1')
     store.getState().closeCard('nope')
+    store.getState().deleteCard('nope')
+    expect(store.getState().data).toBe(before)
+  })
+})
+
+describe('Win events', () => {
+  const shopping = (done: [boolean, boolean]) =>
+    makeCard({
+      id: 'c1',
+      areaId: 'a2',
+      title: 'Compras',
+      items: [makeItem({ id: 'pan', text: 'Pan', done: done[0] }), makeItem({ id: 'leche', text: 'Leche', done: done[1] })],
+    })
+
+  const kinds = (store: ReturnType<typeof createAppStore>) =>
+    store.getState().data.events.map((event) => [event.type, event.itemId ?? event.cardId])
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('toggleItem says what happened and writes the events with the Item, in one save', () => {
+    const store = storeWith([shopping([false, false])])
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+
+    expect(store.getState().toggleItem('c1', 'pan')).toBe('checked')
+    expect(setItem).toHaveBeenCalledTimes(1)
+    expect(store.getState().toggleItem('c1', 'leche')).toBe('finished')
+    expect(kinds(store)).toEqual([
+      ['item', 'pan'],
+      ['item', 'leche'],
+      ['card', 'c1'],
+    ])
+    expect(storedData().events).toEqual(store.getState().data.events)
+    expect(storedData().cards[0].items.every((item) => item.done)).toBe(true)
+
+    expect(store.getState().toggleItem('c1', 'leche')).toBe('unchecked')
+    expect(kinds(store)).toEqual([['item', 'pan']])
+    expect(store.getState().toggleItem('c1', 'nope')).toBeUndefined()
+  })
+
+  it('checking a blank Item of a finished Card is not a new finish', () => {
+    const card = shopping([true, true])
+    const store = storeWith([{ ...card, items: [...card.items, makeItem({ id: 'blank', text: '' })] }])
+    expect(store.getState().toggleItem('c1', 'blank')).toBe('checked')
+  })
+
+  it('closeCard counts a note only for a kept new Card', () => {
+    const store = storeWith([makeCard({ id: 'new', title: 'Idea' }), makeCard({ id: 'old', title: 'Viaje' })])
+    const empty = store.getState().createCard({ x: 500, y: 500 })!
+
+    store.getState().closeCard(empty, { isNew: true })
+    store.getState().closeCard('old')
+    expect(store.getState().data.events).toEqual([])
+
+    store.getState().closeCard('new', { isNew: true })
+    expect(kinds(store)).toEqual([['note', 'new']])
+    expect(storedData().events).toHaveLength(1)
+  })
+
+  it('closeCard drops a checked blank Item together with its Win, and the Card Win follows', () => {
+    const card = makeCard({ id: 'c1', items: [makeItem({ id: 'pan', text: 'Pan' }), makeItem({ id: 'blank', text: ' ', done: true })] })
+    const store = storeWith([card])
+    store.setState({ data: { ...store.getState().data, events: [{ id: 'e', type: 'item', at: 1, cardId: 'c1', itemId: 'blank' }] } })
+    store.getState().toggleItem('c1', 'pan')
+    expect(kinds(store)).toEqual([
+      ['item', 'blank'],
+      ['item', 'pan'],
+      ['card', 'c1'],
+    ])
+
+    store.getState().closeCard('c1')
+    expect(kinds(store)).toEqual([
+      ['item', 'pan'],
+      ['card', 'c1'],
+    ])
+  })
+
+  it('typing a new Item on a finished Card removes the Card Win; clearing it brings it back', () => {
+    const store = storeWith([shopping([false, false])])
+    store.getState().toggleItem('c1', 'pan')
+    store.getState().toggleItem('c1', 'leche')
+    const manteca = store.getState().addItem('c1')!
+    expect(kinds(store)).toContainEqual(['card', 'c1']) // a blank Item is not part of the Card yet
+
+    store.getState().updateItem('c1', manteca, 'M')
+    expect(kinds(store)).toEqual([
+      ['item', 'pan'],
+      ['item', 'leche'],
+    ])
+    store.getState().updateItem('c1', manteca, '')
+    expect(kinds(store).filter(([type]) => type === 'card')).toHaveLength(1)
+  })
+
+  it('removing a checked Item removes its Win; removing the last unchecked one finishes the Card', () => {
+    const store = storeWith([shopping([false, false])])
+    store.getState().toggleItem('c1', 'pan')
+    store.getState().removeItem('c1', 'leche')
+    expect(kinds(store)).toEqual([
+      ['item', 'pan'],
+      ['card', 'c1'],
+    ])
+
+    store.getState().removeItem('c1', 'pan')
+    expect(kinds(store)).toEqual([])
+  })
+
+  it('deleteCard removes the Card and every event of it, and nothing else', () => {
+    const store = storeWith([shopping([false, false]), makeCard({ id: 'c2', items: [makeItem({ id: 'x', text: 'Otro' })] })])
+    store.getState().toggleItem('c1', 'pan')
+    store.getState().toggleItem('c1', 'leche')
+    store.getState().toggleItem('c2', 'x')
+    store.getState().deleteCard('c1')
+
+    expect(kinds(store)).toEqual([
+      ['item', 'x'],
+      ['card', 'c2'],
+    ])
+    expect(storedData().events).toEqual(store.getState().data.events)
+  })
+})
+
+describe('The Jar', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('jarCard refuses a Card with unchecked Items and writes nothing', () => {
+    const store = storeWith([makeCard({ id: 'c1', items: [makeItem({ id: 'i1', text: 'Pan' }), makeItem({ id: 'i2', text: 'Leche' })] })])
+    const before = store.getState().data
+    expect(store.getState().jarCard('c1')).toEqual({ ok: false, pending: 2 })
+    expect(store.getState().data).toBe(before)
+  })
+
+  it('jarCard refuses a missing, an empty or an already jarred Card', () => {
+    const store = storeWith([makeCard({ id: 'empty' }), makeCard({ id: 'in', title: 'Ya está', jarredAt: 5 })])
+    const before = store.getState().data
+    for (const id of ['nope', 'empty', 'in']) expect(store.getState().jarCard(id).ok).toBe(false)
+    expect(store.getState().data).toBe(before)
+  })
+
+  it('jarCard takes a finished Card without a second Card Win', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(9000)
+    const store = storeWith([makeCard({ id: 'c1', items: [makeItem({ id: 'i1', text: 'Pan' })] })])
+    store.getState().toggleItem('c1', 'i1')
+    expect(store.getState().jarCard('c1')).toEqual({ ok: true })
+
+    expect(cardIn(store, 'c1')).toMatchObject({ jarredAt: 9000, updatedAt: 9000 })
+    expect(store.getState().data.events.filter((event) => event.type === 'card')).toHaveLength(1)
+    expect(storedData().cards[0].jarredAt).toBe(9000)
+  })
+
+  it('jarCard gives a Card without Items its Card Win', () => {
+    const store = storeWith([makeCard({ id: 'c1', title: 'Llamar al banco' })])
+    store.getState().jarCard('c1')
+    expect(store.getState().data.events.map((event) => [event.type, event.cardId])).toEqual([['card', 'c1']])
+  })
+
+  it('returnCard puts the Card inside its Area, on top; a finished Card keeps its Card Win', () => {
+    const store = storeWith([
+      makeCard({ id: 'c1', areaId: 'a2', items: [makeItem({ id: 'i1', text: 'Pan' })], position: { x: 9000, y: 9000, z: 1 } }),
+      makeCard({ id: 'c2', areaId: 'a2', title: 'Arriba', position: { z: 12 } }),
+    ])
+    store.getState().toggleItem('c1', 'i1')
+    store.getState().jarCard('c1')
+    store.getState().returnCard('c1')
+    const card = cardIn(store, 'c1')!
+    const [, life] = rowOfAreas()
+
+    expect(card).toMatchObject({ areaId: 'a2', jarredAt: null })
+    expect(card.position.z).toBe(13)
+    expect(card.position.x).toBeGreaterThanOrEqual(life.rect.x)
+    expect(card.position.x).toBeLessThanOrEqual(life.rect.x + life.rect.w)
+    expect(card.position.y).toBeGreaterThanOrEqual(life.rect.y)
+    expect(card.position.y).toBeLessThanOrEqual(life.rect.y + life.rect.h)
+    expect(store.getState().data.events.filter((event) => event.type === 'card')).toHaveLength(1)
+  })
+
+  it('returnCard takes the Card Win back from a Card without Items', () => {
+    const store = storeWith([makeCard({ id: 'c1', title: 'Llamar al banco' })])
+    store.getState().jarCard('c1')
+    store.getState().returnCard('c1')
+    expect(store.getState().data.events).toEqual([])
+  })
+
+  it('returnCard falls back to the nearest Area when its own is gone', () => {
+    const store = storeWith([makeCard({ id: 'c1', areaId: 'gone', title: 'Huérfana', jarredAt: 5, position: { x: 2400, y: 500 } })])
+    store.getState().returnCard('c1')
+    expect(cardIn(store, 'c1')).toMatchObject({ areaId: 'a3', jarredAt: null })
+  })
+
+  it('returnCard ignores a Card on the Desk', () => {
+    const store = storeWith([makeCard({ id: 'c1', title: 'Acá' })])
+    const before = store.getState().data
+    store.getState().returnCard('c1')
     expect(store.getState().data).toBe(before)
   })
 })

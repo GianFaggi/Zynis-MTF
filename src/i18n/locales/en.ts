@@ -1,5 +1,7 @@
 import type { Messages } from './es'
 
+const thingsDone = (n: number) => (n === 1 ? '1 thing done' : `${n} things done`)
+
 // Typed as `Messages`: a missing or extra key fails the build.
 export const en: Messages = {
   tagline: 'more easy tasks',
@@ -35,4 +37,36 @@ export const en: Messages = {
   searchField: 'Search your cards',
   hint: 'Drag cards wherever you like. On your phone, press and hold a card to move it.',
   hintOk: 'Got it',
+
+  wins: 'My wins',
+  winsCounter: (n: number) => `My wins: ${thingsDone(n)} in 7 days`,
+  cardDone: 'Card complete!',
+  cardDoneDetail: 'Drag it into the jar whenever you like',
+  toJar: 'Drop it in the jar',
+  putInJar: 'Put in the jar',
+  jarred: 'Into the jar!',
+  jarredDetail: (n: number) => `That's ${thingsDone(n)} in 7 days`,
+  notYet: 'Not yet',
+  pending: (n: number) => (n === 1 ? '1 item left' : `${n} items left`),
+  jar: 'Jar',
+  jarName: (n: number) => `Jar: ${n === 1 ? '1 card' : `${n} cards`}. Open My wins`,
+  jarLabel: 'Wins',
+  jarCaption: 'Your jar',
+  jarWeek: (n: number) => `${n} this week · tap it to see more`,
+  thingsDone: (n: number) => (n === 1 ? 'thing done in the last 7 days' : 'things done in the last 7 days'),
+  itemsChecked: 'items checked',
+  cardsFinished: 'cards finished',
+  notesWritten: 'notes written',
+  chartLabel: 'Things done per day, last 7 days',
+  weekdayInitial: (day: number) => 'SMTWTFS'[day],
+  bestDay: (weekday: string, n: number) => `Your best day was ${weekday}, with ${n}.`,
+  quietDays: 'Quiet days count too.',
+  sinceStart: (n: number) => `Since you started: ${thingsDone(n)}.`,
+  inJar: 'In the jar',
+  emptyJar: 'When you drop a card in the jar, it shows up here.',
+  takeOut: 'Take out',
+  returned: 'Back on the desk',
+  today: 'today',
+  yesterday: 'yesterday',
+  daysAgo: (n: number) => `${n} days ago`,
 }

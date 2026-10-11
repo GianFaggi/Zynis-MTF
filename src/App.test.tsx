@@ -35,6 +35,30 @@ describe('App', () => {
     expect(document.documentElement.lang).toBe('es')
   })
 
+  it('the tools pill holds search, the wins counter and settings, in that order', () => {
+    render(<App />)
+    const counter = screen.getByRole('button', { name: 'Mis logros: 0 cosas hechas en 7 días' })
+    const pill = [...counter.parentElement!.querySelectorAll('button')].map((button) => button.getAttribute('aria-label'))
+    expect(pill).toEqual(['Buscar', 'Mis logros: 0 cosas hechas en 7 días', 'Ajustes'])
+  })
+
+  it('the wins counter opens Mis logros, which Esc closes back to the counter', async () => {
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: /^Mis logros/ }))
+    expect(screen.getByRole('dialog', { name: 'Mis logros' })).toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Mis logros/ })).toHaveFocus()
+  })
+
+  it('announces toasts in an always-mounted status region', () => {
+    render(<App />)
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    act(() => useDeskStore.getState().showToast('Volvió al escritorio'))
+    expect(screen.getByRole('status')).toHaveTextContent('Volvió al escritorio')
+  })
+
   it('opens Settings with the language selector', async () => {
     render(<App />)
     await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))

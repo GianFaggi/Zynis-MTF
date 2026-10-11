@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useAppStore } from '../store/appStore'
 import { makeArea, makeCard, rowOfAreas } from '../test/fixtures'
 import { resetStores } from '../test/stores'
+import { jarRect } from '../wins/jarLayout'
 import { useDeskStore } from './deskStore'
 import { Dock } from './Dock'
-import { areaView, deskBounds, fitRect } from './geometry'
+import { areaView, deskBounds, fitRect, toScreen } from './geometry'
 
 const fourth = makeArea({ id: 'a4', name: 'Facu', color: 'plum', rect: { x: 80, y: 1300, w: 980, h: 600 } })
 const jsdomViewport = { w: 1024, h: 768 }
@@ -16,7 +17,7 @@ describe('Dock', () => {
     resetStores({ areas: [...rowOfAreas(), fourth] })
   })
 
-  it('offers one button per stored Area, then See all and Tidy up', () => {
+  it('offers one button per stored Area, then the Jar, See all and Tidy up', () => {
     render(<Dock />)
     const dock = screen.getByRole('navigation', { name: 'Áreas' })
     expect(within(dock).getAllByRole('button').map((button) => button.textContent)).toEqual([
@@ -24,9 +25,24 @@ describe('Dock', () => {
       'Vida',
       'Recordar',
       'Facu',
+      'Frasco',
       'Ver todo',
       'Ordenar',
     ])
+  })
+
+  it('"Frasco" flies to the Jar, at no more than 100%, without the accent', async () => {
+    render(<Dock />)
+    const button = screen.getByRole('button', { name: 'Frasco' })
+    expect(button.className).not.toMatch(/accent/)
+    await userEvent.click(button)
+
+    const { view, flying } = useDeskStore.getState()
+    const jar = jarRect(useAppStore.getState().data.areas)!
+    // The Jar's middle lands in the middle of the screen, horizontally.
+    expect(toScreen(view, { x: jar.x + jar.w / 2, y: jar.y }).x).toBeCloseTo(jsdomViewport.w / 2)
+    expect(view.s).toBeLessThanOrEqual(1)
+    expect(flying).toBe(true)
   })
 
   it('an Area button flies the view to that Area', async () => {

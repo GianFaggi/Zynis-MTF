@@ -1,3 +1,5 @@
+const thingsDone = (n: number) => (n === 1 ? '1 cosa hecha' : `${n} cosas hechas`)
+
 // Spanish is the source dictionary: its shape defines `Messages`.
 // A value is a string, or a function for texts that include values.
 export const es = {
@@ -34,6 +36,39 @@ export const es = {
   searchField: 'Buscar en tus tarjetas',
   hint: 'Arrastrá las tarjetas a donde quieras. En el celu, mantené apretada una tarjeta para moverla.',
   hintOk: 'Entendido',
+
+  wins: 'Mis logros',
+  winsCounter: (n: number) => `Mis logros: ${thingsDone(n)} en 7 días`,
+  cardDone: '¡Tarjeta completa!',
+  cardDoneDetail: 'Arrastrala al frasco cuando quieras',
+  toJar: 'Llevala al frasco',
+  putInJar: 'Llevar al frasco',
+  jarred: '¡Al frasco!',
+  jarredDetail: (n: number) => (n === 1 ? `Ya va ${thingsDone(n)} en 7 días` : `Ya van ${thingsDone(n)} en 7 días`),
+  notYet: 'Todavía no',
+  pending: (n: number) => (n === 1 ? 'Te falta 1 elemento' : `Te faltan ${n} elementos`),
+  jar: 'Frasco',
+  jarName: (n: number) => `Frasco: ${n === 1 ? '1 tarjeta' : `${n} tarjetas`}. Abrir Mis logros`,
+  jarLabel: 'Logros',
+  jarCaption: 'Tu frasco',
+  jarWeek: (n: number) => `${n} esta semana · tocalo para ver más`,
+  thingsDone: (n: number): string => (n === 1 ? 'cosa hecha en los últimos 7 días' : 'cosas hechas en los últimos 7 días'),
+  itemsChecked: 'elementos tachados',
+  cardsFinished: 'tarjetas terminadas',
+  notesWritten: 'notas escritas',
+  chartLabel: 'Cosas hechas por día, últimos 7 días',
+  /** `day` as in `Date.getDay()`: 0 = Sunday. "X" is the Spanish initial for miércoles. */
+  weekdayInitial: (day: number) => 'DLMXJVS'[day],
+  bestDay: (weekday: string, n: number) => `Tu mejor día fue el ${weekday}, con ${n}.`,
+  quietDays: 'Los días tranquilos también cuentan.',
+  sinceStart: (n: number) => `Desde que empezaste: ${thingsDone(n)}.`,
+  inJar: 'En el frasco',
+  emptyJar: 'Cuando lleves una tarjeta al frasco, aparece acá.',
+  takeOut: 'Devolver',
+  returned: 'Volvió al escritorio',
+  today: 'hoy',
+  yesterday: 'ayer',
+  daysAgo: (n: number) => `hace ${n} días`,
 }
 
 export type Messages = typeof es

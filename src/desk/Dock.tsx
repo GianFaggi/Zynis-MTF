@@ -2,10 +2,20 @@ import { LayoutGrid, Scan, type LucideIcon } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useT } from '../i18n'
 import { useAppStore } from '../store/appStore'
+import { JarIcon } from '../wins/JarIcon'
+import { jarBounds, jarRect } from '../wins/jarLayout'
 import { areaName } from './areas'
 import { useDeskStore } from './deskStore'
 import { measureCardHeights, viewport } from './dom'
 import { areaView, deskBounds, fitRect } from './geometry'
+
+/** The Jar and its caption with paper around it, at no more than 100%. */
+function goToJar() {
+  const jar = jarRect(useAppStore.getState().data.areas)
+  if (!jar) return
+  const { x, y, w, h } = jarBounds(jar)
+  useDeskStore.getState().flyTo(fitRect({ x: x - 200, y: y - 60, w: w + 400, h: h + 120 }, viewport(), { maxScale: 1 }))
+}
 
 function seeAll() {
   const { areas, cards } = useAppStore.getState().data
@@ -41,7 +51,7 @@ function ToolButton({ icon: Icon, label, onClick }: { icon: LucideIcon; label: s
   )
 }
 
-/** The bottom Dock: fly to each stored Area, See all, Tidy up. Scrolls sideways when narrow. */
+/** The bottom Dock: fly to each stored Area, the Jar, See all, Tidy up. Scrolls sideways when narrow. */
 export function Dock() {
   const t = useT()
   const areas = useAppStore((state) => state.data.areas)
@@ -63,6 +73,7 @@ export function Dock() {
           </DockButton>
         ))}
         <span aria-hidden="true" className="mx-1 h-[22px] w-px flex-none bg-rule" />
+        <ToolButton icon={JarIcon} label={t('jar')} onClick={goToJar} />
         <ToolButton icon={Scan} label={t('seeAll')} onClick={seeAll} />
         <ToolButton icon={LayoutGrid} label={t('tidyUp')} onClick={tidyUp} />
       </nav>

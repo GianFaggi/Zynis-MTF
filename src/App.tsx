@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { IconButton } from './components/ui/IconButton'
 import { Segmented } from './components/ui/Segmented'
 import { Sheet } from './components/ui/Sheet'
+import { Toast } from './components/ui/Toast'
 import { CardEditor } from './desk/CardEditor'
 import { Desk } from './desk/Desk'
 import { Dock } from './desk/Dock'
@@ -13,6 +14,8 @@ import { SearchBox } from './desk/SearchBox'
 import { toWorld } from './desk/geometry'
 import { languageNames, useT } from './i18n'
 import { useAppStore } from './store/appStore'
+import { MisLogros } from './wins/MisLogros'
+import { WinsCounter } from './wins/WinsCounter'
 
 const languageOptions = (['es', 'en'] as const).map((value) => ({ value, label: languageNames[value] }))
 
@@ -31,6 +34,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const searchOpen = useDeskStore((state) => state.searchOpen)
   const toggleSearch = useDeskStore((state) => state.toggleSearch)
+  const toast = useDeskStore((state) => state.toast)
 
   useEffect(() => {
     document.documentElement.lang = language
@@ -47,6 +51,7 @@ export default function App() {
 
       <div className="fixed top-[calc(12px+env(safe-area-inset-top,0px))] right-[calc(14px+env(safe-area-inset-right,0px))] z-10 flex items-center gap-1 rounded-full bg-float p-1 shadow-paper backdrop-blur-[10px]">
         <IconButton label={t('search')} icon={Search} pressed={searchOpen} onClick={toggleSearch} />
+        <WinsCounter />
         <IconButton label={t('settings')} icon={Ellipsis} onClick={() => setSettingsOpen(true)} />
       </div>
 
@@ -64,6 +69,7 @@ export default function App() {
       </button>
 
       <CardEditor />
+      <MisLogros />
 
       <Sheet open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('settings')} closeLabel={t('close')}>
         <div className="flex flex-col gap-2 py-2">
@@ -71,6 +77,8 @@ export default function App() {
           <Segmented label={t('language')} options={languageOptions} value={language} onChange={setLanguage} />
         </div>
       </Sheet>
+
+      <Toast message={toast} />
     </main>
   )
 }

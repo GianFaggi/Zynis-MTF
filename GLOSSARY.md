@@ -35,7 +35,7 @@ One line of a Card's checklist, which can be checked or unchecked.
 _Avoid_: Task, subtask, todo, checkbox
 
 **Finished Card**:
-A Card whose Items are all checked (it has at least one). A Card without Items is never finished by checking; it can still go into the Jar.
+A Card whose Items with text are all checked (it has at least one). A Card without Items is never finished, but it can still go into the Jar. Adding an unchecked Item makes a finished Card unfinished again, and it loses its Card Win until it is finished again. On the Desk, a finished Card shows the "Llevala al frasco" chip.
 _Avoid_: Completed, closed, done card
 
 **Pinned Card**:
@@ -45,16 +45,28 @@ _Avoid_: Favorite, starred
 ## Wins
 
 **Jar**:
-The place on the Desk where the user drops Cards they are done with. It fills up with one piece of paper per Card, in the Card's Area color. A Card with unchecked Items is refused and slides back.
+The place on the Desk, centered below the Areas, where the user puts Cards they are done with, by dropping them on it or with "Llevar al frasco" in the editor. It fills up with one piece of paper per Card, in the Card's Area color. A Card with unchecked Items is refused and slides back. Cards in the Jar leave the Desk but are kept.
 _Avoid_: Archive, trash, done list
 
 **Win**:
-Something the user did that counts toward Mis logros: checking an Item or finishing a Card. Writing a new Card counts separately and more quietly as a note written.
+Something the user did that counts toward Mis logros: checking an Item (an Item Win) or finishing a Card (a Card Win). A Card has one Card Win exactly while it is finished (in the Jar it always has one, so a Card without Items gets it there). A half-done Card counts only its checked Items. A Win goes away with what it counts: unchecking or removing an Item, unfinishing or deleting a Card. The passing of time never removes one ([ADR 0005](docs/adr/0005-win-events-with-removals.md)).
 _Avoid_: Point, score, achievement, streak
 
+**Things done** (ES: **cosas hechas**):
+The number of Wins (Item Wins plus Card Wins) in a period. The wins counter and the main number in Mis logros show the things done in the last 7 days: today plus the six previous calendar days.
+_Avoid_: Score, total points, productivity
+
+**Note written** (ES: **nota escrita**):
+A newly created Card that the user kept (it was not empty when its editor closed). It is counted on its own, more quietly, and is not a Win. Deleting the Card removes it.
+_Avoid_: Post, entry
+
 **Mis logros** (EN: **My wins**):
-The view that shows the user's Wins: things done in the last 7 days, a bar per day, notes written, and the Cards in the Jar (which can be taken back out). It only counts; it never punishes quiet days.
+The view that shows the user's Wins: things done in the last 7 days, a bar per day, notes written, the total since you started, and the Cards in the Jar (which can be taken back out). It only counts; it never punishes quiet days.
 _Avoid_: Stats, dashboard, streak, progress report
+
+**Devolver** (EN: **Take out**):
+Taking a Card out of the Jar from Mis logros. The Card goes back on the Desk inside its Area, on top of the others.
+_Avoid_: Restore, undo, unarchive
 
 ## Data
 

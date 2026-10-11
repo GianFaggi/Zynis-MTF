@@ -1,12 +1,21 @@
 import type { Viewport } from './geometry'
 
-// The only place that reads sizes from the DOM. Card heights depend on content and
-// fonts, so they are measured when a rule needs them (drop, Tidy up, See all), never cached.
+// The only place that reads sizes and media settings from the DOM. Card heights depend
+// on content and fonts, so they are measured when a rule needs them (drop, Tidy up,
+// See all), never cached.
 
 const WORLD_SELECTOR = '[data-desk-world]'
 
 export function viewport(): Viewport {
   return { w: window.innerWidth, h: window.innerHeight }
+}
+
+/**
+ * CSS turns off every animation under reduced motion (src/index.css); this is for the
+ * waits and DOM effects that JS times itself. jsdom has no `matchMedia`.
+ */
+export function prefersReducedMotion(): boolean {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
 /**

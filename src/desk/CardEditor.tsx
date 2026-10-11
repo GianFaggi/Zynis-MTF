@@ -6,7 +6,11 @@ import { Sheet } from '../components/ui/Sheet'
 import { useT } from '../i18n'
 import { useAppStore } from '../store/appStore'
 import type { Card } from '../types'
+import { useWinFeedback } from '../wins/feedback'
+import { JarIcon } from '../wins/JarIcon'
+import { jarVerdict } from '../wins/rules'
 import { areaName } from './areas'
+import { isEmptyCard } from './cardText'
 import { useDeskStore } from './deskStore'
 import { ItemCheck } from './ItemCheck'
 
@@ -14,8 +18,8 @@ const BODY_MAX_HEIGHT = 360
 
 /**
  * The Card editor sheet. Every change is saved as it is typed; closing it in any way
- * (Esc, scrim, close, Guardar) runs `closeCard`, which drops blank Items and discards
- * a Card left empty.
+ * (Esc, scrim, close, Guardar) runs `closeCard`, which drops blank Items, discards
+ * a Card left empty and counts a kept new Card as a note.
  */
 export function CardEditor() {
   const t = useT()
@@ -26,6 +30,7 @@ export function CardEditor() {
   const isNew = useDeskStore((state) => state.newCardId !== null && state.newCardId === state.editingId)
   const area = areas.find((candidate) => candidate.id === card?.areaId)
   const titleRef = useRef<HTMLInputElement>(null)
+  const feedback = useWinFeedback()
 
   // Effects run children first: this one runs after the Sheet has moved focus into
   // its panel, so a new Card's title can take it.
@@ -34,8 +39,17 @@ export function CardEditor() {
   }, [editingId, isNew])
 
   const close = () => {
-    if (editingId) useAppStore.getState().closeCard(editingId)
+    if (editingId) useAppStore.getState().closeCard(editingId, { isNew })
     useDeskStore.getState().closeEditor()
+  }
+
+  // The non-drag way to the Jar, with the same rules as a drop. The editor closes first,
+  // so a new Card counts its note before it goes in.
+  const putInJar = (card: Card) => {
+    const verdict = jarVerdict(card)
+    if (!verdict.ok) return feedback.refused(verdict.pending)
+    close()
+    if (useAppStore.getState().jarCard(card.id).ok) feedback.jarred()
   }
 
   return (
@@ -56,7 +70,7 @@ export function CardEditor() {
       }
     >
       {/* Keyed by Card, so the Delete confirmation never carries over to another Card. */}
-      {card && <EditorBody key={card.id} card={card} titleRef={titleRef} onClose={close} />}
+      {card && <EditorBody key={card.id} card={card} titleRef={titleRef} onClose={close} onPutInJar={() => putInJar(card)} />}
     </Sheet>
   )
 }
@@ -65,12 +79,14 @@ type EditorBodyProps = {
   card: Card
   titleRef: RefObject<HTMLInputElement | null>
   onClose: () => void
+  onPutInJar: () => void
 }
 
-function EditorBody({ card, titleRef, onClose }: EditorBodyProps) {
+function EditorBody({ card, titleRef, onClose, onPutInJar }: EditorBodyProps) {
   const t = useT()
   const areas = useAppStore((state) => state.data.areas)
   const { updateCard, addItem, updateItem, toggleItem, removeItem, placeCard, deleteCard } = useAppStore.getState()
+  const feedback = useWinFeedback()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const itemInputs = useRef(new Map<string, HTMLInputElement>())
@@ -108,7 +124,11 @@ function EditorBody({ card, titleRef, onClose }: EditorBodyProps) {
       <ul className="flex flex-col gap-1">
         {card.items.map((item) => (
           <li key={item.id} className="flex items-center gap-2.5">
-            <ItemCheck done={item.done} label={item.text || t('itemText')} onToggle={() => toggleItem(card.id, item.id)} />
+            <ItemCheck
+              done={item.done}
+              label={item.text || t('itemText')}
+              onToggle={(box) => feedback.itemToggled(toggleItem(card.id, item.id), card.id, box)}
+            />
             {/* A form, not an Enter key handler: phone keyboards always submit a form with their
                 confirm key, but while composing a word they often report Enter as "Unidentified". */}
             <form
@@ -183,6 +203,10 @@ function EditorBody({ card, titleRef, onClose }: EditorBodyProps) {
             ))}
           </select>
         </label>
+        <Button onClick={onPutInJar} disabled={isEmptyCard(card)}>
+          <JarIcon size={15} strokeWidth={2} aria-hidden="true" />
+          {t('putInJar')}
+        </Button>
         <Button
           variant="danger"
           onClick={() => {

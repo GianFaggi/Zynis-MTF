@@ -90,4 +90,13 @@ describe('Sheet', () => {
     expect(dialog).toHaveClass('card-tint')
     expect(dialog.style.getPropertyValue('--b')).toBe('var(--color-sand)')
   })
+
+  it('wide makes the panel wider', () => {
+    render(
+      <Sheet open onClose={() => {}} title="Mis logros" closeLabel="Cerrar" wide>
+        <p>Contenido</p>
+      </Sheet>,
+    )
+    expect(screen.getByRole('dialog')).toHaveClass('w-[min(880px,100%)]')
+  })
 })

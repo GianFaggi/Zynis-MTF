@@ -12,12 +12,17 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 ## Conventions
 
 - Every Area, Card, Item and win event has an `id`: a v4 UUID from `newId()` in `src/lib/id.ts`.
-- Areas, Cards and Items also have `createdAt` and `updatedAt` (epoch ms). `updatedAt` changes on every edit, including moves. Win events have `at` instead (they are never edited).
+- Areas, Cards and Items also have `createdAt` and `updatedAt` (epoch ms). `updatedAt` changes on every edit, including moves. Win events have `at` instead (they are never edited, only added or removed).
 - `newId()` uses the built-in `crypto.randomUUID()`; outside a secure context (phone testing over `http://192.168.x.x`) it falls back to `crypto.getRandomValues()`. No `uuid` package.
 - Keys are prefixed `mtf_` and the root document carries a `schemaVersion` for migrations.
 - A drag writes once, on drop: while dragging only the DOM moves. Typing in the editor writes on each change (cheap at notepad size, ADR 0004).
 - On a launch with no stored Areas, the store writes the three default Areas into `mtf_data` (`ensureDefaultAreas`), so Cards always point at Area ids that survive a reload. A document from change 1 (`areas: []`) gets them the same way; no migration.
-- Deleting a Card does **not** delete its win events: what you did still counts.
+- `events` is filled from change 3 on (documents from changes 1–2 simply have none; no migration). It is a list that follows the Desk, not an append-only log ([ADR 0005](../../docs/adr/0005-win-events-with-removals.md)); the rules live in `src/wins/rules.ts` ([architecture.md](architecture.md#wins-as-events)):
+  - `item` — appended when an Item is checked; the most recent one for that Item is removed when it is unchecked, and all of them when the Item is removed (including a blank Item dropped when the editor closes).
+  - `card` — exactly one while a Desk Card is finished: appended when it becomes finished (by checking or by removing its last unchecked Item), removed when it stops being finished (an Item unchecked, or a new unchecked Item with text). The Jar appends one to a Card without Items when it accepts it; taking that Card back out removes it. A Card in the Jar always keeps its one.
+  - `note` — appended once when the editor of a newly created Card closes and the Card is kept.
+- Deleting a Card removes **every** event with its `cardId` (`item`, `card` and `note`): a deleted Card is treated as never written. The Jar is where Cards whose credit you want to keep go.
+- Every action changes a Card and its events in **one** `data` replacement, so a save never holds a Card and Wins that disagree.
 - View state (pan/zoom, open sheets) is never part of `mtf_data`.
 
 ## Entities (schema version 1)

@@ -36,6 +36,11 @@ describe('releaseOutcome', () => {
     expect(releaseOutcome({ intent: 'pan', distance: 5, onLabel: true })).toBe('label')
   })
 
+  it('a small release on the Jar is a tap on the Jar; a real pan from it is a pan', () => {
+    expect(releaseOutcome({ intent: 'pan', distance: 5, onLabel: false, onJar: true })).toBe('jar')
+    expect(releaseOutcome({ intent: 'pan', distance: 6, onLabel: false, onJar: true })).toBe('none')
+  })
+
   it('a small release on empty paper, or a real pan, does nothing', () => {
     expect(releaseOutcome({ intent: 'pan', distance: 5, onLabel: false })).toBe('none')
     expect(releaseOutcome({ intent: 'pan', distance: 6, onLabel: true })).toBe('none')

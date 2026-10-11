@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { ToastMessage } from '../components/ui/Toast'
 import type { View } from './geometry'
 
 // Desk UI state, never saved (KB/frontend/architecture.md). Shared because the Dock,
@@ -10,6 +11,8 @@ import type { View } from './geometry'
 const FLY_MS = 600
 /** The Card transition while tidying up (0.5 s), plus a little slack. */
 const TIDY_MS = 560
+/** How long a toast stays up. */
+export const TOAST_MS = 2800
 
 export interface DeskState {
   view: View
@@ -22,6 +25,11 @@ export interface DeskState {
   newCardId: string | null
   searchOpen: boolean
   query: string
+  toast: ToastMessage | null
+  /** The Mis logros sheet is open. */
+  winsOpen: boolean
+  /** Goes up on each new Win; the wins counter remounts its number on it to replay the bump. */
+  winsBump: number
 
   setView: (view: View) => void
   /** Moves the view with an animation (none with reduced motion: the global CSS drops transitions). */
@@ -32,11 +40,18 @@ export interface DeskState {
   closeEditor: () => void
   toggleSearch: () => void
   setQuery: (query: string) => void
+  /** Replaces the current toast, if any, and hides it after 2.8 s. */
+  showToast: (title: string, detail?: string) => void
+  openWins: () => void
+  closeWins: () => void
+  bumpWins: () => void
 }
 
 function createDeskStore() {
   let flyTimer: ReturnType<typeof setTimeout> | undefined
   let tidyTimer: ReturnType<typeof setTimeout> | undefined
+  let toastTimer: ReturnType<typeof setTimeout> | undefined
+  let toastId = 0
 
   return create<DeskState>()((set) => ({
     view: { x: 0, y: 0, s: 1 },
@@ -46,6 +61,9 @@ function createDeskStore() {
     newCardId: null,
     searchOpen: false,
     query: '',
+    toast: null,
+    winsOpen: false,
+    winsBump: 0,
 
     setView: (view) => set({ view, flying: false }),
     flyTo: (view) => {
@@ -62,6 +80,15 @@ function createDeskStore() {
     closeEditor: () => set({ editingId: null, newCardId: null }),
     toggleSearch: () => set((state) => ({ searchOpen: !state.searchOpen, query: '' })),
     setQuery: (query) => set({ query }),
+    // Replaced rather than queued: Wins can come fast, and a queue would lag behind the user.
+    showToast: (title, detail) => {
+      clearTimeout(toastTimer)
+      set({ toast: { id: ++toastId, title, detail } })
+      toastTimer = setTimeout(() => set({ toast: null }), TOAST_MS)
+    },
+    openWins: () => set({ winsOpen: true }),
+    closeWins: () => set({ winsOpen: false }),
+    bumpWins: () => set((state) => ({ winsBump: state.winsBump + 1 })),
   }))
 }
 
