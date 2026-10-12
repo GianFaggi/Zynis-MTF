@@ -1,4 +1,4 @@
-import type { Language, MtfData } from '../types'
+import type { Language, MtfData, Theme } from '../types'
 
 // The only module that touches localStorage (KB/frontend/storage.md, ADR 0004).
 // Every access is wrapped: if the browser refuses storage (blocked, private mode,
@@ -8,6 +8,7 @@ export const SCHEMA_VERSION = 1
 
 export const DATA_KEY = 'mtf_data'
 export const LANGUAGE_KEY = 'mtf_language'
+export const THEME_KEY = 'mtf_theme'
 export const HINT_SEEN_KEY = 'mtf_hint_seen'
 export const INSTALL_NUDGE_SEEN_KEY = 'mtf_install_nudge_seen'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
@@ -81,6 +82,15 @@ export function loadLanguage(): Language | null {
 
 export function saveLanguage(language: Language): void {
   write(LANGUAGE_KEY, language)
+}
+
+export function loadTheme(): Theme | null {
+  const value = read(THEME_KEY)
+  return value === 'system' || value === 'light' || value === 'dark' ? value : null
+}
+
+export function saveTheme(theme: Theme): void {
+  write(THEME_KEY, theme)
 }
 
 /** Whether the first-run hint was dismissed on this device. A device setting, like the language. */

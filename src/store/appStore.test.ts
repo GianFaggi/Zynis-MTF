@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DATA_KEY, LANGUAGE_KEY } from '../lib/storage'
+import { DATA_KEY, LANGUAGE_KEY, THEME_KEY } from '../lib/storage'
 import { makeArea, makeCard, makeData, makeItem, rowOfAreas } from '../test/fixtures'
 import type { MtfData } from '../types'
 import { createAppStore } from './appStore'
@@ -60,10 +60,29 @@ describe('appStore', () => {
     expect(storedData()).toEqual(next)
   })
 
-  it('replaceData puts the imported document in place, saves it and keeps the language', () => {
+  it('the theme is System until one is chosen', () => {
+    expect(createAppStore().getState().theme).toBe('system')
+  })
+
+  it('uses a stored theme', () => {
+    localStorage.setItem(THEME_KEY, 'dark')
+    expect(createAppStore().getState().theme).toBe('dark')
+  })
+
+  it('setTheme changes the theme and writes only mtf_theme', () => {
+    const store = createAppStore()
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    store.getState().setTheme('light')
+    expect(store.getState().theme).toBe('light')
+    expect(localStorage.getItem(THEME_KEY)).toBe('light')
+    expect(setItem.mock.calls.map(([key]) => key)).toEqual([THEME_KEY])
+  })
+
+  it('replaceData puts the imported document in place, saves it and keeps the language and the theme', () => {
     browserLanguages(['es-AR'])
     const store = storeWith([makeCard({ id: 'mine', title: 'Solo acá' })])
     store.getState().setLanguage('en')
+    store.getState().setTheme('dark')
     const imported = makeData({
       areas: [makeArea({ id: 'x1', key: 'work' })],
       cards: [makeCard({ id: 'theirs', areaId: 'x1', title: 'De la copia', jarredAt: 7 })],
@@ -76,6 +95,8 @@ describe('appStore', () => {
     expect(storedData()).toEqual(imported)
     expect(store.getState().language).toBe('en')
     expect(localStorage.getItem(LANGUAGE_KEY)).toBe('en')
+    expect(store.getState().theme).toBe('dark')
+    expect(localStorage.getItem(THEME_KEY)).toBe('dark')
   })
 
   it('does not write mtf_data when only the language changes', () => {

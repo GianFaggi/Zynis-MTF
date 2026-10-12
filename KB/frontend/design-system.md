@@ -50,12 +50,22 @@ An animation restarts when its element remounts: the wins counter keys its numbe
 
 ### How the theme switches
 
-- Tokens are declared once in `@theme static`. A `@media (prefers-color-scheme: dark)` block inside `@layer base` redefines the **same** `--color-*` / `--shadow-*` variables on `:root` and sets `color-scheme: dark`. Utilities read `var(--color-*)`, so the whole UI follows the system theme live, with **no `dark:` variants** anywhere.
+The user picks **Sistema · Claro · Oscuro** in Settings (change 5); System is the default. The choice is the device setting `mtf_theme` ([storage.md](storage.md#keys)), held in `appStore.theme`.
+
+- Tokens are declared once in `@theme static`. One block in `@layer base`, `:root { @variant dark { … } }`, redefines the **same** `--color-*` / `--shadow-*` variables and the strength variables, and sets `color-scheme: dark`. Utilities read `var(--color-*)`, so the whole UI switches with **no `dark:` variants** anywhere.
+- **The `dark` custom variant.** `src/index.css` redefines Tailwind's `dark` variant with two branches:
+  - `:root:where([data-theme='dark'])` — the user chose Dark;
+  - `@media (prefers-color-scheme: dark)` + `:root:where(:not([data-theme='light']))` — the device prefers dark and the user did not choose Light.
+
+  Tailwind emits the block's lines under both branches, so the dark values are written **once** in the source and cannot drift between two copies. `:where()` adds no specificity, so the dark rules win over the light `:root` by order. Redefining the built-in name (not a new one) means even a stray `dark:` utility would follow the user's choice; the rule against `dark:` utilities stays.
+- **`data-theme` only for a manual choice.** Under System `<html>` has no attribute: the media query alone decides, before any script runs, and switches live with the device. So a phone in dark mode never gets a light first paint. Light and Dark set `data-theme="light"` / `"dark"`.
+- **`applyTheme(theme)`** in `src/lib/theme.ts` holds the only DOM writes. `main.tsx` calls it before React renders (a stored Light or Dark is in place before the first commit), and an `App` effect calls it on every change. A deferred module can still let the browser paint one frame of the system palette first; if that shows on a phone, the fix is an inline head script (a storage-layer exception), not done yet.
+- **Status bar.** `index.html` has two `theme-color` metas (light `#F5F1EA`, dark `#1C1A18`), each with a `media` query, so under System the status bar follows the device on its own. `applyTheme` saves each meta's original `content` in `data-system-content` the first time; under Light or Dark it sets **both** metas to the computed `--color-paper` (so whichever `media` matches shows the chosen paper); under System it puts the originals back. No hex value lives in TypeScript. An empty computed value (jsdom, no CSS) leaves the metas alone.
+- The install splash and the manifest's `theme_color` / `background_color` stay light paper: browsers read them at install time only ([pwa.md](pwa.md#manifest)).
 - **Not `@theme inline`**: `inline` writes the literal hex into each utility, so the dark override would have nothing to override.
 - **`static`**: Tailwind normally emits only the variables it finds used in source. Area colors are picked at runtime from data (`var(--color-${area.color})`), which the scanner cannot see, so every token is always emitted.
 - **`--color-*: initial`** removes Tailwind's default palette: `bg-red-500` does not exist, only Paper colors do.
-- `index.html` has two `theme-color` metas (light `#F5F1EA`, dark `#1C1A18`) so the phone status bar matches.
-- There is no manual light/dark toggle in the MVP.
+- *Rejected*: copying the dark block under a `[data-theme='dark']` selector (two lists of ~30 values kept equal by hand); CSS `light-dark()` per token (colors only, so the shadows and strength percentages would still need a block, and it needs Safari 17.5).
 
 ### Area paint
 
@@ -119,5 +129,5 @@ Feature pieces that use the accent live outside the kit, which never does: `Item
 - **Color is information.** Area colors identify Areas; the accent means "you did something". Never use the accent for decoration or navigation — not even the focus ring (the mockup used accent there; the app uses ink).
 - **No chrome bars.** Controls float on the paper (pill groups, dock, FAB); there is no header bar and no tab bar.
 - **Positive copy only.** Celebrate, never scold ("Los días tranquilos también cuentan").
-- Light and dark themes both designed; dark is warm charcoal, not pure black.
+- Light and dark themes both designed; dark is warm charcoal, not pure black. The user can follow the system or pick one in Settings.
 - Closed-API UI components in `src/components/ui/`: typed props and `children`, no free `className`, so screens can't override styles one by one (the same approach Zynis Pulse uses for its design system). Defined in change 1.

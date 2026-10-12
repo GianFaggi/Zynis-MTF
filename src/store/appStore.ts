@@ -5,8 +5,8 @@ import { CARD_WIDTH, FALLBACK_CARD_HEIGHT, randomTilt, type Point } from '../des
 import { tidyLayout } from '../desk/tidy'
 import { detectLanguage } from '../i18n/detect'
 import { newId } from '../lib/id'
-import { loadData, loadLanguage, saveData, saveLanguage } from '../lib/storage'
-import type { AreaId, Card, Item, Language, MtfData, WinEvent } from '../types'
+import { loadData, loadLanguage, loadTheme, saveData, saveLanguage, saveTheme } from '../lib/storage'
+import type { AreaId, Card, Item, Language, MtfData, Theme, WinEvent } from '../types'
 import { cardDeleted, cardJarred, itemToggled, itemsRemoved, jarVerdict, noteWritten, syncCardWin, type JarVerdict } from '../wins/rules'
 
 // The single in-memory source of truth for saved data (KB/frontend/architecture.md).
@@ -23,6 +23,8 @@ export interface AppState {
   data: MtfData
   language: Language
   setLanguage: (language: Language) => void
+  theme: Theme
+  setTheme: (theme: Theme) => void
 
   /** Adds Trabajo, Vida and Recordar when no Area is stored. Runs once on create. */
   ensureDefaultAreas: () => void
@@ -49,7 +51,7 @@ export interface AppState {
   jarCard: (id: string) => JarVerdict
   /** Takes a Card out of the Jar, back inside its Area and on top. */
   returnCard: (id: string) => void
-  /** Import: the whole document becomes `data`, already validated (at least one Area). The language stays. */
+  /** Import: the whole document becomes `data`, already validated (at least one Area). The language and the theme stay. */
   replaceData: (data: MtfData) => void
 }
 
@@ -105,6 +107,11 @@ export function createAppStore() {
       setLanguage: (language) => {
         set({ language })
         saveLanguage(language)
+      },
+      theme: loadTheme() ?? 'system',
+      setTheme: (theme) => {
+        set({ theme })
+        saveTheme(theme)
       },
 
       ensureDefaultAreas: () =>

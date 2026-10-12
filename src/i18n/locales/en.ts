@@ -9,6 +9,10 @@ export const en: Messages = {
   settings: 'Settings',
   close: 'Close',
   language: 'Language',
+  theme: 'Theme',
+  themeSystem: 'System',
+  themeLight: 'Light',
+  themeDark: 'Dark',
 
   desk: 'Desk',
   work: 'Work',

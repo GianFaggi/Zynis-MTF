@@ -8,6 +8,10 @@ export const es = {
   settings: 'Ajustes',
   close: 'Cerrar',
   language: 'Idioma',
+  theme: 'Tema',
+  themeSystem: 'Sistema',
+  themeLight: 'Claro',
+  themeDark: 'Oscuro',
 
   desk: 'Escritorio',
   work: 'Trabajo',

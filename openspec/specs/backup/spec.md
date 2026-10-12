@@ -13,7 +13,7 @@ The Settings sheet SHALL show a "Copia de seguridad" / "Backup" section with a s
 - **THEN** the Backup section shows its note, an Export button and an Import button
 
 ### Requirement: Export makes a Backup file
-Export SHALL produce one JSON file named `mtf-backup-YYYY-MM-DD.json`, with the local date of the export, that holds the user's whole data document: every Area, every Card (on the Desk and in the Jar) with its Items, and every win event, at the current schema version, plus a marker that identifies it as an MTF Backup and the moment it was exported. Device settings (language, dismissed hints) SHALL NOT be part of the file.
+Export SHALL produce one JSON file named `mtf-backup-YYYY-MM-DD.json`, with the local date of the export, that holds the user's whole data document: every Area, every Card (on the Desk and in the Jar) with its Items, and every win event, at the current schema version, plus a marker that identifies it as an MTF Backup and the moment it was exported. Device settings (language, theme, dismissed hints) SHALL NOT be part of the file.
 
 #### Scenario: File name
 - **WHEN** the user exports on October 11, 2026 (local time)
@@ -26,6 +26,10 @@ Export SHALL produce one JSON file named `mtf-backup-YYYY-MM-DD.json`, with the 
 #### Scenario: Language is not exported
 - **WHEN** the user exports with the language set to English
 - **THEN** the file has no language setting
+
+#### Scenario: Theme is not exported
+- **WHEN** the user exports with the theme set to Dark
+- **THEN** the file has no theme setting
 
 ### Requirement: Export shares on phones and downloads elsewhere
 On a touch device whose browser can share files, Export SHALL open the system share sheet with the Backup file. Everywhere else, and when sharing fails for any reason other than the user cancelling, Export SHALL download the file. Cancelling the share sheet SHALL do nothing else. After the file was handed to the share sheet or downloaded, MTF SHALL show a toast naming the file.

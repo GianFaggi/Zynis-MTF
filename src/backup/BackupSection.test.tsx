@@ -60,6 +60,18 @@ describe('BackupSection', () => {
     await waitFor(() => expect(useDeskStore.getState().toast).toMatchObject({ title: 'Copia lista', detail: file.name }))
   })
 
+  it('Export leaves out the device settings: no theme and no language in the file', async () => {
+    useAppStore.getState().setTheme('dark')
+    useAppStore.getState().setLanguage('en')
+    render(<BackupSection onImported={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Export backup' }))
+
+    const text = await vi.mocked(deliverFile).mock.calls[0][0].text()
+    expect(Object.keys(JSON.parse(text))).toEqual(['format', 'exportedAt', 'data'])
+    expect(Object.keys(JSON.parse(text).data)).toEqual(['schemaVersion', 'areas', 'cards', 'events'])
+    expect(text).not.toMatch(/theme|"dark"|language/)
+  })
+
   it('no toast when the share sheet was closed', async () => {
     vi.mocked(deliverFile).mockResolvedValueOnce('cancelled')
     setup()
