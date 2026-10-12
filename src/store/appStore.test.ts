@@ -60,6 +60,24 @@ describe('appStore', () => {
     expect(storedData()).toEqual(next)
   })
 
+  it('replaceData puts the imported document in place, saves it and keeps the language', () => {
+    browserLanguages(['es-AR'])
+    const store = storeWith([makeCard({ id: 'mine', title: 'Solo acá' })])
+    store.getState().setLanguage('en')
+    const imported = makeData({
+      areas: [makeArea({ id: 'x1', key: 'work' })],
+      cards: [makeCard({ id: 'theirs', areaId: 'x1', title: 'De la copia', jarredAt: 7 })],
+      events: [{ id: 'e1', type: 'card', at: 7, cardId: 'theirs' }],
+    })
+
+    store.getState().replaceData(imported)
+
+    expect(store.getState().data).toBe(imported)
+    expect(storedData()).toEqual(imported)
+    expect(store.getState().language).toBe('en')
+    expect(localStorage.getItem(LANGUAGE_KEY)).toBe('en')
+  })
+
   it('does not write mtf_data when only the language changes', () => {
     const store = createAppStore()
     const setItem = vi.spyOn(Storage.prototype, 'setItem')

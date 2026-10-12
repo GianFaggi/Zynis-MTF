@@ -45,6 +45,8 @@ export interface DeskState {
   openWins: () => void
   closeWins: () => void
   bumpWins: () => void
+  /** After an Import: closes the editor, search and Mis logros, which may point at Cards that are gone. The view is not reset here. */
+  resetAfterImport: () => void
 }
 
 function createDeskStore() {
@@ -89,6 +91,7 @@ function createDeskStore() {
     openWins: () => set({ winsOpen: true }),
     closeWins: () => set({ winsOpen: false }),
     bumpWins: () => set((state) => ({ winsBump: state.winsBump + 1 })),
+    resetAfterImport: () => set({ editingId: null, newCardId: null, searchOpen: false, query: '', winsOpen: false }),
   }))
 }
 

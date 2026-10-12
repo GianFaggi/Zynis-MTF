@@ -1,4 +1,5 @@
 const thingsDone = (n: number) => (n === 1 ? '1 cosa hecha' : `${n} cosas hechas`)
+const cards = (n: number) => (n === 1 ? '1 tarjeta' : `${n} tarjetas`)
 
 // Spanish is the source dictionary: its shape defines `Messages`.
 // A value is a string, or a function for texts that include values.
@@ -12,7 +13,7 @@ export const es = {
   work: 'Trabajo',
   life: 'Vida',
   remember: 'Recordar',
-  cardCount: (n: number) => (n === 1 ? '1 tarjeta' : `${n} tarjetas`),
+  cardCount: cards,
 
   newCard: 'Nueva tarjeta',
   more: (n: number) => `+${n} más`,
@@ -69,6 +70,38 @@ export const es = {
   today: 'hoy',
   yesterday: 'ayer',
   daysAgo: (n: number) => `hace ${n} días`,
+
+  backup: 'Copia de seguridad',
+  backupNote:
+    'Tus notas se guardan en este navegador. Para pasarlas del celu a la PC (o al revés), exportá una copia y abrila en el otro dispositivo.',
+  exportBackup: 'Exportar copia',
+  importBackup: 'Importar copia',
+  backupReady: 'Copia lista',
+  backupImported: 'Copia importada',
+  notBackup: 'Este archivo no es una copia de MTF. Tus datos no cambiaron.',
+  newerBackup: 'Esta copia se hizo con una versión más nueva de MTF. Volvé a abrir MTF para actualizarlo y probá otra vez. Tus datos no cambiaron.',
+  damagedBackup: 'Esta copia está dañada y no se puede usar. Tus datos no cambiaron.',
+  backupFrom: (date: string) => `Copia del ${date}`,
+  backupDesk: (n: number) => `${cards(n)} en el escritorio`,
+  backupJar: (n: number) => `${cards(n)} en el frasco`,
+  backupDone: thingsDone,
+  replaceWarning: (n: number) =>
+    `Reemplaza todo lo que hay en este dispositivo (${cards(n)}). Si querés conservarlo, exportalo antes.`,
+  replaceData: 'Reemplazar mis datos',
+  cancel: 'Cancelar',
+
+  installApp: 'Instalar la app',
+  installWhy:
+    'Instalada, MTF se abre como una app y tus notas están más seguras: en iPhone, Safari puede borrar los datos de las páginas que no abrís hace un tiempo, pero no los de las apps instaladas.',
+  installed: 'MTF ya está instalada en este dispositivo.',
+  iosShare: 'Tocá Compartir',
+  iosAddToHome: 'Elegí “Agregar a inicio”.',
+  iosOpen: 'Abrí MTF desde el ícono.',
+  installButton: 'Instalar MTF',
+  installManual: 'Abrí el menú del navegador y buscá “Instalar app” o “Agregar a la pantalla de inicio”.',
+  installNudge: 'Instalá MTF para que tus notas estén más seguras.',
+  installHow: 'Cómo',
+  notNow: 'Ahora no',
 }
 
 export type Messages = typeof es

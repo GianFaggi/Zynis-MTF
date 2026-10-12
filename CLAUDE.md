@@ -62,14 +62,15 @@ Every change follows the same flow as the other Zynis projects:
 1. **Ticket** — `/crear-ticket <description>` (new GitHub issue) or `/select-ticket <n>` (existing one). This creates the issue in `GianFaggi/Zynis-MTF`, the branch `{type}/{number}-{slug}` from an up-to-date `main`, and fills `KB/developers/active.md`.
 2. **Propose** — `/opsx:propose`: creates an OpenSpec change named like the branch slug (e.g. `1-fundacion-pwa`) with `proposal.md` (why + scope), delta `specs/`, `design.md` and `tasks.md` in `openspec/changes/<name>/`. Use `/opsx:explore` first when the rules are still fuzzy. New or sharpened domain terms go to `GLOSSARY.md`, hard-to-reverse decisions to `docs/adr/`. The user reviews the artifacts before any code is written.
 3. **Implement** — `/opsx:apply`: works through `tasks.md`. Read the relevant KB first; keep tests green (`npm test`).
-4. **Archive** — `/opsx:archive`: merges the delta specs into `openspec/specs/` and moves the change to `openspec/changes/archive/`.
-5. **Close** — `/close-ticket`: closes the issue, archives the ticket to `KB/developers/done/NNN-type-slug.md`, empties `active.md`. `/postpone-ticket` parks it under Postponed instead.
+4. **Merge** — the user commits, pushes the ticket branch and opens the PR; it merges once CI is green. The PR carries the code, tests and docs, not the archive.
+5. **Archive** — after the merge, on an up-to-date `main` (`git checkout main`, `git pull`): `/opsx:archive` merges the delta specs into `openspec/specs/` and moves the change to `openspec/changes/archive/`. It is history only, so the user pushes it **straight to `main`** (allowed by the ruleset's bypass, see below): no archive branch, no archive PR.
+6. **Close** — `/close-ticket`: closes the issue, archives the ticket to `KB/developers/done/NNN-type-slug.md`, empties `active.md`. `/postpone-ticket` parks it under Postponed instead.
 
 Other commands: `/active` (current ticket summary), `/daily-summary`, `/sync-kb`.
 
 **Rules:**
 - **The user commits, pushes and opens PRs — never Claude.** Claude may only run `git checkout`, `git pull` and `git branch`.
-- **`main` only moves through green PRs.** A GitHub ruleset requires the CI job `check` to pass before merging and rejects direct pushes to `main` ([KB/frontend/testing.md](KB/frontend/testing.md#merge-gate)). Suggest a separate PR, never a push to `main`, even for chores.
+- **`main` only moves through green PRs, with one exception.** A GitHub ruleset requires the CI job `check` to pass before merging ([KB/frontend/testing.md](KB/frontend/testing.md#merge-gate)). Code, tests, docs and chores always go through a PR. The only direct push to `main` is the OpenSpec archive commit after a merge (history only), which the repo admin's bypass allows; never suggest a direct push for anything else.
 - **No AI attribution.** Never add `Co-Authored-By: Claude …` trailers or "Generated with Claude Code" footers to commit messages, PR descriptions, or any commit/PR text suggested to the user.
 - GitHub issues are written in **Spanish**. Their bodies always go through a temp file with `--body-file` (never `\n` inside the string). Template: `## Objetivo` + `## Criterios de Aceptación` with checkboxes.
 - KBs, ADRs, OpenSpec artifacts and code comments are written in **English**. The UI is **Spanish + English**.

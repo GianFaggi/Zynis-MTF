@@ -1,5 +1,6 @@
 import { Ellipsis, Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { BackupSection } from './backup/BackupSection'
 import { IconButton } from './components/ui/IconButton'
 import { Segmented } from './components/ui/Segmented'
 import { Sheet } from './components/ui/Sheet'
@@ -12,8 +13,12 @@ import { useDeskStore } from './desk/deskStore'
 import { viewport } from './desk/dom'
 import { SearchBox } from './desk/SearchBox'
 import { toWorld } from './desk/geometry'
+import { showWholeDesk } from './desk/view'
 import { languageNames, useT } from './i18n'
+import { InstallNudge } from './install/InstallNudge'
+import { InstallSection } from './install/InstallSection'
 import { useAppStore } from './store/appStore'
+import { usePersistentStorage } from './store/usePersistentStorage'
 import { MisLogros } from './wins/MisLogros'
 import { WinsCounter } from './wins/WinsCounter'
 
@@ -24,6 +29,13 @@ function createCardInView() {
   const { w, h } = viewport()
   const id = useAppStore.getState().createCard(toWorld(useDeskStore.getState().view, { x: w / 2, y: h / 2 }))
   if (id) useDeskStore.getState().openEditor(id, { isNew: true })
+}
+
+/** After an Import: nothing open may point at a Card that is gone; the whole new Desk comes into view. */
+function showImportedDesk(title: string, detail: string) {
+  useDeskStore.getState().resetAfterImport()
+  showWholeDesk()
+  useDeskStore.getState().showToast(title, detail)
 }
 
 /** The paper screen: the Desk, with the floating controls and the sheets over it. */
@@ -39,6 +51,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = language
   }, [language])
+  usePersistentStorage()
 
   return (
     <main className="relative h-full overflow-hidden bg-paper">
@@ -58,6 +71,7 @@ export default function App() {
       <SearchBox />
       <Dock />
       <FirstRunHint />
+      <InstallNudge onHow={() => setSettingsOpen(true)} />
 
       <button
         type="button"
@@ -76,6 +90,13 @@ export default function App() {
           <span className="text-xs font-semibold tracking-[0.08em] text-pencil uppercase">{t('language')}</span>
           <Segmented label={t('language')} options={languageOptions} value={language} onChange={setLanguage} />
         </div>
+        <BackupSection
+          onImported={(data) => {
+            setSettingsOpen(false)
+            showImportedDesk(t('backupImported'), t('cardCount', data.cards.length))
+          }}
+        />
+        <InstallSection />
       </Sheet>
 
       <Toast message={toast} />

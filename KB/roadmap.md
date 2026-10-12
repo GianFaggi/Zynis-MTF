@@ -41,8 +41,9 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 - [x] Manual check on a real Android phone and an iPhone (task 7.6)
 
 ## Change 4 — Backup ([#4](https://github.com/GianFaggi/Zynis-MTF/issues/4))
-- [ ] Export / Import backup file with validation and confirmation
-- [ ] Persistent storage request; install guidance
+- [x] Export / Import backup file with validation and confirmation ([ADR 0006](../docs/adr/0006-backup-file-format.md)); Export shares on phones, downloads on PCs; Import always replaces
+- [x] Persistent storage request; install guidance (Settings section per device + one-time nudge)
+- [x] Manual check on a real Android phone and an iPhone (task 8.4)
 
 ## Small tickets
 - [ ] Theme toggle in Settings: System · Light · Dark ([#5](https://github.com/GianFaggi/Zynis-MTF/issues/5)); after change 1 merges

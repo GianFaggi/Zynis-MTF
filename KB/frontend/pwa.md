@@ -45,10 +45,25 @@ Risk: a page still running old JS that lazy-loads a chunk the new worker removed
 - `pwa-assets.config.ts` extends the `minimal-2023` preset: no padding on the regular icons (the logo already fills its square with paper), and paper instead of white as the padding of the maskable and Apple icons.
 - To redesign the icon: replace `public/logo.svg`, rerun the command, commit the PNGs.
 
+## Install guidance
+
+Added in change 4. Installing is what protects the notes on iPhone (see iOS specifics), so MTF explains it in Settings and nudges once. Code in `src/install/`.
+
+- **Modes** — `installMode()` in `installStore.ts`, in this order of priority:
+  | Mode | When | Settings → "Instalar la app" shows |
+  |---|---|---|
+  | `installed` | `appinstalled` fired in this session, or `isStandalone()` (`(display-mode: standalone)` or iOS's `navigator.standalone`) | the "why" text and "MTF ya está instalada en este dispositivo." |
+  | `ios` | `isIos()`: `iPhone`/`iPad`/`iPod` in the user agent, or `Macintosh` with `maxTouchPoints > 1` (iPadOS reports itself as a Mac) | the "why" text and the steps: 1. Tocá Compartir (lucide `Share` icon) 2. Elegí "Agregar a inicio" 3. Abrí MTF desde el ícono |
+  | `prompt` | the browser fired `beforeinstallprompt` (Chromium) | the "why" text and an "Instalar MTF" `primary` button that opens the browser's dialog |
+  | `manual` | anything else (Firefox, desktop Safari…) | the "why" text and where to look in the browser menu |
+- **`beforeinstallprompt` is captured in `main.tsx`**, by `listenForInstall()` before React mounts, because Chromium can fire it early. The handler calls `preventDefault()` (no mini-infobar: Settings offers it) and keeps the event in `installStore`. `install()` calls its `prompt()` once and drops it (an event can be used once). `appinstalled` sets `installed` and drops it.
+- **The nudge** (`InstallNudge.tsx`, the same `Callout` as the first-run hint): "Instalá MTF para que tus notas estén más seguras." with "Cómo" (opens Settings) and "Ahora no". It appears when the number of `note` events grows during the session (a new Card was kept; a reload with notes never triggers it) **and** at that moment the mode is `ios` or `prompt`, the first-run hint was dismissed (`mtf_hint_seen`), and `mtf_install_nudge_seen` is not set. Either button, or `installed` becoming true, writes `mtf_install_nudge_seen = '1'`: once per device.
+- **Persistent storage** is asked for from `App` through `usePersistentStorage()`, the first time in a launch that the data holds a Card ([storage.md](storage.md#persistent-storage)). Chrome grants it silently (installed apps and engagement raise the odds), so asking on every launch until granted lets a later install count; Safari grants it mostly to Home Screen apps; Firefox asks the user, which is why it waits for the first Card.
+
 ## iOS specifics
 
-- Add to Home Screen is manual in Safari (Share → Add to Home Screen); the app should explain it once.
-- Installed PWAs are not subject to Safari's 7-day storage eviction for websites; this is part of why installing matters ([storage.md](storage.md)).
+- Add to Home Screen is manual in Safari (Share → "Agregar a inicio" / "Add to Home Screen"); the install section in Settings shows these steps on iPhone and iPad, and the nudge points to it once ([Install guidance](#install-guidance)). Safari never fires `beforeinstallprompt`.
+- Installed PWAs are not subject to Safari's 7-day storage eviction for websites; this is part of why installing matters ([storage.md](storage.md)). An installed MTF on iOS has its own storage, separate from Safari's: a Backup is how notes written in the Safari tab move into the installed app.
 - Use `viewport-fit=cover` and `env(safe-area-inset-*)` for floating controls.
 - Disable the long-press callout and text selection on the Desk (press and hold is the drag gesture).
 
@@ -62,4 +77,5 @@ Risk: a page still running old JS that lazy-loads a chunk the new worker removed
 - [x] Opens offline after first visit — automated in `e2e/offline.spec.ts`
 - [ ] Opens offline on a real phone (airplane mode, after deploy) — user check
 - [ ] Installs on Android Chrome and iOS Safari — user check, after deploy
+- [x] The install section matches the device: Safari's steps on iPhone, "Instalar MTF" opens Chrome's dialog on Android; the nudge appears once after the first kept Card — checked by hand on Android and iPhone (change 4)
 - [x] Fonts render offline — automated in `e2e/offline.spec.ts`

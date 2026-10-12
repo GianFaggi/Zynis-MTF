@@ -12,7 +12,7 @@ Set up in change 1. Conventions follow Zynis Pulse, plus Playwright for gestures
 | | Vitest + Testing Library (jsdom) | Playwright (real browser) |
 |---|---|---|
 | What | rules, storage, store actions, components | real flows with gestures |
-| Examples | finishing a Card when the last Item is checked; Jar refuses a Card with pending Items; win counts for the last 7 days; Export/Import round trip; ES/EN strings | drag a Card to another Area; press-and-hold drag on a phone viewport; pinch/wheel zoom and far-zoom titles; drop a finished Card in the Jar |
+| Examples | finishing a Card when the last Item is checked; Jar refuses a Card with pending Items; win counts for the last 7 days; Backup round trip and every refusal; install mode per device; ES/EN strings | drag a Card to another Area; press-and-hold drag on a phone viewport; pinch/wheel zoom and far-zoom titles; drop a finished Card in the Jar; export → import a real file, also offline |
 | How many | many, fast | few, slower |
 | Command | `npm test` | `npm run test:e2e` |
 
@@ -29,7 +29,14 @@ jsdom has no layout and no real pointer gestures: never try to test dragging or 
 - **Query by role and visible text**, not class names or test ids
 - **Playwright** specs in `e2e/`, projects for desktop Chrome and a phone viewport (Pixel / iPhone); start the Vite preview server via `webServer`
 - **Test data builders** in `src/test/fixtures.ts` (`makeArea`, `rowOfAreas`, `makeCard`, `makeItem`, `makeData`, `sequence`): readable ids (`a1`–`a3`, `c1`) so a failing assertion says which entity it is about. `sequence(...)` is a fixed `random` for layouts.
-- **App stores are singletons**: component tests call `resetStores(data?)` from `src/test/stores.ts` first (Spanish, the three default Areas, a fresh `deskStore`).
+- **App stores are singletons**: component tests call `resetStores(data?)` from `src/test/stores.ts` first (Spanish, the three default Areas, a fresh `deskStore`). `installStore` is reset with `useInstallStore.setState(useInstallStore.getInitialState(), true)`.
+- **Browser APIs jsdom lacks** (change 4) are put in place per test and removed in `afterEach`, never in the global setup, so a test that forgets one fails instead of passing on a fake:
+  - `matchMedia`: `vi.stubGlobal('matchMedia', (query) => ({ matches: … }))`, removed by `vi.unstubAllGlobals()`
+  - `navigator.share` / `canShare` / `storage` / `maxTouchPoints` / `standalone`: `Object.defineProperty(navigator, name, { value, configurable: true })`, removed with `Reflect.deleteProperty(navigator, name)`; `userAgent` with `vi.spyOn(navigator, 'userAgent', 'get')`
+  - `URL.createObjectURL` / `revokeObjectURL`: assigned on `URL` and deleted after; the download link's `click()` is spied on `HTMLAnchorElement.prototype`, so jsdom never tries to navigate
+  - `src/test/device.ts`: `stubDevice({ userAgent, touchPoints, displayStandalone, iosStandalone })` and `restoreDevice()` for the install tests, with real user agents in `USER_AGENTS` (iPhone, iPad, iPadOS-as-Mac, Android, Windows)
+- **Module mocks** only at a seam the test is about: `vi.mock('./deliver')` in `BackupSection.test.tsx` (the share sheet / download is tested on its own), `requestPersistentStorage` in `usePersistentStorage.test.ts`, and `upgradeDocument` in `backup.test.ts` to inject a migration step (at schema version 1 there is no older version to import).
+- **File picking**: `userEvent.upload(screen.getByLabelText('Importar copia'), file)` with `new File([text], name, { type: 'application/json' })`. `upload` honors the input's `accept`, so test files are `.json`.
 - **Real stores in component tests**: render the component, act through Testing Library, assert on `useAppStore.getState()` / `useDeskStore.getState()`. A 4-Area data set proves the Dock and Place are generic.
 
 ## E2E conventions (change 2)
@@ -59,6 +66,16 @@ Shared helpers live in `e2e/helpers.ts`:
 - The Jar is a button named "Frasco: N tarjetas…", so the Dock's "Frasco" needs `exact: true` or the Dock's `navigation` scope.
 - A finished Card seeded **without** events (a document from before change 3) gets its Card Win from the Jar, so the counter goes 0 → 1: that is how the "counted once" rule shows in e2e.
 - A test on a 360 px viewport (`page.setViewportSize`) checks that the Dock scrolls sideways and still reaches "Frasco".
+
+### Backup (`e2e/backup.spec.ts`, change 4)
+
+- **Desktop project only** (`test.skip(({ isMobile }) => isMobile, …)` at file level): the phone project emulates a coarse pointer, where Export opens the system share sheet, which Chromium cannot drive. The share path is covered by `deliver.test.ts` and by hand on real phones.
+- **Export**: `page.waitForEvent('download')` before the click; the file name is compared with the page's own local date, and the file is read from `download.path()`.
+- **Import**: `page.locator('input[type="file"]').setInputFiles(path)` (the input is hidden; Playwright sets files on it directly), then "Reemplazar mis datos". A refused file is given as a `{ name, mimeType, buffer }`.
+- The round trip compares `storedData(page)` with the seeded document with `toEqual`, before and after a reload.
+- **Offline**: wait for `navigator.serviceWorker.controller`, `context.setOffline(true)`, reload, then export and import, collecting every request whose origin is not the app's (none expected).
+
+The Backup unit tests: `backup.test.ts` (file name at 23:30 in `America/Argentina/Buenos_Aires`, round trip, every refusal, migration), `validate.test.ts` (one test per entity rule), `deliver.test.ts`, `BackupSection.test.tsx`, plus `upgradeDocument`, `requestPersistentStorage` and the nudge flag in `storage.test.ts`.
 
 ## Setup
 
@@ -110,10 +127,10 @@ command npx playwright install chromium # once per machine, after installing dep
 
 A GitHub ruleset, **`main: CI must pass`** (Settings → Rules → Rulesets, active since 2026-10-11), protects the default branch:
 
-- **Required status check `check`** (the job above, source GitHub Actions). A PR cannot be merged until it is green, and a commit cannot reach `main` unless it already passed on another ref, so direct pushes to `main` are rejected: even chores like archiving a change go through a PR.
+- **Required status check `check`** (the job above, source GitHub Actions). A PR cannot be merged until it is green, and a commit cannot reach `main` unless it already passed on another ref, so direct pushes to `main` are rejected for everyone outside the bypass list.
 - Branches do **not** have to be up to date with `main` before merging (one developer; re-running CI on every `main` move buys nothing).
 - **Block force pushes** and **restrict deletions** on `main`.
-- **No bypass list**: the repo admin is held to the same rules.
+- **Bypass list: Repository admin** (added 2026-10-11). It exists for one thing: pushing the OpenSpec archive commit (archived change + synced specs, history only) straight to `main` after a feature PR merges, instead of opening an archive-only PR. Everything else (code, tests, docs, chores) still goes through a green PR; the bypass is a convention kept by discipline, not enforced by GitHub.
 
 If the job is renamed in `ci-frontend.yml`, update the required check in the ruleset too, or every PR stays blocked waiting for a check that never reports.
 

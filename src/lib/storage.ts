@@ -9,6 +9,7 @@ export const SCHEMA_VERSION = 1
 export const DATA_KEY = 'mtf_data'
 export const LANGUAGE_KEY = 'mtf_language'
 export const HINT_SEEN_KEY = 'mtf_hint_seen'
+export const INSTALL_NUDGE_SEEN_KEY = 'mtf_install_nudge_seen'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
 
 type Migration = (doc: Record<string, unknown>) => Record<string, unknown>
@@ -26,6 +27,33 @@ export function emptyData(): MtfData {
   return { schemaVersion: SCHEMA_VERSION, areas: [], cards: [], events: [] }
 }
 
+export type UpgradeResult = { ok: true; data: MtfData } | { ok: false; reason: 'shape' | 'newer' | 'migration' }
+
+/**
+ * Checks a parsed document's outer shape and migrates it to the current version: the
+ * one migration path, shared by `loadData()` and Import (ADR 0006), so a stored document
+ * and a Backup can never be upgraded differently. The entities inside the lists are not
+ * checked here. `steps` and `target` are only passed by tests.
+ */
+export function upgradeDocument(doc: unknown, steps = migrations, target = SCHEMA_VERSION): UpgradeResult {
+  if (!isDocument(doc)) return { ok: false, reason: 'shape' }
+  if (doc.schemaVersion > target) return { ok: false, reason: 'newer' }
+  try {
+    const migrated = migrate(doc, steps, target)
+    if (!isDocument(migrated)) return { ok: false, reason: 'migration' }
+    return { ok: true, data: migrated as unknown as MtfData }
+  } catch (error) {
+    console.warn('[storage] migration failed:', error)
+    return { ok: false, reason: 'migration' }
+  }
+}
+
+const recoveryReasons: Record<Extract<UpgradeResult, { ok: false }>['reason'], string> = {
+  shape: 'stored data has the wrong shape',
+  newer: `stored data has a schema version newer than ${SCHEMA_VERSION}`,
+  migration: 'stored data could not be migrated',
+}
+
 export function loadData(): MtfData {
   const raw = read(DATA_KEY)
   if (raw === null) return emptyData()
@@ -37,19 +65,9 @@ export function loadData(): MtfData {
     return recover(raw, 'stored data is not valid JSON')
   }
 
-  if (!isDocument(parsed)) return recover(raw, 'stored data has the wrong shape')
-  if (parsed.schemaVersion > SCHEMA_VERSION) {
-    return recover(raw, `stored data has schema version ${parsed.schemaVersion}, newer than ${SCHEMA_VERSION}`)
-  }
-
-  try {
-    const migrated = migrate(parsed, migrations, SCHEMA_VERSION)
-    if (!isDocument(migrated)) return recover(raw, 'migrated data has the wrong shape')
-    // The document and its lists are checked; the entities inside were written by MTF itself.
-    return migrated as unknown as MtfData
-  } catch (error) {
-    return recover(raw, `migration failed: ${String(error)}`)
-  }
+  const result = upgradeDocument(parsed)
+  // The document and its lists are checked; the entities inside were written by MTF itself.
+  return result.ok ? result.data : recover(raw, recoveryReasons[result.reason])
 }
 
 export function saveData(data: MtfData): void {
@@ -72,6 +90,30 @@ export function loadHintSeen(): boolean {
 
 export function saveHintSeen(): void {
   write(HINT_SEEN_KEY, '1')
+}
+
+/** Whether the install nudge was shown and answered (or MTF was installed) on this device. */
+export function loadInstallNudgeSeen(): boolean {
+  return read(INSTALL_NUDGE_SEEN_KEY) === '1'
+}
+
+export function saveInstallNudgeSeen(): void {
+  write(INSTALL_NUDGE_SEEN_KEY, '1')
+}
+
+/**
+ * Asks the browser not to evict MTF's storage under pressure. Silent: does nothing
+ * without the API or when already persistent, and only logs a refusal or a failure.
+ */
+export async function requestPersistentStorage(): Promise<void> {
+  try {
+    const storage = navigator.storage
+    if (!storage?.persist || !storage.persisted) return
+    if (await storage.persisted()) return
+    await storage.persist()
+  } catch (error) {
+    console.warn('[storage] could not ask for persistent storage:', error)
+  }
 }
 
 /** Runs `steps[v]` from the document's version up to `target`, one version at a time. */
