@@ -1,7 +1,22 @@
+import type { AreaColor } from '../../types'
 import type { Messages } from './es'
 
 const thingsDone = (n: number) => (n === 1 ? '1 thing done' : `${n} things done`)
 const cards = (n: number) => (n === 1 ? '1 card' : `${n} cards`)
+const colorNames: Record<AreaColor, string> = {
+  sage: 'Sage',
+  sand: 'Sand',
+  sky: 'Sky',
+  plum: 'Plum',
+  rose: 'Rose',
+  teal: 'Teal',
+  olive: 'Olive',
+  slate: 'Slate',
+  indigo: 'Indigo',
+  turquoise: 'Turquoise',
+  pine: 'Pine',
+  berry: 'Berry',
+}
 
 // Typed as `Messages`: a missing or extra key fails the build.
 export const en: Messages = {
@@ -42,6 +57,21 @@ export const en: Messages = {
   searchField: 'Search your cards',
   hint: 'Drag cards wherever you like. On your phone, press and hold a card to move it.',
   hintOk: 'Got it',
+
+  area: 'Area',
+  newArea: 'New area',
+  newAreaName: 'New area',
+  editArea: (name: string) => `Edit area ${name}`,
+  areaName: 'Name',
+  areaColor: 'Color',
+  colorName: (color: AreaColor) => colorNames[color],
+  deleteArea: 'Delete area',
+  deleteAreaAsk: 'Delete this area?',
+  deleteAreaCards: (n: number) => (n === 1 ? 'Its card goes to' : `Its ${n} cards go to`),
+  lastArea: 'The desk needs at least one area.',
+  areaInTheWay: "There's another area there",
+  areaDeleted: 'Area deleted',
+  areaDeletedDetail: (n: number, name: string) => (n === 1 ? `1 card went to ${name}` : `${n} cards went to ${name}`),
 
   wins: 'My wins',
   winsCounter: (n: number) => `My wins: ${thingsDone(n)} in 7 days`,

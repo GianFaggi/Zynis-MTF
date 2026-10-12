@@ -8,7 +8,7 @@ import { Jar } from '../wins/Jar'
 import { isOverJar, jarRect } from '../wins/jarLayout'
 import { jarVerdict } from '../wins/rules'
 import { AreaRegion } from './AreaRegion'
-import { areaForPoint } from './areas'
+import { areaForPoint, overlapsAny, resizedRect } from './areas'
 import { DeskCard } from './DeskCard'
 import { useDeskStore } from './deskStore'
 import { measureCardHeights, prefersReducedMotion, viewport } from './dom'
@@ -30,7 +30,8 @@ import { HOLD_MS, nextIntent, releaseOutcome, type Intent, type PointerKind } fr
 // The Desk (KB/frontend/desk.md, ADR 0003): one world `div` moved with a CSS
 // transform, and one gesture controller for the whole surface. Gesture frames write
 // the DOM directly; the stores hear about a pan through `setView` (applied to the DOM
-// by a subscription, not by rendering) and about a Card drag only once, on drop.
+// by a subscription, not by rendering), and about a Card drag or an Area move or
+// resize only once, on release.
 
 /** One press on the Desk, from pointer down to release. */
 interface Press {
@@ -46,6 +47,11 @@ interface Press {
   onJar: boolean
   /** The Card the press started on; `offset` is the drag so far in Desk px. */
   card: { id: string; element: HTMLElement; height: number; offset: Point } | null
+  /**
+   * The Area moved by its label or resized by its handle: its wrapper, its Card elements
+   * on the Desk (collected at lift), and the rect it would have if released now.
+   */
+  area: { id: string; wrapper: HTMLElement; cards: HTMLElement[]; rect: Rect | null } | null
   /** Where the pan starts from: the view and the pointer movement at that moment. */
   panStart: { view: View; movement: [number, number] }
 }
@@ -57,7 +63,7 @@ const CLICK_SLOP_PX = 6
 /** The grain tile (see `paper-grain`); the grain layer is one tile larger than the screen. */
 const GRAIN_TILE = 220
 const HOLD_VIBRATION_MS = 12
-/** A refused Card's slide back (0.35 s), plus a little slack. */
+/** A refused Card's or Area's slide back (0.35 s), plus a little slack. */
 const RETURN_MS = 380
 /** An accepted Card shrinking into the Jar (0.45 s), plus a little slack. */
 const INTO_JAR_MS = 460
@@ -82,11 +88,15 @@ function beginPress(event: Event): Press {
     labelAreaId: null,
     onJar: false,
     card: null,
+    area: null,
     panStart: { view: useDeskStore.getState().view, movement: [0, 0] },
   }
-  // Labels and the Jar are buttons, but a press on them may still pan: checked before CONTROLS.
+  // Labels and the Jar are buttons, but a press on them may still pan or move: checked before CONTROLS.
+  // The resize handle needs no hold: it exists only to be dragged, so a swipe there is never a pan.
+  const handle = target.closest<HTMLElement>('[data-area-resize]')
+  if (handle) return { ...press, intent: 'resize', area: areaPress(handle) }
   const label = target.closest<HTMLElement>('[data-area-label]')
-  if (label) return { ...press, labelAreaId: label.dataset.areaLabel! }
+  if (label) return { ...press, intent: 'pending', labelAreaId: label.dataset.areaLabel!, area: areaPress(label) }
   if (target.closest('[data-jar]')) return { ...press, onJar: true }
   if (target.closest(CONTROLS)) return { ...press, intent: 'ignore' }
   const card = target.closest<HTMLElement>('[data-card-id]')
@@ -100,12 +110,31 @@ function beginPress(event: Event): Press {
   return press
 }
 
+function areaPress(within: HTMLElement): NonNullable<Press['area']> {
+  const wrapper = within.closest<HTMLElement>('[data-area-id]')!
+  return { id: wrapper.dataset.areaId!, wrapper, cards: [], rect: null }
+}
+
 function findCard(id: string) {
   return useAppStore.getState().data.cards.find((card) => card.id === id)
 }
 
-/** Picks the Card up: the raised look, drawn above everything. */
+function findArea(id: string) {
+  return useAppStore.getState().data.areas.find((area) => area.id === id)
+}
+
+/** Picks the Card or the Area up. A Card gets the raised look; an Area only a stronger tint, and its Cards come along. */
 function lift(press: Press) {
+  if (press.area) {
+    const { id, wrapper } = press.area
+    if (press.intent === 'drag') {
+      const { cards } = useAppStore.getState().data
+      const ids = new Set(cards.filter((card) => card.areaId === id && card.jarredAt === null).map((card) => card.id))
+      press.area.cards = [...document.querySelectorAll<HTMLElement>('[data-card-id]')].filter((element) => ids.has(element.dataset.cardId!))
+    }
+    wrapper.setAttribute('data-lifted', '')
+    return
+  }
   if (!press.card) return
   press.card.height = measureCardHeights().get(press.card.id) ?? FALLBACK_CARD_HEIGHT
   press.card.element.setAttribute('data-lifted', '')
@@ -125,6 +154,7 @@ function liftedCenter(card: Card, lifted: NonNullable<Press['card']>): Point {
 
 /** Moves the lifted Card with the pointer and previews where it would go: an Area's color, or the Jar. */
 function follow(press: Press, [mx, my]: [number, number]) {
+  if (press.area) return followArea(press, [mx, my])
   const lifted = press.card
   const card = lifted && findCard(lifted.id)
   if (!lifted || !card) return
@@ -142,9 +172,44 @@ function follow(press: Press, [mx, my]: [number, number]) {
   else lifted.element.style.removeProperty('--b-preview')
 }
 
+/**
+ * Moves the lifted Area and its Cards with the pointer (`translate`, as for a Card), or
+ * resizes it (`--live-w` / `--live-h`), and warns while it would overlap another Area.
+ */
+function followArea(press: Press, [mx, my]: [number, number]) {
+  const lifted = press.area!
+  const area = findArea(lifted.id)
+  if (!area) return
+  const { s } = useDeskStore.getState().view
+  // Whole Desk px, as the store will write them, so the overlap check sees the final rect.
+  const dx = Math.round(mx / s)
+  const dy = Math.round(my / s)
+  if (press.intent === 'resize') {
+    lifted.rect = resizedRect(area.rect, dx, dy)
+    lifted.wrapper.style.setProperty('--live-w', `${lifted.rect.w}px`)
+    lifted.wrapper.style.setProperty('--live-h', `${lifted.rect.h}px`)
+  } else {
+    lifted.rect = { ...area.rect, x: area.rect.x + dx, y: area.rect.y + dy }
+    for (const element of [lifted.wrapper, ...lifted.cards]) element.style.translate = `${dx}px ${dy}px`
+  }
+  lifted.wrapper.toggleAttribute('data-blocked', overlapsAny(useAppStore.getState().data.areas, area.id, lifted.rect))
+}
+
 /** Clears everything the drag wrote to the DOM; React's styles show the stored place again. */
 function settle(press: Press) {
   jarElement()?.removeAttribute('data-over')
+  if (press.area) {
+    const { wrapper, cards } = press.area
+    for (const element of [wrapper, ...cards]) {
+      element.removeAttribute('data-returning')
+      element.style.translate = ''
+    }
+    wrapper.removeAttribute('data-lifted')
+    wrapper.removeAttribute('data-blocked')
+    wrapper.style.removeProperty('--live-w')
+    wrapper.style.removeProperty('--live-h')
+    return
+  }
   const element = press.card?.element
   if (!element) return
   element.removeAttribute('data-lifted')
@@ -201,16 +266,49 @@ function dropOnJar(press: Press, card: Card, jar: Rect, feedback: WinFeedback) {
   }, instant ? 0 : INTO_JAR_MS)
 }
 
-/** Stops a press for good, e.g. when a second finger starts a pinch: a lifted Card goes back. */
+/**
+ * Ends an Area move or resize. Free: written once, like a Card drop. Over another Area:
+ * the Area (and, for a move, its Cards) slides back, nothing is written, and `onBlocked`
+ * says why. Under reduced motion CSS drops the transition and it is back at once.
+ */
+function dropArea(press: Press, onBlocked: () => void) {
+  const lifted = press.area!
+  const area = findArea(lifted.id)
+  if (!area || !lifted.rect) return settle(press)
+  if (!overlapsAny(useAppStore.getState().data.areas, area.id, lifted.rect)) {
+    const { moveArea, resizeArea } = useAppStore.getState()
+    if (press.intent === 'resize') resizeArea(area.id, lifted.rect)
+    else moveArea(area.id, lifted.rect.x - area.rect.x, lifted.rect.y - area.rect.y)
+    return settle(press)
+  }
+
+  const { wrapper, cards } = lifted
+  wrapper.removeAttribute('data-lifted')
+  wrapper.removeAttribute('data-blocked')
+  for (const element of [wrapper, ...cards]) {
+    element.setAttribute('data-returning', '')
+    element.style.translate = ''
+  }
+  wrapper.style.removeProperty('--live-w')
+  wrapper.style.removeProperty('--live-h')
+  onBlocked()
+  setTimeout(() => settle(press), prefersReducedMotion() ? 0 : RETURN_MS)
+}
+
+/** Stops a press for good, e.g. when a second finger starts a pinch: a lifted Card or Area goes back. */
 function abandon(press: Press | null) {
   if (!press) return
   clearTimeout(press.timer)
-  if (press.intent === 'drag') settle(press)
+  if (press.intent === 'drag' || press.intent === 'resize') settle(press)
   press.intent = 'ignore'
 }
 
 function flyToArea(area: Area) {
   useDeskStore.getState().flyTo(areaView(area, viewport()))
+}
+
+function editArea(area: Area) {
+  useDeskStore.getState().openAreaEditor(area.id)
 }
 
 export function Desk() {
@@ -275,6 +373,7 @@ export function Desk() {
           swallowClick.current = false
           press.current = beginPress(event)
           const started = press.current
+          if (started.intent === 'resize') lift(started)
           if (started.intent === 'pending' && started.pointerType === 'touch') {
             started.timer = setTimeout(() => {
               if (press.current !== started || started.intent !== 'pending') return
@@ -304,7 +403,7 @@ export function Desk() {
             useDeskStore.getState().setView({ ...view, x: view.x + movement[0] - from[0], y: view.y + movement[1] - from[1] })
             deskRef.current?.toggleAttribute('data-panning', true)
           }
-          if (current.intent === 'drag') follow(current, movement)
+          if (current.intent === 'drag' || current.intent === 'resize') follow(current, movement)
         }
 
         if (!last) return
@@ -321,8 +420,9 @@ export function Desk() {
           onLabel: current.labelAreaId !== null,
           onJar: current.onJar,
         })
-        if (outcome === 'drop') {
+        if (outcome === 'drop' || outcome === 'resize') {
           if (cancelled) settle(current)
+          else if (current.area) dropArea(current, () => useDeskStore.getState().showToast(t('areaInTheWay')))
           else drop(current, feedback)
         } else if (outcome === 'open' && !cancelled && current.card) {
           useDeskStore.getState().openEditor(current.card.id)
@@ -335,7 +435,7 @@ export function Desk() {
       },
 
       onPinch: ({ first, origin: [ox, oy], offset: [s], memo }) => {
-        // A second finger takes over: any pan, hold or Card drag in progress stops.
+        // A second finger takes over: any pan, hold, Card drag or Area move or resize in progress stops.
         if (first) abandon(press.current)
         const anchor: Point = first ? toWorld(useDeskStore.getState().view, { x: ox, y: oy }) : memo
         useDeskStore.getState().setView({ s, x: ox - anchor.x * s, y: oy - anchor.y * s })
@@ -374,7 +474,7 @@ export function Desk() {
         }
       }}
       onDoubleClick={(event) => {
-        if ((event.target as Element).closest(`[data-card-id], [data-area-label], ${CONTROLS}`)) return
+        if ((event.target as Element).closest(`[data-card-id], [data-area-label], [data-area-resize], ${CONTROLS}`)) return
         const point = toWorld(useDeskStore.getState().view, { x: event.clientX, y: event.clientY })
         const id = useAppStore.getState().createCard(point)
         if (id) useDeskStore.getState().openEditor(id, { isNew: true })
@@ -388,7 +488,7 @@ export function Desk() {
         className="group absolute top-0 left-0 origin-top-left will-change-transform data-flying:transition-transform data-flying:duration-[550ms] data-flying:ease-[cubic-bezier(.3,.7,.2,1)]"
       >
         {areas.map((area) => (
-          <AreaRegion key={area.id} area={area} count={counts.get(area.id) ?? 0} onFly={flyToArea} />
+          <AreaRegion key={area.id} area={area} count={counts.get(area.id) ?? 0} onFly={flyToArea} onEdit={editArea} />
         ))}
         {jar && <Jar rect={jar} cards={inJar} colorOf={colorOf} />}
         {onDesk.map((card) => (

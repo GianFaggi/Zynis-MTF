@@ -1,3 +1,4 @@
+import { AREA_COLORS } from '../desk/areas'
 import type { MtfData } from '../types'
 
 // The strict entity check for a Backup (ADR 0006). `loadData()` trusts the entities
@@ -7,7 +8,7 @@ import type { MtfData } from '../types'
 
 type Entity = Record<string, unknown>
 
-const AREA_COLORS = new Set(['sage', 'sand', 'sky', 'plum', 'rose'])
+const COLORS = new Set<string>(AREA_COLORS)
 const AREA_KEYS = new Set(['work', 'life', 'remember'])
 const EVENT_TYPES = new Set(['item', 'card', 'note'])
 
@@ -37,7 +38,7 @@ const isStamped = (entity: Entity) => isNumber(entity.createdAt) && isNumber(ent
 function isArea(area: Entity): boolean {
   return (
     isStamped(area) &&
-    AREA_COLORS.has(area.color as string) &&
+    COLORS.has(area.color as string) &&
     isOptional(area.key, (key) => AREA_KEYS.has(key as string)) &&
     isOptional(area.name, isString) &&
     hasNumbers(area.rect, ['x', 'y', 'w', 'h']) &&

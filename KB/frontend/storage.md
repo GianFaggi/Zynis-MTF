@@ -24,6 +24,7 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 - Deleting a Card removes **every** event with its `cardId` (`item`, `card` and `note`): a deleted Card is treated as never written. The Jar is where Cards whose credit you want to keep go.
 - Every action changes a Card and its events in **one** `data` replacement, so a save never holds a Card and Wins that disagree.
 - View state (pan/zoom, open sheets) is never part of `mtf_data`.
+- Areas the user creates, renames, recolors, moves, resizes or deletes (#7) need **no schema bump**: `Area` already had an optional `name`, an optional `key` and a `rect`. A user-created Area has no `key`; clearing the name of a default Area removes `name`, so its translated `key` shows again. Moving an Area writes its `rect` and its Desk Cards' positions in one replacement; deleting one moves its Cards to the Area the user chose, and leaves `events` untouched (a Win's `areaId` is a snapshot). Only `AreaColor` grew, from 5 to 12 colors. So a Backup made by this version with one of the new colors is refused as **damaged** by an older MTF; that is acceptable, since a Backup moves data between devices running the same deployed app.
 
 ## Entities (schema version 1)
 
@@ -31,7 +32,7 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 type Language = 'es' | 'en';
 type Theme = 'system' | 'light' | 'dark'; // device setting, not in MtfData
 type AreaId = string;
-type AreaColor = 'sage' | 'sand' | 'sky' | 'plum' | 'rose';
+type AreaColor = 'sage' | 'sand' | 'sky' | 'plum' | 'rose' | 'teal' | 'olive' | 'slate' | 'indigo' | 'turquoise' | 'pine' | 'berry'; // teal… berry: #7
 
 interface Area {
   id: AreaId;

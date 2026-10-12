@@ -9,7 +9,20 @@ export type Theme = 'system' | 'light' | 'dark'
 
 export type AreaId = string
 
-export type AreaColor = 'sage' | 'sand' | 'sky' | 'plum' | 'rose'
+/** The 12 Paper Area colors; `AREA_COLORS` in `src/desk/areas.ts` lists them in swatch order. */
+export type AreaColor =
+  | 'sage'
+  | 'sand'
+  | 'sky'
+  | 'plum'
+  | 'rose'
+  | 'teal'
+  | 'olive'
+  | 'slate'
+  | 'indigo'
+  | 'turquoise'
+  | 'pine'
+  | 'berry'
 
 export interface Area {
   id: AreaId

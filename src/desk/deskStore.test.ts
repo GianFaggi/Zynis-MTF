@@ -43,10 +43,34 @@ describe('deskStore feedback', () => {
   })
 })
 
+describe('deskStore Area editor', () => {
+  beforeEach(() => {
+    useDeskStore.setState(useDeskStore.getInitialState(), true)
+  })
+
+  it('opens for one Area, as new or not, and closes', () => {
+    expect(useDeskStore.getState().areaEditor).toBeNull()
+    useDeskStore.getState().openAreaEditor('a2')
+    expect(useDeskStore.getState().areaEditor).toEqual({ id: 'a2', isNew: false })
+    useDeskStore.getState().openAreaEditor('a4', { isNew: true })
+    expect(useDeskStore.getState().areaEditor).toEqual({ id: 'a4', isNew: true })
+    useDeskStore.getState().closeAreaEditor()
+    expect(useDeskStore.getState().areaEditor).toBeNull()
+  })
+})
+
 describe('deskStore after an Import', () => {
-  it('closes the editor, search and Mis logros, and leaves the view alone', () => {
+  it('closes the editors, search and Mis logros, and leaves the view alone', () => {
     const view = { x: -300, y: -120, s: 0.6 }
-    useDeskStore.setState({ view, editingId: 'c1', newCardId: 'c1', searchOpen: true, query: 'pan', winsOpen: true })
+    useDeskStore.setState({
+      view,
+      editingId: 'c1',
+      newCardId: 'c1',
+      areaEditor: { id: 'a4', isNew: true },
+      searchOpen: true,
+      query: 'pan',
+      winsOpen: true,
+    })
 
     useDeskStore.getState().resetAfterImport()
 
@@ -54,6 +78,7 @@ describe('deskStore after an Import', () => {
       view,
       editingId: null,
       newCardId: null,
+      areaEditor: null,
       searchOpen: false,
       query: '',
       winsOpen: false,
