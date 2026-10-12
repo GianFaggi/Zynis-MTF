@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { areaLabel, openApp } from './helpers.ts'
 
 test.use({ locale: 'es-AR' })
@@ -34,6 +34,61 @@ test('switching to English survives a reload in a Spanish browser', async ({ pag
   await page.reload()
   await expect(areaLabel(page, 'Work')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+})
+
+const DARK_PAPER = 'rgb(28, 26, 24)' // #1c1a18
+const LIGHT_PAPER = 'rgb(245, 241, 234)' // #f5f1ea
+
+const paper = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+
+/** The status bar color: the `theme-color` meta whose `media` matches, as the browser picks it. */
+const themeColor = (page: Page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')]
+      .find((meta) => !meta.media || matchMedia(meta.media).matches)
+      ?.content.toLowerCase(),
+  )
+
+async function chooseTheme(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Ajustes' }).click()
+  await page.getByRole('group', { name: 'Tema' }).getByRole('button', { name }).click()
+  await page.keyboard.press('Escape')
+}
+
+test.describe('on a light device', () => {
+  test.use({ colorScheme: 'light' })
+
+  test('choosing Oscuro paints the dark paper and status bar, and survives a reload', async ({ page }) => {
+    await openApp(page)
+    expect(await paper(page)).toBe(LIGHT_PAPER)
+    expect(await themeColor(page)).toBe('#f5f1ea')
+
+    await chooseTheme(page, 'Oscuro')
+    await expect.poll(() => paper(page)).toBe(DARK_PAPER)
+    expect(await themeColor(page)).toBe('#1c1a18')
+
+    await page.reload()
+    await expect(areaLabel(page, 'Trabajo')).toBeVisible()
+    expect(await paper(page)).toBe(DARK_PAPER)
+    expect(await themeColor(page)).toBe('#1c1a18')
+
+    await chooseTheme(page, 'Sistema')
+    await expect.poll(() => paper(page)).toBe(LIGHT_PAPER)
+    expect(await themeColor(page)).toBe('#f5f1ea')
+  })
+})
+
+test.describe('on a dark device', () => {
+  test.use({ colorScheme: 'dark' })
+
+  test('choosing Claro paints the light paper and status bar', async ({ page }) => {
+    await openApp(page)
+    expect(await paper(page)).toBe(DARK_PAPER)
+
+    await chooseTheme(page, 'Claro')
+    await expect.poll(() => paper(page)).toBe(LIGHT_PAPER)
+    expect(await themeColor(page)).toBe('#f5f1ea')
+  })
 })
 
 test('Settings closes when tapping outside it', async ({ page }) => {

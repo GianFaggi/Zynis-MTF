@@ -7,17 +7,20 @@ import {
   LANGUAGE_KEY,
   RECOVERY_KEY_PREFIX,
   SCHEMA_VERSION,
+  THEME_KEY,
   emptyData,
   loadData,
   loadHintSeen,
   loadInstallNudgeSeen,
   loadLanguage,
+  loadTheme,
   migrate,
   requestPersistentStorage,
   saveData,
   saveHintSeen,
   saveInstallNudgeSeen,
   saveLanguage,
+  saveTheme,
   upgradeDocument,
 } from './storage'
 
@@ -126,9 +129,11 @@ describe('storage', () => {
 
     expect(loadData()).toEqual(emptyData())
     expect(loadLanguage()).toBeNull()
+    expect(loadTheme()).toBeNull()
     expect(loadHintSeen()).toBe(false)
     expect(() => saveData(sample)).not.toThrow()
     expect(() => saveLanguage('en')).not.toThrow()
+    expect(() => saveTheme('dark')).not.toThrow()
     expect(() => saveHintSeen()).not.toThrow()
     expect(warn).toHaveBeenCalled()
   })
@@ -150,6 +155,18 @@ describe('storage', () => {
   it('ignores an unknown stored language', () => {
     localStorage.setItem(LANGUAGE_KEY, 'fr')
     expect(loadLanguage()).toBeNull()
+  })
+
+  it.each(['system', 'light', 'dark'] as const)('stores and reads the theme %s', (theme) => {
+    saveTheme(theme)
+    expect(localStorage.getItem(THEME_KEY)).toBe(theme)
+    expect(loadTheme()).toBe(theme)
+  })
+
+  it('reads no theme when unset or unknown', () => {
+    expect(loadTheme()).toBeNull()
+    localStorage.setItem(THEME_KEY, 'sepia')
+    expect(loadTheme()).toBeNull()
   })
 })
 

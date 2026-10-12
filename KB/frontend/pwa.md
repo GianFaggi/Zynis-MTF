@@ -32,7 +32,7 @@ Risk: a page still running old JS that lazy-loads a chunk the new worker removed
 - `name`: "MTF — Más Tareas Fáciles", `short_name`: "MTF", `description` in Spanish, `lang`: `es`
 - `start_url` / `scope`: `/`
 - `display`: `standalone`, `orientation`: any (the Desk works in landscape too)
-- `theme_color` / `background_color`: paper (`#F5F1EA`); dark handled by the app, and `index.html` has light/dark `theme-color` metas for the status bar
+- `theme_color` / `background_color`: paper (`#F5F1EA`), fixed at install time, so the splash stays light paper whatever the theme. The app paints the theme itself; the status bar comes from the light/dark `theme-color` metas in `index.html`, which follow the device under System and are set to the chosen paper under Light or Dark by `applyTheme` ([design-system.md](design-system.md#how-the-theme-switches))
 - Icons: 64, 192, 512, maskable 512; Apple touch icon 180 (`<link rel="apple-touch-icon">`), `favicon.ico` 48 and `logo.svg` as favicons
 
 ## Icons

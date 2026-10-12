@@ -6,9 +6,13 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { listenForInstall } from './install/installStore'
+import { applyTheme } from './lib/theme'
+import { useAppStore } from './store/appStore'
 
 // Before rendering: Chromium can offer the install before React mounts.
 listenForInstall()
+// A chosen Light or Dark in place before React's first commit (System needs nothing).
+applyTheme(useAppStore.getState().theme)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

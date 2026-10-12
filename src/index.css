@@ -1,6 +1,23 @@
 @import 'tailwindcss';
 
 /*
+  Dark paper (KB/frontend/design-system.md#how-the-theme-switches): when the user chose
+  Dark (`data-theme="dark"` on <html>), or when the device prefers dark and the user did
+  not choose Light. Under System there is no attribute, so the media query alone decides,
+  before any script runs. `:where()` adds no specificity: the dark values win by order.
+*/
+@custom-variant dark {
+  &:where([data-theme='dark']) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme='light'])) {
+      @slot;
+    }
+  }
+}
+
+/*
   Paper design tokens (KB/frontend/design-system.md).
   - `static`: always emit every variable. Later changes pick Area colors at runtime
     (`var(--color-sage)` built from data), which Tailwind's source scan cannot see.
@@ -119,8 +136,9 @@
     --paper-grain-opacity: 0.05;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
+  /* Written once; the `dark` variant above emits it for both conditions. */
+  :root {
+    @variant dark {
       color-scheme: dark;
 
       --card-tint: 11%;

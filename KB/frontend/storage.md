@@ -29,6 +29,7 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 
 ```ts
 type Language = 'es' | 'en';
+type Theme = 'system' | 'light' | 'dark'; // device setting, not in MtfData
 type AreaId = string;
 type AreaColor = 'sage' | 'sand' | 'sky' | 'plum' | 'rose';
 
@@ -87,6 +88,7 @@ interface MtfData {         // the whole `mtf_data` document
 | `mtf_data_recovery_<epochMs>` | raw text of an `mtf_data` that could not be read, kept instead of overwritten | change 1 |
 | `mtf_hint_seen` | `'1'` once the first-run hint is dismissed; a device setting, not part of `mtf_data` or the Backup | change 2 |
 | `mtf_install_nudge_seen` | `'1'` once the install nudge was answered ("Cómo" or "Ahora no") or MTF was installed; a device setting, not part of the Backup | change 4 |
+| `mtf_theme` | `'system'`, `'light'` or `'dark'`; anything else is ignored (= System). A device setting, not part of `mtf_data` or the Backup | change 5 |
 
 ## Storage layer API (`src/lib/storage.ts`)
 
@@ -96,6 +98,8 @@ interface MtfData {         // the whole `mtf_data` document
 | `saveData(data)` | Writes the whole document. |
 | `loadLanguage(): Language \| null` | `null` when unset or unknown. |
 | `saveLanguage(language)` | |
+| `loadTheme(): Theme \| null` | `null` when unset, unknown or storage refuses to read; the store then uses `'system'` |
+| `saveTheme(theme)` | Writes `'system'` too, so the choice is explicit |
 | `loadHintSeen(): boolean` | `true` only when `mtf_hint_seen` is `'1'`; `false` when unset or storage refuses to read |
 | `saveHintSeen()` | Writes `'1'` |
 | `loadInstallNudgeSeen(): boolean` | `true` only when `mtf_install_nudge_seen` is `'1'`; `false` when unset or storage refuses to read |
@@ -121,7 +125,7 @@ A **Backup** is one JSON file, `mtf-backup-YYYY-MM-DD.json` (local date of the e
 }
 ```
 
-- `data.schemaVersion` is the only version number. Device settings (`mtf_language`, `mtf_hint_seen`, `mtf_install_nudge_seen`) are never in the file. Pretty-printed with 2 spaces.
+- `data.schemaVersion` is the only version number. Device settings (`mtf_language`, `mtf_theme`, `mtf_hint_seen`, `mtf_install_nudge_seen`) are never in the file, and an Import leaves them as they were. Pretty-printed with 2 spaces.
 - The pure functions live in `src/backup/backup.ts`: `backupFileName(date)`, `makeBackup(data, now)` and `readBackup(text)`. `src/backup/validate.ts` (`isValidData`) checks the entities; `src/backup/deliver.ts` shares or downloads the file.
 - **Reading a Backup** (`readBackup`) is stricter than `loadData()`, because the file comes from outside:
   - **not a Backup**: longer than 5 MB, not JSON, not an object, or `format !== 'mtf-backup'`

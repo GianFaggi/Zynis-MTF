@@ -17,8 +17,10 @@ import { showWholeDesk } from './desk/view'
 import { languageNames, useT } from './i18n'
 import { InstallNudge } from './install/InstallNudge'
 import { InstallSection } from './install/InstallSection'
+import { applyTheme } from './lib/theme'
 import { useAppStore } from './store/appStore'
 import { usePersistentStorage } from './store/usePersistentStorage'
+import type { Theme } from './types'
 import { MisLogros } from './wins/MisLogros'
 import { WinsCounter } from './wins/WinsCounter'
 
@@ -43,14 +45,23 @@ export default function App() {
   const t = useT()
   const language = useAppStore((state) => state.language)
   const setLanguage = useAppStore((state) => state.setLanguage)
+  const theme = useAppStore((state) => state.theme)
+  const setTheme = useAppStore((state) => state.setTheme)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const searchOpen = useDeskStore((state) => state.searchOpen)
   const toggleSearch = useDeskStore((state) => state.toggleSearch)
   const toast = useDeskStore((state) => state.toast)
+  // Built here, unlike `languageOptions`: the theme names are translated.
+  const themeOptions: { value: Theme; label: string }[] = [
+    { value: 'system', label: t('themeSystem') },
+    { value: 'light', label: t('themeLight') },
+    { value: 'dark', label: t('themeDark') },
+  ]
 
   useEffect(() => {
     document.documentElement.lang = language
   }, [language])
+  useEffect(() => applyTheme(theme), [theme])
   usePersistentStorage()
 
   return (
@@ -89,6 +100,10 @@ export default function App() {
         <div className="flex flex-col gap-2 py-2">
           <span className="text-xs font-semibold tracking-[0.08em] text-pencil uppercase">{t('language')}</span>
           <Segmented label={t('language')} options={languageOptions} value={language} onChange={setLanguage} />
+        </div>
+        <div className="flex flex-col gap-2 py-2">
+          <span className="text-xs font-semibold tracking-[0.08em] text-pencil uppercase">{t('theme')}</span>
+          <Segmented label={t('theme')} options={themeOptions} value={theme} onChange={setTheme} />
         </div>
         <BackupSection
           onImported={(data) => {

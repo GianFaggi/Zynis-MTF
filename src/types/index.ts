@@ -4,6 +4,9 @@
 
 export type Language = 'es' | 'en'
 
+/** A device setting, like the language: `'system'` follows the device's light/dark mode. */
+export type Theme = 'system' | 'light' | 'dark'
+
 export type AreaId = string
 
 export type AreaColor = 'sage' | 'sand' | 'sky' | 'plum' | 'rose'
