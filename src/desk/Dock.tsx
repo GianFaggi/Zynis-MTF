@@ -7,7 +7,8 @@ import { jarBounds, jarRect } from '../wins/jarLayout'
 import { areaName } from './areas'
 import { useDeskStore } from './deskStore'
 import { measureCardHeights, viewport } from './dom'
-import { areaView, deskBounds, fitRect } from './geometry'
+import { areaView, fitRect } from './geometry'
+import { showWholeDesk } from './view'
 
 /** The Jar and its caption with paper around it, at no more than 100%. */
 function goToJar() {
@@ -15,12 +16,6 @@ function goToJar() {
   if (!jar) return
   const { x, y, w, h } = jarBounds(jar)
   useDeskStore.getState().flyTo(fitRect({ x: x - 200, y: y - 60, w: w + 400, h: h + 120 }, viewport(), { maxScale: 1 }))
-}
-
-function seeAll() {
-  const { areas, cards } = useAppStore.getState().data
-  const bounds = deskBounds(areas, cards, measureCardHeights())
-  if (bounds) useDeskStore.getState().flyTo(fitRect(bounds, viewport()))
 }
 
 function tidyUp() {
@@ -74,7 +69,7 @@ export function Dock() {
         ))}
         <span aria-hidden="true" className="mx-1 h-[22px] w-px flex-none bg-rule" />
         <ToolButton icon={JarIcon} label={t('jar')} onClick={goToJar} />
-        <ToolButton icon={Scan} label={t('seeAll')} onClick={seeAll} />
+        <ToolButton icon={Scan} label={t('seeAll')} onClick={showWholeDesk} />
         <ToolButton icon={LayoutGrid} label={t('tidyUp')} onClick={tidyUp} />
       </nav>
     </div>

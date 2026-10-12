@@ -86,6 +86,7 @@ interface MtfData {         // the whole `mtf_data` document
 | `mtf_language` | `'es'` or `'en'`; anything else is ignored | change 1 |
 | `mtf_data_recovery_<epochMs>` | raw text of an `mtf_data` that could not be read, kept instead of overwritten | change 1 |
 | `mtf_hint_seen` | `'1'` once the first-run hint is dismissed; a device setting, not part of `mtf_data` or the Backup | change 2 |
+| `mtf_install_nudge_seen` | `'1'` once the install nudge was answered ("Cómo" or "Ahora no") or MTF was installed; a device setting, not part of the Backup | change 4 |
 
 ## Storage layer API (`src/lib/storage.ts`)
 
@@ -97,20 +98,44 @@ interface MtfData {         // the whole `mtf_data` document
 | `saveLanguage(language)` | |
 | `loadHintSeen(): boolean` | `true` only when `mtf_hint_seen` is `'1'`; `false` when unset or storage refuses to read |
 | `saveHintSeen()` | Writes `'1'` |
-| `migrate(doc, steps, target)` | Runs `steps[v]` (v → v + 1) up to `target`; throws if a step is missing. The `migrations` map is empty at v1. |
+| `loadInstallNudgeSeen(): boolean` | `true` only when `mtf_install_nudge_seen` is `'1'`; `false` when unset or storage refuses to read |
+| `saveInstallNudgeSeen()` | Writes `'1'` |
+| `upgradeDocument(doc): UpgradeResult` | The one migration path, used by `loadData()` and by Import. `{ ok: true, data }`, or `{ ok: false, reason }` with `'shape'` (outer shape wrong), `'newer'` (`schemaVersion` above `SCHEMA_VERSION`) or `'migration'` (a step missing, throwing, or breaking the shape). Checks the outer shape only, not the entities |
+| `migrate(doc, steps, target)` | Runs `steps[v]` (v → v + 1) up to `target`; throws if a step is missing. The `migrations` map is private and empty at v1. |
 | `emptyData()` | `{ schemaVersion: SCHEMA_VERSION, areas: [], cards: [], events: [] }` |
+| `requestPersistentStorage(): Promise<void>` | Asks the browser to keep MTF's storage (`navigator.storage.persist()`). Returns at once without the API or when `persisted()` is already `true`; never throws, only logs. Called by `usePersistentStorage()` ([Persistent storage](#persistent-storage)) |
 
 Every access is in `try/catch`: when the browser refuses storage (blocked, private mode, quota) the layer logs `console.warn` and never throws; the app keeps working in memory.
 
-**Adding a schema change:** bump `SCHEMA_VERSION`, add `migrations[old] = (doc) => newDoc`, update `src/types/index.ts` and this file, and add a test in `storage.test.ts` that loads an old document.
+**Adding a schema change:** bump `SCHEMA_VERSION`, add `migrations[old] = (doc) => newDoc`, update `src/types/index.ts` and this file, and add a test in `storage.test.ts` that loads an old document **and** one in `src/backup/backup.test.ts` that imports an old Backup ([ADR 0006](../../docs/adr/0006-backup-file-format.md)).
 
-## Export / Import (change 4)
+## Export / Import
 
-- Export writes the whole `mtf_data` document to `mtf-backup-YYYY-MM-DD.json`.
-- Import validates `schemaVersion` and shape, then replaces the current data after an explicit confirmation in the UI. (Merge is a V2 sync concern.)
-- Ask the browser for persistent storage (`navigator.storage.persist()`) on first launch to reduce eviction risk.
+A **Backup** is one JSON file, `mtf-backup-YYYY-MM-DD.json` (local date of the export), with the whole `mtf_data` document inside an envelope ([ADR 0006](../../docs/adr/0006-backup-file-format.md)):
+
+```json
+{
+  "format": "mtf-backup",
+  "exportedAt": "2026-10-11T18:04:12.345Z",
+  "data": { "schemaVersion": 1, "areas": [], "cards": [], "events": [] }
+}
+```
+
+- `data.schemaVersion` is the only version number. Device settings (`mtf_language`, `mtf_hint_seen`, `mtf_install_nudge_seen`) are never in the file. Pretty-printed with 2 spaces.
+- The pure functions live in `src/backup/backup.ts`: `backupFileName(date)`, `makeBackup(data, now)` and `readBackup(text)`. `src/backup/validate.ts` (`isValidData`) checks the entities; `src/backup/deliver.ts` shares or downloads the file.
+- **Reading a Backup** (`readBackup`) is stricter than `loadData()`, because the file comes from outside:
+  - **not a Backup**: longer than 5 MB, not JSON, not an object, or `format !== 'mtf-backup'`
+  - **damaged**: `data` fails the outer shape check, `exportedAt` is not a string, a migration step fails, or the entity check fails (missing or wrongly typed field, duplicated id, unknown Area color, a Card whose Area is not in the file, no Area at all)
+  - **newer**: `data.schemaVersion` above `SCHEMA_VERSION`
+  - an older version is migrated through `upgradeDocument()`, the same path as on load
+- Unknown extra fields are kept, so a round trip is exact. A win event whose `cardId` points at no Card is accepted (it only miscounts).
+- **Import replaces** the whole document (`appStore.replaceData`) after an explicit confirmation in Settings; nothing is written before it. Merging is a V2 sync concern.
+
+## Persistent storage
+
+`usePersistentStorage()` (`src/store/usePersistentStorage.ts`, called once from `App`) runs `requestPersistentStorage()` the first time in a launch that the data holds at least one Card: when MTF opens with Cards, or right after the first Card is kept. Not on a blank first launch, because Firefox shows a permission prompt for it. Asking on every launch until granted lets a later install count (Chrome grants it silently by engagement and installation; Safari mostly to Home Screen apps).
 
 ## Risks
 
-- Safari can evict data of sites not opened for ~7 days; installed PWAs are treated better. Mitigation: install prompt guidance + Backup.
+- Safari can evict data of sites not opened for ~7 days; installed PWAs are treated better. Mitigation: install guidance in Settings + the one-time install nudge ([pwa.md](pwa.md)), the persistent storage request, and the Backup.
 - Clearing site data deletes everything. Mitigation: Backup.

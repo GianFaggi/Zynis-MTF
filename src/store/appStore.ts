@@ -49,6 +49,8 @@ export interface AppState {
   jarCard: (id: string) => JarVerdict
   /** Takes a Card out of the Jar, back inside its Area and on top. */
   returnCard: (id: string) => void
+  /** Import: the whole document becomes `data`, already validated (at least one Area). The language stays. */
+  replaceData: (data: MtfData) => void
 }
 
 /** Brings `events` in line with a Card that just changed. */
@@ -287,6 +289,8 @@ export function createAppStore() {
             syncWins,
           )
         }),
+
+      replaceData: (data) => set({ data }),
     }
   })
 

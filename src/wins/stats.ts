@@ -38,6 +38,11 @@ export function daysAgo(time: number, now: number): number {
   return Math.round((utcDate(now) - utcDate(time)) / 86_400_000)
 }
 
+/** Things done since the user started (`winStats().total`), without needing today. */
+export function totalDone(events: readonly WinEvent[]): number {
+  return events.filter((event) => event.type !== 'note').length
+}
+
 export function winStats(events: readonly WinEvent[], now: number): WinStats {
   const today = new Date(now)
   const dayAt = (offset: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset).getTime()
@@ -45,7 +50,6 @@ export function winStats(events: readonly WinEvent[], now: number): WinStats {
   const weekStart = days[0].start
   const weekEnd = dayAt(1)
   const week = { items: 0, cards: 0, notes: 0, done: 0 }
-  let total = 0
 
   for (const event of events) {
     const inWeek = event.at >= weekStart && event.at < weekEnd
@@ -53,7 +57,6 @@ export function winStats(events: readonly WinEvent[], now: number): WinStats {
       if (inWeek) week.notes++
       continue
     }
-    total++
     if (!inWeek) continue
     if (event.type === 'item') week.items++
     else week.cards++
@@ -64,5 +67,5 @@ export function winStats(events: readonly WinEvent[], now: number): WinStats {
   let best: DayCount | null = null
   for (const day of days) if (day.count > 0 && day.count >= (best?.count ?? 0)) best = day
 
-  return { days, week, best, total }
+  return { days, week, best, total: totalDone(events) }
 }

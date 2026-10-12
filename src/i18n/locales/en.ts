@@ -1,6 +1,7 @@
 import type { Messages } from './es'
 
 const thingsDone = (n: number) => (n === 1 ? '1 thing done' : `${n} things done`)
+const cards = (n: number) => (n === 1 ? '1 card' : `${n} cards`)
 
 // Typed as `Messages`: a missing or extra key fails the build.
 export const en: Messages = {
@@ -13,7 +14,7 @@ export const en: Messages = {
   work: 'Work',
   life: 'Life',
   remember: 'Remember',
-  cardCount: (n: number) => (n === 1 ? '1 card' : `${n} cards`),
+  cardCount: cards,
 
   newCard: 'New card',
   more: (n: number) => `+${n} more`,
@@ -69,4 +70,34 @@ export const en: Messages = {
   today: 'today',
   yesterday: 'yesterday',
   daysAgo: (n: number) => `${n} days ago`,
+
+  backup: 'Backup',
+  backupNote: 'Your notes are saved in this browser. To move them between your phone and PC, export a backup and open it on the other device.',
+  exportBackup: 'Export backup',
+  importBackup: 'Import backup',
+  backupReady: 'Backup ready',
+  backupImported: 'Backup imported',
+  notBackup: "This file is not an MTF backup. Your data hasn't changed.",
+  newerBackup: "This backup was made with a newer version of MTF. Reopen MTF to update it and try again. Your data hasn't changed.",
+  damagedBackup: "This backup is damaged and can't be used. Your data hasn't changed.",
+  backupFrom: (date: string) => `Backup from ${date}`,
+  backupDesk: (n: number) => `${cards(n)} on the desk`,
+  backupJar: (n: number) => `${cards(n)} in the jar`,
+  backupDone: thingsDone,
+  replaceWarning: (n: number) => `It replaces everything on this device (${cards(n)}). To keep it, export it first.`,
+  replaceData: 'Replace my data',
+  cancel: 'Cancel',
+
+  installApp: 'Install the app',
+  installWhy:
+    "Installed, MTF opens like an app and your notes are safer: on iPhone, Safari can erase the data of sites you haven't opened in a while, but not of installed apps.",
+  installed: 'MTF is installed on this device.',
+  iosShare: 'Tap Share',
+  iosAddToHome: 'Choose “Add to Home Screen”.',
+  iosOpen: 'Open MTF from its icon.',
+  installButton: 'Install MTF',
+  installManual: 'Open the browser menu and look for “Install app” or “Add to Home screen”.',
+  installNudge: 'Install MTF to keep your notes safer.',
+  installHow: 'How',
+  notNow: 'Not now',
 }

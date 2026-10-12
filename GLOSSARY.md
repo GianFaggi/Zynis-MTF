@@ -70,6 +70,14 @@ _Avoid_: Restore, undo, unarchive
 
 ## Data
 
-**Backup**:
-A file with all of the user's Desk, Cards and Wins, made by Export and loaded by Import. In the MVP it is how data moves between phone and PC.
-_Avoid_: Sync, save file
+**Backup** (ES: **copia de seguridad**, **copia**):
+A file (`mtf-backup-YYYY-MM-DD.json`) with all of the user's Areas, Cards (on the Desk and in the Jar) and Wins, made by Export and loaded by Import. It does not carry device settings such as the language. In the MVP it is how data moves between phone and PC ([ADR 0006](docs/adr/0006-backup-file-format.md)).
+_Avoid_: Sync, save file, archive
+
+**Export** (ES: **Exportar copia**):
+Making a Backup of everything on this device. On a phone it opens the share menu with the file; on a PC it downloads it.
+_Avoid_: Save, sync, download (as the name of the action)
+
+**Import** (ES: **Importar copia**):
+Loading a Backup on this device. MTF checks the file first and, after the user confirms, **replaces** everything on the device with it; it never merges. A file that is not a valid Backup changes nothing.
+_Avoid_: Restore, sync, merge, open

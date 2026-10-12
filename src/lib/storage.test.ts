@@ -3,17 +3,22 @@ import type { MtfData } from '../types'
 import {
   DATA_KEY,
   HINT_SEEN_KEY,
+  INSTALL_NUDGE_SEEN_KEY,
   LANGUAGE_KEY,
   RECOVERY_KEY_PREFIX,
   SCHEMA_VERSION,
   emptyData,
   loadData,
   loadHintSeen,
+  loadInstallNudgeSeen,
   loadLanguage,
   migrate,
+  requestPersistentStorage,
   saveData,
   saveHintSeen,
+  saveInstallNudgeSeen,
   saveLanguage,
+  upgradeDocument,
 } from './storage'
 
 const sample: MtfData = {
@@ -166,5 +171,109 @@ describe('migrate', () => {
 
   it('throws when a step is missing, so loadData can keep a recovery copy', () => {
     expect(() => migrate({ schemaVersion: 1 }, {}, 2)).toThrow(/no migration from schema version 1/)
+  })
+})
+
+describe('install nudge flag', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('remembers that the install nudge was seen', () => {
+    expect(loadInstallNudgeSeen()).toBe(false)
+    saveInstallNudgeSeen()
+    expect(localStorage.getItem(INSTALL_NUDGE_SEEN_KEY)).toBe('1')
+    expect(loadInstallNudgeSeen()).toBe(true)
+  })
+
+  it('reads as not seen when storage refuses to read', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    localStorage.setItem(INSTALL_NUDGE_SEEN_KEY, '1')
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    expect(loadInstallNudgeSeen()).toBe(false)
+  })
+})
+
+describe('requestPersistentStorage', () => {
+  /** jsdom has no `navigator.storage`: each test puts its own in place. */
+  function stubStorage(storage: Partial<StorageManager> | undefined) {
+    Object.defineProperty(navigator, 'storage', { value: storage, configurable: true })
+  }
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'storage')
+    vi.restoreAllMocks()
+  })
+
+  it('does nothing without the API', async () => {
+    stubStorage(undefined)
+    await expect(requestPersistentStorage()).resolves.toBeUndefined()
+  })
+
+  it('does not ask when the storage is already persistent', async () => {
+    const persist = vi.fn(async () => true)
+    stubStorage({ persisted: async () => true, persist })
+    await requestPersistentStorage()
+    expect(persist).not.toHaveBeenCalled()
+  })
+
+  it('asks once when the storage is not persistent yet', async () => {
+    const persist = vi.fn(async () => false)
+    stubStorage({ persisted: async () => false, persist })
+    await requestPersistentStorage()
+    expect(persist).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not throw when the request fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    stubStorage({ persisted: async () => false, persist: () => Promise.reject(new Error('denied')) })
+    await expect(requestPersistentStorage()).resolves.toBeUndefined()
+    expect(warn).toHaveBeenCalled()
+  })
+})
+
+describe('upgradeDocument', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns a current-version document as it is', () => {
+    expect(upgradeDocument(sample)).toEqual({ ok: true, data: sample })
+  })
+
+  it.each([
+    ['not an object', 'hola'],
+    ['null', null],
+    ['no schemaVersion', { areas: [], cards: [], events: [] }],
+    ['cards not a list', { ...sample, cards: {} }],
+  ])('refuses the wrong shape (%s)', (_, doc) => {
+    expect(upgradeDocument(doc)).toEqual({ ok: false, reason: 'shape' })
+  })
+
+  it('refuses a document from a newer schema version', () => {
+    expect(upgradeDocument({ ...sample, schemaVersion: SCHEMA_VERSION + 1 })).toEqual({ ok: false, reason: 'newer' })
+  })
+
+  it('upgrades an older version through the migration steps', () => {
+    const steps = { 1: (doc: Record<string, unknown>) => ({ ...doc, upgraded: true }) }
+    expect(upgradeDocument(sample, steps, 2)).toEqual({ ok: true, data: { ...sample, schemaVersion: 2, upgraded: true } })
+  })
+
+  it('reports a missing or failing step, or one that breaks the shape, as a migration failure', () => {
+    const failing = {
+      1: () => {
+        throw new Error('boom')
+      },
+    }
+    const breaking = { 1: (doc: Record<string, unknown>) => ({ ...doc, cards: null }) }
+    expect(upgradeDocument(sample, {}, 2)).toEqual({ ok: false, reason: 'migration' })
+    expect(upgradeDocument(sample, failing, 2)).toEqual({ ok: false, reason: 'migration' })
+    expect(upgradeDocument(sample, breaking, 2)).toEqual({ ok: false, reason: 'migration' })
   })
 })

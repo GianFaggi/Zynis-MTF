@@ -42,3 +42,21 @@ describe('deskStore feedback', () => {
     expect(useDeskStore.getState().winsBump).toBe(2)
   })
 })
+
+describe('deskStore after an Import', () => {
+  it('closes the editor, search and Mis logros, and leaves the view alone', () => {
+    const view = { x: -300, y: -120, s: 0.6 }
+    useDeskStore.setState({ view, editingId: 'c1', newCardId: 'c1', searchOpen: true, query: 'pan', winsOpen: true })
+
+    useDeskStore.getState().resetAfterImport()
+
+    expect(useDeskStore.getState()).toMatchObject({
+      view,
+      editingId: null,
+      newCardId: null,
+      searchOpen: false,
+      query: '',
+      winsOpen: false,
+    })
+  })
+})

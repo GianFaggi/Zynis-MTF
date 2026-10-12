@@ -2,9 +2,12 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { makeBackup } from './backup/backup'
 import { useDeskStore } from './desk/deskStore'
-import { LANGUAGE_KEY } from './lib/storage'
+import { HINT_SEEN_KEY, LANGUAGE_KEY } from './lib/storage'
 import { useAppStore } from './store/appStore'
+import { USER_AGENTS, restoreDevice, stubDevice } from './test/device'
+import { makeCard, makeData, rowOfAreas } from './test/fixtures'
 import { resetStores } from './test/stores'
 
 function desk() {
@@ -24,6 +27,7 @@ describe('App', () => {
   })
 
   afterEach(() => {
+    restoreDevice()
     vi.restoreAllMocks()
   })
 
@@ -94,6 +98,49 @@ describe('App', () => {
     const [card] = useAppStore.getState().data.cards
     expect(card.areaId).toBe('a2')
     expect(useDeskStore.getState()).toMatchObject({ editingId: card.id, newCardId: card.id })
+  })
+
+  it('Settings shows the language, then the Backup section, then the install section', async () => {
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    const settings = screen.getByRole('dialog', { name: 'Ajustes' })
+
+    const labels = [...settings.querySelectorAll('span.uppercase')].map((label) => label.textContent)
+    expect(labels).toEqual(['Idioma', 'Copia de seguridad', 'Instalar la app'])
+    expect(within(settings).getByRole('button', { name: 'Exportar copia' })).toBeInTheDocument()
+    expect(within(settings).getByRole('button', { name: 'Importar copia' })).toBeInTheDocument()
+  })
+
+  it('a confirmed Import closes Settings, shows the new Desk and says so', async () => {
+    const imported = makeData({
+      areas: rowOfAreas(),
+      cards: [makeCard({ id: 't1', areaId: 'a2', title: 'De la copia' }), makeCard({ id: 't2', title: 'Otra', jarredAt: 3 })],
+    })
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    const file = new File([makeBackup(imported, new Date())], 'mtf-backup-2026-10-11.json', { type: 'application/json' })
+    await userEvent.upload(screen.getByLabelText('Importar copia'), file)
+    await userEvent.click(await screen.findByRole('button', { name: 'Reemplazar mis datos' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(useAppStore.getState().data).toEqual(imported)
+    expect(areaLabels()).toContain('Vida, 1 tarjeta')
+    expect(screen.getByRole('status')).toHaveTextContent('Copia importada')
+    expect(screen.getByRole('status')).toHaveTextContent('2 tarjetas')
+  })
+
+  it('the install nudge\'s "Cómo" opens Settings with the install section', async () => {
+    stubDevice({ userAgent: USER_AGENTS.iphone, touchPoints: 5 })
+    localStorage.setItem(HINT_SEEN_KEY, '1')
+    render(<App />)
+    act(() => {
+      const { data } = useAppStore.getState()
+      useAppStore.setState({ data: { ...data, events: [{ id: 'n1', type: 'note', at: Date.now() }] } })
+    })
+    await userEvent.click(screen.getByRole('button', { name: 'Cómo' }))
+
+    const settings = screen.getByRole('dialog', { name: 'Ajustes' })
+    expect(within(settings).getByText('Elegí “Agregar a inicio”.')).toBeInTheDocument()
   })
 
   it('closes Settings with Esc', async () => {

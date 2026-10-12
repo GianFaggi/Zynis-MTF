@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WinEvent } from '../types'
-import { dayStart, daysAgo, winStats } from './stats'
+import { dayStart, daysAgo, totalDone, winStats } from './stats'
 
 // "Today" is pinned with fake timers (Date only), so the 7-day window is the same on
 // every run. Events are placed at local noon N calendar days before today.
@@ -64,6 +64,12 @@ describe('winStats', () => {
     expect(stats.best).toBeNull()
     expect(stats.week.done).toBe(0)
     expect(stats.total).toBe(1)
+  })
+
+  it('totalDone is the same total, without today', () => {
+    const events = [event('item', at(40)), event('card', at(3)), event('note', at(0)), event('item', at(0))]
+    expect(totalDone(events)).toBe(3)
+    expect(totalDone(events)).toBe(winStats(events, Date.now()).total)
   })
 })
 
