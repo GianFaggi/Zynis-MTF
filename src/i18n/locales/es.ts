@@ -1,5 +1,21 @@
+import type { AreaColor } from '../../types'
+
 const thingsDone = (n: number) => (n === 1 ? '1 cosa hecha' : `${n} cosas hechas`)
 const cards = (n: number) => (n === 1 ? '1 tarjeta' : `${n} tarjetas`)
+const colorNames: Record<AreaColor, string> = {
+  sage: 'Salvia',
+  sand: 'Arena',
+  sky: 'Cielo',
+  plum: 'Ciruela',
+  rose: 'Rosa',
+  teal: 'Verde azulado',
+  olive: 'Oliva',
+  slate: 'Pizarra',
+  indigo: 'Índigo',
+  turquoise: 'Turquesa',
+  pine: 'Pino',
+  berry: 'Frambuesa',
+}
 
 // Spanish is the source dictionary: its shape defines `Messages`.
 // A value is a string, or a function for texts that include values.
@@ -41,6 +57,21 @@ export const es = {
   searchField: 'Buscar en tus tarjetas',
   hint: 'Arrastrá las tarjetas a donde quieras. En el celu, mantené apretada una tarjeta para moverla.',
   hintOk: 'Entendido',
+
+  area: 'Área',
+  newArea: 'Nueva área',
+  newAreaName: 'Área nueva',
+  editArea: (name: string) => `Editar área ${name}`,
+  areaName: 'Nombre',
+  areaColor: 'Color',
+  colorName: (color: AreaColor) => colorNames[color],
+  deleteArea: 'Borrar área',
+  deleteAreaAsk: '¿Borrar el área?',
+  deleteAreaCards: (n: number) => (n === 1 ? 'Su tarjeta pasa a' : `Sus ${n} tarjetas pasan a`),
+  lastArea: 'El escritorio necesita al menos un área.',
+  areaInTheWay: 'Ahí hay otra área',
+  areaDeleted: 'Área borrada',
+  areaDeletedDetail: (n: number, name: string) => (n === 1 ? `1 tarjeta pasó a ${name}` : `${n} tarjetas pasaron a ${name}`),
 
   wins: 'Mis logros',
   winsCounter: (n: number) => `Mis logros: ${thingsDone(n)} en 7 días`,

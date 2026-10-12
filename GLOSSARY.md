@@ -9,8 +9,12 @@ The single, endless surface where every Card lives. The user pans and zooms it. 
 _Avoid_: Board, canvas (in UI copy), workspace, page
 
 **Area**:
-A named, colored region of the Desk. Three default Areas (Trabajo, Vida, Recordar) are created on first launch; the user will be able to add their own. An Area groups Cards by where they sit; it is not a container, a tab or a list. A Card belongs to the Area it was dropped in, or to the nearest Area when dropped outside all of them, and takes its color.
-_Avoid_: Board, table, tab, list, category, folder
+A named, colored region of the Desk. Three default Areas (Trabajo, Vida, Recordar) are created on first launch; the user can create their own, rename and recolor any Area (12 colors, which may repeat), and delete one by choosing the Area that receives its Cards (the last Area stays). The user moves an Area by dragging its label, and its Cards on the Desk come along; resizing it from its corner moves no Card. Areas never overlap. An Area groups Cards by where they sit; it is not a container, a tab or a list. A Card belongs to the Area it was dropped in, or to the nearest Area when dropped outside all of them, and takes its color. A renamed default Area shows its custom name in every language ([ADR 0007](docs/adr/0007-areas-the-user-shapes.md)).
+_Avoid_: Board, table, tab, list, category, folder, zone
+
+**Area editor** (ES "editor del área"):
+The sheet where the user renames an Area, picks its color and deletes it. It opens from the pencil next to the Area's label on the Desk, or from the Area's row in Settings → Áreas. It is the way to change an Area without a gesture.
+_Avoid_: Area settings, properties
 
 **Place**:
 The editor's way to move a Card to another Area without dragging it (the "Lugar" selector). The Card lands somewhere inside the chosen Area and takes its color.

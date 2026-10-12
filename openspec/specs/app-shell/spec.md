@@ -62,7 +62,7 @@ A floating settings button with an accessible name SHALL open a Settings sheet o
 
 #### Scenario: Open settings
 - **WHEN** the user activates the settings button
-- **THEN** the Settings sheet opens and shows the language setting and the theme setting
+- **THEN** the Settings sheet opens and shows the language setting, the theme setting and the Areas section
 
 #### Scenario: Close with Esc
 - **WHEN** the Settings sheet is open and the user presses `Esc`

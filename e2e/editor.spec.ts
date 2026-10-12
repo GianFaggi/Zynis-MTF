@@ -1,18 +1,7 @@
-import { expect, test, type Page } from '@playwright/test'
-import { cardColor, center, cssColor, deskScale, openApp, storedData } from './helpers.ts'
+import { expect, test } from '@playwright/test'
+import { cardColor, center, cssColor, openApp, storedData, zoomInIfFar } from './helpers.ts'
 
 test.use({ locale: 'es-AR' })
-
-/** Desktop opens zoomed out (titles only); the checklist needs the near look. */
-async function zoomInIfFar(page: Page, at: { x: number; y: number }) {
-  while ((await deskScale(page)) < 0.6) {
-    await page.mouse.move(at.x, at.y)
-    await page.keyboard.down('Control')
-    await page.mouse.wheel(0, -20)
-    await page.keyboard.up('Control')
-    await page.waitForTimeout(200)
-  }
-}
 
 test('create, check, reload, Place and delete a Card through the UI', async ({ page, isMobile }) => {
   await openApp(page)

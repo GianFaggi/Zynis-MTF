@@ -117,6 +117,20 @@ describe('CardEditor', () => {
     expect(dialog.style.getPropertyValue('--b')).toBe('var(--color-plum)')
   })
 
+  it('Place lists an Area created and one renamed by the user, as typed, also in English', async () => {
+    const { createArea, renameArea, setLanguage } = useAppStore.getState()
+    const created = createArea('Facu')
+    renameArea('a2', 'Casa')
+    setLanguage('en')
+    useDeskStore.getState().openEditor('c1')
+    render(<CardEditor />)
+
+    const place = screen.getByRole('combobox', { name: 'Place' })
+    expect(within(place).getAllByRole('option').map((option) => option.textContent)).toEqual(['Work', 'Casa', 'Remember', 'Facu'])
+    await userEvent.selectOptions(place, 'Facu')
+    expect(stored()!.areaId).toBe(created)
+  })
+
   it('pins and unpins', async () => {
     openEditor()
     await userEvent.click(screen.getByRole('button', { name: 'Fijar' }))

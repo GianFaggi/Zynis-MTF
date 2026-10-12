@@ -27,10 +27,12 @@ Live in the `@theme static` block of `src/index.css` (Tailwind v4). TypeScript n
 | `--color-accent-soft` | `color-mix(in oklab, accent 14%, paper)` | (follows) | Soft accent fill: wins counter, finished-Card chip |
 | `--color-bar` | `color-mix(in oklab, accent 30%, rule)` | (follows) | Past days in the Mis logros chart |
 | `--color-glass` | `rgb(255 255 255 / .45)` | `rgb(255 255 255 / .05)` | The Jar's glass and neck |
-| `--color-sage` | `#6F8F6B` | `#93B28E` | Area: Trabajo |
-| `--color-sand` | `#B8914A` | `#D3AE68` | Area: Vida |
-| `--color-sky` | `#5F87AD` | `#86A9CB` | Area: Recordar |
-| `--color-plum`, `--color-rose` | `#8E6C9C`, `#B86E7B` | `#B293C0`, `#D8909C` | Spare Area colors |
+| `--color-sage` | `#5F9460` | `#8FC289` | Area color; Trabajo by default |
+| `--color-sand` | `#C29236` | `#E2B55A` | Area color; Vida by default |
+| `--color-sky` | `#4C84C2` | `#7DB0E6` | Area color; Recordar by default |
+| `--color-plum`, `--color-rose` | `#8F5CAB`, `#C45A82` | `#BB88D6`, `#EC88A8` | Area colors |
+| `--color-teal`, `--color-olive`, `--color-slate` | `#2F8F86`, `#858C32`, `#5D7193` | `#5CC3B7`, `#BFC866`, `#92A8CC` | Area colors (added in #7) |
+| `--color-indigo`, `--color-turquoise`, `--color-pine`, `--color-berry` | `#5B62C7`, `#2595B3`, `#34875A`, `#AD4688` | `#979CF2`, `#5BC6E2`, `#6CC690`, `#E477BD` | Area colors (added in #7) |
 | `--color-float` | `rgb(252 250 246 / .86)` | `rgb(39 36 33 / .86)` | Floating pills (with backdrop blur) |
 | `--color-scrim` | `rgb(40 30 20 / .32)` | `rgb(0 0 0 / .5)` | Behind sheets |
 | `--color-hover` | `rgb(70 50 30 / .07)` | `rgb(255 255 255 / .07)` | Hover, quiet fills, segmented track |
@@ -43,6 +45,8 @@ Live in the `@theme static` block of `src/index.css` (Tailwind v4). TypeScript n
 | `--animate-spark` | `spark .75s … forwards` (to `translate(var(--dx), var(--dy)) scale(.4)`, opacity 0) | — | One spark of a celebration (`src/wins/sparks.ts`) |
 | `--animate-pop` | `pop .6s` (scale 1.06 at 35%, a fading accent glow) | — | A Card just finished by checking its last Item (`data-celebrate`); uses `scale`, not `transform`, so it never fights the tilt or a drag |
 | `--animate-stamp` | `stamp .45s`, 0.12 s delay (from `scale(2.2)`, faded, `rotate(-30deg)`) | — | The finished Card's seal landing on its corner |
+
+**Area colors.** There are 12, listed in swatch order by `AREA_COLORS` in `src/desk/areas.ts` (sage, sand, sky, plum, rose, teal, olive, slate, indigo, turquoise, pine, berry); `AreaColor` in `src/types` is the same union. The user picks one per Area in the Area editor, and two Areas may share one. None of them is the accent, which stays reserved for wins: there is no orange, and rose and berry lean pink and magenta, away from the terracotta. During #7, after seeing the Desk, the user asked for **more colors and stronger ones**: the palette went from 8 to 12 (indigo, turquoise, pine and berry fill the empty parts of the hue wheel) and every Area color, the original five included, got more saturated in both themes, together with stronger `--card-tint` and `--area-tint`. Checked on a Desk with 12 Areas in light and dark (tint, label, Card, Jar piece, swatch). Hex values live only in `src/index.css`, never in TypeScript.
 
 `--color-accent-soft` and `--color-bar` are built with `var()` from other tokens, so the dark block needs no lines for them: they follow the dark `accent`, `paper` and `rule` on their own. Lightning CSS adds a static light fallback before each one for browsers without `color-mix`.
 
@@ -73,8 +77,8 @@ Components set the Area color as the custom property `--b` (`var(--color-sage)`,
 
 | Utility | What | Strength variable (light / dark) |
 |---|---|---|
-| `card-tint` | Card and editor fill: `color-mix(in oklab, var(--b) var(--card-tint), var(--color-sheet))` | `--card-tint` 8% / 11% |
-| `area-tint` | Area region: soft, slightly irregular radial gradient of `--b`, no border | `--area-tint` 13% / 10% |
+| `card-tint` | Card and editor fill: `color-mix(in oklab, var(--b) var(--card-tint), var(--color-sheet))` | `--card-tint` 10% / 14% (8% / 11% before #7) |
+| `area-tint` | Area region: soft, slightly irregular radial gradient of `--b`, no border | `--area-tint` 17% / 14% (13% / 10% before #7); `--tint-boost` 1.7 while lifted |
 | `paper-grain` | Faint SVG noise, 220 px tiles. Painted once on its own layer, one tile larger than the screen; the Desk moves it with a `transform` by the pan modulo 220 px, so panning never repaints it. It does not scale with the zoom: resizing the SVG noise every frame was ~85% of the paint work while moving (measured in change 2) | `--paper-grain-opacity` 0.05 / 0.07 |
 | `card-won` | A finished Card (`data-finished:card-won`): the Area tint warmed with 10% accent, a 1.5 px border at 70% accent, and a 4 px halo at 12% accent drawn as `::after` (inset −5.5 px, radius 18 px), so it never fights the Card's own shadows (lifted, search hit) or the ink focus ring | — |
 

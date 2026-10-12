@@ -143,15 +143,55 @@ describe('App', () => {
     expect(useDeskStore.getState()).toMatchObject({ editingId: card.id, newCardId: card.id })
   })
 
-  it('Settings shows the language, then the theme, then the Backup section, then the install section', async () => {
+  it('Settings shows the language, the theme, the Areas, the Backup section and the install section, in that order', async () => {
     render(<App />)
     await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
     const settings = screen.getByRole('dialog', { name: 'Ajustes' })
 
     const labels = [...settings.querySelectorAll('span.uppercase')].map((label) => label.textContent)
-    expect(labels).toEqual(['Idioma', 'Tema', 'Copia de seguridad', 'Instalar la app'])
+    expect(labels).toEqual(['Idioma', 'Tema', 'Áreas', 'Copia de seguridad', 'Instalar la app'])
     expect(within(settings).getByRole('button', { name: 'Exportar copia' })).toBeInTheDocument()
     expect(within(settings).getByRole('button', { name: 'Importar copia' })).toBeInTheDocument()
+  })
+
+  it('the Areas section lists every Area in Desk order, with "Nueva área"', async () => {
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    const settings = screen.getByRole('dialog', { name: 'Ajustes' })
+
+    const rows = within(settings).getAllByRole('listitem').map((row) => row.textContent)
+    expect(rows).toEqual(['Trabajo', 'Vida', 'Recordar'])
+    expect(within(settings).getByRole('button', { name: 'Nueva área' })).toBeInTheDocument()
+  })
+
+  it('an Area row closes Settings and opens that Area’s editor', async () => {
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Ajustes' })).getByRole('button', { name: 'Vida' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Ajustes' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Área' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Nombre' })).toHaveValue('Vida')
+  })
+
+  it('"Nueva área" adds an Area to the Dock, flies to it and opens its editor with the name selected', async () => {
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Nueva área' }))
+
+    const created = useAppStore.getState().data.areas[3]
+    expect(created).toMatchObject({ name: 'Área nueva', color: 'plum' })
+    expect(screen.queryByRole('dialog', { name: 'Ajustes' })).not.toBeInTheDocument()
+    expect(useDeskStore.getState()).toMatchObject({ areaEditor: { id: created.id, isNew: true }, flying: true })
+    const name = screen.getByRole('textbox', { name: 'Nombre' }) as HTMLInputElement
+    expect(name).toHaveFocus()
+    expect([name.selectionStart, name.selectionEnd]).toEqual([0, 'Área nueva'.length])
+
+    await userEvent.keyboard('Facu')
+    await userEvent.keyboard('{Escape}')
+    const dock = screen.getByRole('navigation', { name: 'Áreas' })
+    expect(within(dock).getByRole('button', { name: 'Facu' })).toBeInTheDocument()
+    expect(areaLabels()).toContain('Facu, 0 tarjetas')
   })
 
   it('a confirmed Import closes Settings, shows the new Desk and says so', async () => {

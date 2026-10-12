@@ -1,12 +1,12 @@
 import { create } from 'zustand'
-import { areaForPoint, defaultAreas, spotIn } from '../desk/areas'
+import { areaForPoint, cleanName, defaultAreas, freeSlot, nextColor, spotIn } from '../desk/areas'
 import { isEmptyCard, isFinished } from '../desk/cardText'
-import { CARD_WIDTH, FALLBACK_CARD_HEIGHT, randomTilt, type Point } from '../desk/geometry'
+import { CARD_WIDTH, FALLBACK_CARD_HEIGHT, randomTilt, type Point, type Rect } from '../desk/geometry'
 import { tidyLayout } from '../desk/tidy'
 import { detectLanguage } from '../i18n/detect'
 import { newId } from '../lib/id'
 import { loadData, loadLanguage, loadTheme, saveData, saveLanguage, saveTheme } from '../lib/storage'
-import type { AreaId, Card, Item, Language, MtfData, Theme, WinEvent } from '../types'
+import type { Area, AreaColor, AreaId, Card, Item, Language, MtfData, Theme, WinEvent } from '../types'
 import { cardDeleted, cardJarred, itemToggled, itemsRemoved, jarVerdict, noteWritten, syncCardWin, type JarVerdict } from '../wins/rules'
 
 // The single in-memory source of truth for saved data (KB/frontend/architecture.md).
@@ -53,6 +53,18 @@ export interface AppState {
   returnCard: (id: string) => void
   /** Import: the whole document becomes `data`, already validated (at least one Area). The language and the theme stay. */
   replaceData: (data: MtfData) => void
+
+  /** A new Area in the first free slot, in the first unused color. `name` is the provisional name, already translated. Returns its id. */
+  createArea: (name: string) => string
+  /** Renames an Area as typed (`cleanName`): left empty, a default Area goes back to its translated name. */
+  renameArea: (id: string, typed: string) => void
+  recolorArea: (id: string, color: AreaColor) => void
+  /** Ends an Area move: shifts the Area and its Desk Cards. The Desk has already checked it overlaps no Area. */
+  moveArea: (id: string, dx: number, dy: number) => void
+  /** Ends an Area resize with the new rect. The Desk has already checked the minimum size and the overlap. */
+  resizeArea: (id: string, rect: Rect) => void
+  /** Removes an Area; its Cards go to `destinationId`. Refuses, writing nothing, the last Area or a missing or same destination. */
+  deleteArea: (id: string, destinationId: string) => void
 }
 
 /** Brings `events` in line with a Card that just changed. */
@@ -95,6 +107,15 @@ function withItem(data: MtfData, cardId: string, itemId: string, change: (item: 
     },
     wins,
   )
+}
+
+/** `data` with one Area replaced by `change(area, now)`. The same `data` when the Area does not exist or did not change. */
+function withArea(data: MtfData, id: string, change: (area: Area, now: number) => Area): MtfData {
+  const index = data.areas.findIndex((area) => area.id === id)
+  if (index === -1) return data
+  const area = change(data.areas[index], Date.now())
+  if (area === data.areas[index]) return data
+  return { ...data, areas: data.areas.with(index, area) }
 }
 
 export function createAppStore() {
@@ -298,6 +319,86 @@ export function createAppStore() {
         }),
 
       replaceData: (data) => set({ data }),
+
+      createArea: (name) => {
+        const now = Date.now()
+        const id = newId()
+        update((data) => {
+          const area: Area = { id, name, color: nextColor(data.areas), rect: freeSlot(data.areas), createdAt: now, updatedAt: now }
+          return { ...data, areas: [...data.areas, area] }
+        })
+        return id
+      },
+
+      renameArea: (id, typed) =>
+        update((data) =>
+          withArea(data, id, (area, now) => {
+            const name = cleanName(area, typed)
+            if (name === area.name) return area
+            if (name !== undefined) return { ...area, name, updatedAt: now }
+            // No `name` at all, rather than `name: undefined`, so the stored Area matches a fresh default one.
+            const renamed = { ...area, updatedAt: now }
+            delete renamed.name
+            return renamed
+          }),
+        ),
+
+      recolorArea: (id, color) =>
+        update((data) => withArea(data, id, (area, now) => (area.color === color ? area : { ...area, color, updatedAt: now }))),
+
+      moveArea: (id, dx, dy) =>
+        update((data) => {
+          const x = Math.round(dx)
+          const y = Math.round(dy)
+          if (x === 0 && y === 0) return data
+          const moved = withArea(data, id, (area, now) => ({
+            ...area,
+            rect: { ...area.rect, x: area.rect.x + x, y: area.rect.y + y },
+            updatedAt: now,
+          }))
+          if (moved === data) return data
+          const now = Date.now()
+          // Its Cards on the Desk come along; Cards in the Jar have no place on the Desk.
+          return {
+            ...moved,
+            cards: data.cards.map((card) =>
+              card.areaId === id && card.jarredAt === null
+                ? { ...card, position: { ...card.position, x: card.position.x + x, y: card.position.y + y }, updatedAt: now }
+                : card,
+            ),
+          }
+        }),
+
+      resizeArea: (id, rect) =>
+        update((data) =>
+          withArea(data, id, (area, now) => {
+            const same = (['x', 'y', 'w', 'h'] as const).every((side) => area.rect[side] === rect[side])
+            return same ? area : { ...area, rect: { ...rect }, updatedAt: now }
+          }),
+        ),
+
+      deleteArea: (id, destinationId) =>
+        update((data) => {
+          const destination = data.areas.find((area) => area.id === destinationId)
+          if (data.areas.length < 2 || destinationId === id || !destination || !data.areas.some((area) => area.id === id)) return data
+          const now = Date.now()
+          const top = topZ(data.cards)
+          // Desk Cards land on top of every other Card, keeping their stacking order among themselves.
+          const onDesk = data.cards
+            .filter((card) => card.areaId === id && card.jarredAt === null)
+            .sort((a, b) => a.position.z - b.position.z)
+          const zOf = new Map(onDesk.map((card, index) => [card.id, top + index]))
+          return {
+            ...data,
+            areas: data.areas.filter((area) => area.id !== id),
+            cards: data.cards.map((card) => {
+              if (card.areaId !== id) return card
+              const z = zOf.get(card.id)
+              if (z === undefined) return { ...card, areaId: destinationId, updatedAt: now }
+              return { ...card, areaId: destinationId, position: { ...card.position, ...spotIn(destination, Math.random), z }, updatedAt: now }
+            }),
+          }
+        }),
     }
   })
 

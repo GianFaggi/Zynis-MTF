@@ -5,6 +5,8 @@ import { IconButton } from './components/ui/IconButton'
 import { Segmented } from './components/ui/Segmented'
 import { Sheet } from './components/ui/Sheet'
 import { Toast } from './components/ui/Toast'
+import { AreaEditor } from './desk/AreaEditor'
+import { AreasSection } from './desk/AreasSection'
 import { CardEditor } from './desk/CardEditor'
 import { Desk } from './desk/Desk'
 import { Dock } from './desk/Dock'
@@ -12,7 +14,7 @@ import { FirstRunHint } from './desk/FirstRunHint'
 import { useDeskStore } from './desk/deskStore'
 import { viewport } from './desk/dom'
 import { SearchBox } from './desk/SearchBox'
-import { toWorld } from './desk/geometry'
+import { areaView, toWorld } from './desk/geometry'
 import { showWholeDesk } from './desk/view'
 import { languageNames, useT } from './i18n'
 import { InstallNudge } from './install/InstallNudge'
@@ -31,6 +33,14 @@ function createCardInView() {
   const { w, h } = viewport()
   const id = useAppStore.getState().createCard(toWorld(useDeskStore.getState().view, { x: w / 2, y: h / 2 }))
   if (id) useDeskStore.getState().openEditor(id, { isNew: true })
+}
+
+/** A just-created Area: the view flies to it and its editor opens with the provisional name selected. */
+function showNewArea(id: string) {
+  const area = useAppStore.getState().data.areas.find((candidate) => candidate.id === id)
+  if (!area) return
+  useDeskStore.getState().flyTo(areaView(area, viewport()))
+  useDeskStore.getState().openAreaEditor(id, { isNew: true })
 }
 
 /** After an Import: nothing open may point at a Card that is gone; the whole new Desk comes into view. */
@@ -94,6 +104,7 @@ export default function App() {
       </button>
 
       <CardEditor />
+      <AreaEditor />
       <MisLogros />
 
       <Sheet open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('settings')} closeLabel={t('close')}>
@@ -105,6 +116,17 @@ export default function App() {
           <span className="text-xs font-semibold tracking-[0.08em] text-pencil uppercase">{t('theme')}</span>
           <Segmented label={t('theme')} options={themeOptions} value={theme} onChange={setTheme} />
         </div>
+        {/* Settings closes first: two sheets are never open at once. */}
+        <AreasSection
+          onOpenArea={(id) => {
+            setSettingsOpen(false)
+            useDeskStore.getState().openAreaEditor(id)
+          }}
+          onCreated={(id) => {
+            setSettingsOpen(false)
+            showNewArea(id)
+          }}
+        />
         <BackupSection
           onImported={(data) => {
             setSettingsOpen(false)

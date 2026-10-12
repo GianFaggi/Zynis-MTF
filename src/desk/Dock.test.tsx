@@ -31,6 +31,22 @@ describe('Dock', () => {
     ])
   })
 
+  it('shows a renamed Area by its custom name in English, and an Area created by the user', () => {
+    resetStores()
+    const { createArea, renameArea, setLanguage } = useAppStore.getState()
+    renameArea('a2', 'Casa')
+    createArea('Proyecto X')
+    setLanguage('en')
+    render(<Dock />)
+    const dock = screen.getByRole('navigation', { name: 'Areas' })
+    expect(within(dock).getAllByRole('button').map((button) => button.textContent).slice(0, 4)).toEqual([
+      'Work',
+      'Casa',
+      'Remember',
+      'Proyecto X',
+    ])
+  })
+
   it('"Frasco" flies to the Jar, at no more than 100%, without the accent', async () => {
     render(<Dock />)
     const button = screen.getByRole('button', { name: 'Frasco' })

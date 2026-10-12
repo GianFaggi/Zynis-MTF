@@ -85,6 +85,20 @@ export function deskScale(page: Page): Promise<number> {
 }
 
 /**
+ * Mouse only: Ctrl + wheel around `at` until the Desk shows the near look (Cards in
+ * full, the Area edit buttons and resize handles). Desktop opens zoomed out.
+ */
+export async function zoomInIfFar(page: Page, at: { x: number; y: number }) {
+  while ((await deskScale(page)) < 0.6) {
+    await page.mouse.move(at.x, at.y)
+    await page.keyboard.down('Control')
+    await page.mouse.wheel(0, -20)
+    await page.keyboard.up('Control')
+    await page.waitForTimeout(200)
+  }
+}
+
+/**
  * Real touch input through the Chrome DevTools Protocol: Playwright has no touch
  * drag or pinch API. Both e2e projects run Chromium, and the phone project emulates
  * a touch screen, so Chrome turns these into touch and pointer events.

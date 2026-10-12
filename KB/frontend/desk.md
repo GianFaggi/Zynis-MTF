@@ -14,20 +14,22 @@ Pure modules (no React, no DOM; each has a co-located `*.test.ts`):
 | File | What |
 |---|---|
 | `geometry.ts` | View math: `toWorld`, `toScreen`, `clampScale`, `zoomAt`, `fitScale`, `fitRect`, `areaView`, `cardRect`, `cardView`, `deskBounds`, `initialView`; `randomTilt`, `between`; constants `MIN_SCALE`, `MAX_SCALE`, `FAR_SCALE`, `CARD_WIDTH`, `FALLBACK_CARD_HEIGHT` |
-| `areas.ts` | `defaultAreas(now)`, `areaForPoint(areas, point)`, `areaName(area, t)`, `spotIn(area, random)` |
+| `areas.ts` | `defaultAreas(now)`, `areaForPoint(areas, point)`, `areaName(area, t)`, `spotIn(area, random)`; the Area rules of #7: `AREA_COLORS`, `nextColor`, `freeSlot`, `overlaps`, `overlapsAny`, `resizedRect`, `nearestArea`, `cleanName`, `MIN_AREA_SIZE`, `AREA_NAME_MAX` ([Areas](#areas)) |
 | `tidy.ts` | `tidyLayout(areas, cards, heights, random)`, `columnCount(width)` |
 | `search.ts` | `normalize(text)`, `matchesQuery(card, query)` |
 | `cardText.ts` | `usableItems(card)`, `isEmptyCard(card)`, `isFinished(card)`, `pendingItems(card)`, `displayTitle(card)` |
-| `intent.ts` | `nextIntent({ intent, pointerType, distance, held })`, `releaseOutcome({ intent, distance, onLabel, onJar })`, `HOLD_MS` |
+| `intent.ts` | `nextIntent({ intent, pointerType, distance, held })`, `releaseOutcome({ intent, distance, onLabel, onJar })`, `HOLD_MS`. Intents: `pending`, `pan`, `drag`, `resize` |
 
 State and components:
 
 | File | What |
 |---|---|
-| `deskStore.ts` | Unsaved Desk UI state ([architecture.md](architecture.md)): view, `flying`, `tidying`, `editingId`, `newCardId`, `searchOpen`, `query`, `toast`, `winsOpen`, `winsBump`; actions `setView`, `flyTo`, `animateTidy`, `openEditor`, `closeEditor`, `toggleSearch`, `setQuery`, `showToast`, `openWins`, `closeWins`, `bumpWins` |
+| `deskStore.ts` | Unsaved Desk UI state ([architecture.md](architecture.md)): view, `flying`, `tidying`, `editingId`, `newCardId`, `areaEditor`, `searchOpen`, `query`, `toast`, `winsOpen`, `winsBump`; actions `setView`, `flyTo`, `animateTidy`, `openEditor`, `closeEditor`, `openAreaEditor`, `closeAreaEditor`, `toggleSearch`, `setQuery`, `showToast`, `openWins`, `closeWins`, `bumpWins`, `resetAfterImport` |
 | `dom.ts` | `measureCardHeights()`, `viewport()` and `prefersReducedMotion()` — the only place that reads sizes and media settings from the DOM |
-| `Desk.tsx` | The surface: world `div`, grain, gestures, Card drag, the Jar drop, double-click to create |
-| `AreaRegion.tsx` | One Area: the soft tinted region and its label with the Card count |
+| `Desk.tsx` | The surface: world `div`, grain, gestures, Card drag, the Jar drop, Area move and resize, double-click to create |
+| `AreaRegion.tsx` | One Area, in one wrapper at its rect's top-left: the soft tinted region, its label with the Card count, the edit button and the resize handle |
+| `AreaEditor.tsx` | The Area editor sheet: name, 12 color swatches, Borrar área with the destination of its Cards |
+| `AreasSection.tsx` | The Areas group of Settings: one row per Area (opens its editor) and Nueva área |
 | `DeskCard.tsx` | One Card on the Desk (memoized); a finished Card wears `card-won`, the filled "Llevala al frasco" chip and a ✓ seal, and plays a one-time pop + stamp when `data-celebrate` is set ([design-system.md](design-system.md)) |
 | `ItemCheck.tsx` | An Item's box, shared by `DeskCard` and `CardEditor`; `onToggle` gets the box element so sparks start from it |
 | `CardEditor.tsx` | The editor sheet, with "Llevar al frasco" |
@@ -56,17 +58,21 @@ Functions that random numbers feed (`spotIn`, `tidyLayout`, `randomTilt`) take a
 | Open a Card | tap (< 9 px) | click; `Enter` on a focused Card |
 | Check an Item | tap its box (never starts a drag) | click |
 | New Card | `+` button (center of view) | `+` button, or double-click empty paper |
-| Fly to an Area | tap its label (< 6 px) | click its label |
+| Fly to an Area | tap its label (< 9 px) | click its label |
+| Move an Area (with its Cards) | **press and hold its label 320 ms**, then drag | drag its label after moving > 4 px |
+| Resize an Area | drag the handle in its bottom-right corner (no hold) | drag the handle |
+| Edit an Area (name, color, delete) | the pencil next to its label, or its row in Settings → Áreas | the same |
 | Put a Card in the Jar | press and hold, drag it onto the Jar | drag it onto the Jar |
 | Open Mis logros | tap the Jar (< 6 px) | click the Jar; `Enter` on the focused Jar |
 
-- One `useGesture` controller on the Desk handles drag, pinch and wheel. A press inside `button, input, textarea, select` is ignored, so an Item's box never starts a drag. A press on a Card is `pending`; anywhere else it is `pan`. `nextIntent()` decides each move:
+- One `useGesture` controller on the Desk handles drag, pinch and wheel. `beginPress` sorts each press by what it started on, in this order: an Area's resize handle (`resize`), an Area label (`pending`), the Jar (`pan`, a tap opens Mis logros), a control inside `button, input, textarea, select, a` (ignored, so an Item's box or the Area edit button never starts a drag), a Card (`pending`), empty paper (`pan`). `nextIntent()` decides each move of a `pending` press, the same for a Card and an Area label:
   - mouse/pen + `pending` + > 4 px → `drag`
   - touch + `pending` + > 9 px before the hold → `pan` (a quick swipe over a Card pans)
   - touch + `pending` + the 320 ms timer fired → `drag`, plus `navigator.vibrate(12)` where supported
 - The hold is a timer started on the press, **not** use-gesture's `delay`: `delay` starts the drag as soon as the pointer moves, and MTF needs movement before the hold to mean pan.
 - While lifted: no tilt, scale 1.04, `shadow-lift`, drawn above everything. The Card is moved by writing its `transform` straight to the DOM; the store is written once, on drop (`dropCard`), which sets the position, the Area, a new tilt and `z = max(z) + 1` so the last moved Card stays on top after a reload.
-- A drag interrupted by the system (`pointercancel`) or by a second finger (a pinch starts) is cancelled: the Card goes back to where it started and keeps its Area.
+- A drag interrupted by the system (`pointercancel`) or by a second finger (a pinch starts) is cancelled: the Card goes back to where it started and keeps its Area. The same goes for an Area move or resize.
+- `releaseOutcome()`: a released `drag` drops (a Card or an Area), a `resize` ends the resize, a `pending` press that moved < 9 px opens the Card or, on a label, flies to the Area.
 - The Desk has `touch-action: none`, no text selection, no iOS long-press callout, and no context menu.
 
 ## Areas
@@ -77,6 +83,20 @@ Functions that random numbers feed (`spotIn`, `tidyLayout`, `randomTilt`) take a
 - **Area for a point** (`areaForPoint`): the Area whose rect contains the point; otherwise the Area with the smallest distance from the point to its rect; ties go to the first Area in the list. On drop, the point is the Card's center (`x + 118`, `y + height / 2`). This replaces the mockup's "nearest horizontal center": it gives the same answer for the default row and stays right for any layout custom Areas may use.
 - While dragging, the Card already shows the color of the Area it would join.
 - Tapping an Area label flies the view to that Area.
+
+### Areas the user shapes (#7)
+
+Why Areas became movable and resizable, and why their Cards travel with them → [ADR 0007](../../docs/adr/0007-areas-the-user-shapes.md). The rules are pure functions in `areas.ts`; the store actions are in [architecture.md](architecture.md#two-stores).
+
+- **Area editor** (`AreaEditor.tsx`, `deskStore.areaEditor`): a sheet tinted with the Area color, opened from the pencil next to the label (near look only) or from the Area's row in **Settings → Áreas** (Settings closes first: two sheets are never open at once). It holds:
+  - **Name**: a local draft. Each non-empty change calls `renameArea`, so the label updates live; `cleanName` trims it and cuts it at 40 characters (`maxLength` too). On close, an empty name brings a default Area back to its translated name, and a custom Area back to the name it had when the editor opened. A custom name reads the same in Spanish and English.
+  - **Color**: 12 swatches (`AREA_COLORS`) as native radios in a `radiogroup`, each named by its translated color, the current one ringed in ink. The tint, label, Cards, Jar pieces and Dock dot follow at once, because they all read the color through the Area.
+  - **Borrar área**: an inline confirmation. With Cards (on the Desk or in the Jar) it reads "Sus N tarjetas pasan a [Area]", a `<select>` with the nearest Area (`nearestArea`, edge to edge) listed first and chosen; without Cards just "¿Borrar el área?". Then Borrar or Cancelar. `deleteArea` puts the Desk Cards inside the destination with `spotIn`, on top, and gives the Jar Cards its `areaId`; no Win is touched. Toast "Área borrada" + "N tarjetas pasaron a X". With one Area left the button is disabled and a line says the Desk needs at least one Area.
+- **Create** (Settings → **Nueva área**): `createArea(t('newAreaName'))` adds "Área nueva" in `nextColor` (the first color no Area uses; the first one when all 12 are taken), at `freeSlot`, then Settings closes, the view flies to it (`areaView`) and its editor opens with the name selected. `freeSlot` continues the default row as a grid of 3 per row (origin (80, 120), 980 × 1000, 80 px apart across, rows 1160 px apart, so a second row starts at y = 1280 and its label stands clear of the first row's Cards) and takes the first slot, row by row, with 40 px of paper free around it. A slot freed by a deleted Area is reused. The Jar follows by itself (`jarRect` is derived from the Areas).
+- **Move**: drag the label (see the gestures above). The Desk lifts the Area (`data-lifted` on the wrapper: a stronger tint, `cursor: grabbing`, no tilt, no scale) and collects the elements of its Cards on the Desk once. Each frame writes the same `translate` on the wrapper and on those Cards, the property a Card drag uses. On release, `moveArea` shifts the rect and those Cards by the rounded distance, in one write. Cards of other Areas never move, even when the moved Area ends up under them: Areas are not containers.
+- **Resize**: the handle is 56 Desk px (31 screen px at the far-zoom threshold, where it hides), centered on the bottom-right corner, with a quiet pencil corner mark. A press there is `resize` at once: no hold on touch, because the handle exists only to be dragged. Each frame writes `--live-w` / `--live-h` on the wrapper, which win over React's `--rect-w` / `--rect-h`; `resizedRect` keeps the top-left and floors at 520 × 520 (`MIN_AREA_SIZE`, about two Card columns). On release `resizeArea` writes the rect. No Card moves or changes Area.
+- **No overlap**: while moving or resizing, `overlapsAny` (strict intersection; shared edges are fine) toggles `data-blocked` on the wrapper: a dashed `pencil` outline on the tint and the label at 50%. Released blocked: `data-returning` on the wrapper and the carried Cards (0.35 s `translate`, and `width` / `height` on the tint for a resize), the written values are cleared so everything slides back, `settle` runs after 380 ms (at once under reduced motion), nothing is written, and the toast says "Ahí hay otra área". The Desk checks overlap before calling `moveArea` / `resizeArea`, the way it calls `jarVerdict` before `jarCard`; the store does not repeat the check.
+- Long names are never clipped: a 40-character label at 68 px is wider than a 520 px Area and simply runs onto the paper.
 
 ## Far zoom (semantic zoom)
 
@@ -129,4 +149,5 @@ Built in change 3. Code in `src/wins/` ([files below](#files-srcwins)); the Win 
 ## Accessibility
 
 - Cards are focusable `article`s; `Enter` opens the editor. The editor's **Place** selector moves a Card to another Area without dragging; this is the non-gesture path and must always exist. Its **Llevar al frasco** button is the non-gesture way to the Jar; the Jar itself is a button (`Enter` opens Mis logros). Keyboard users navigate with the Dock, See all and search.
-- `prefers-reduced-motion` turns off fly-to and Tidy up, and every Win animation: sparks, a finished Card's pop and seal stamp, a Card shrinking into the Jar or sliding back from it, a piece dropping in, the counter bump. CSS drops them (`animation: none`, `transition: none`); the JS-timed parts (`burst`, `data-celebrate`, the Jar drop waits) check `prefersReducedMotion()`. The result of each action is the same.
+- The **Area editor** is the non-gesture path for Areas: it is reached from the label's edit button or from Settings → Áreas, and creates, renames, recolors and deletes without a drag. Moving and resizing an Area have **no keyboard path** on purpose: they only change the layout, and every Card stays reachable through the Place selector, the Dock and search. The resize handle is `aria-hidden`.
+- `prefers-reduced-motion` turns off fly-to and Tidy up, an Area sliding back after a refused move or resize, and every Win animation: sparks, a finished Card's pop and seal stamp, a Card shrinking into the Jar or sliding back from it, a piece dropping in, the counter bump. CSS drops them (`animation: none`, `transition: none`); the JS-timed parts (`burst`, `data-celebrate`, the Jar drop waits) check `prefersReducedMotion()`. The result of each action is the same.

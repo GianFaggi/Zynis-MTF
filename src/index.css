@@ -43,12 +43,19 @@
   --color-accent-soft: color-mix(in oklab, var(--color-accent) 14%, var(--color-paper));
   --color-bar: color-mix(in oklab, var(--color-accent) 30%, var(--color-rule));
 
-  /* Area colors */
-  --color-sage: #6f8f6b;
-  --color-sand: #b8914a;
-  --color-sky: #5f87ad;
-  --color-plum: #8e6c9c;
-  --color-rose: #b86e7b;
+  /* Area colors (AREA_COLORS in src/desk/areas.ts) */
+  --color-sage: #5f9460;
+  --color-sand: #c29236;
+  --color-sky: #4c84c2;
+  --color-plum: #8f5cab;
+  --color-rose: #c45a82;
+  --color-teal: #2f8f86;
+  --color-olive: #858c32;
+  --color-slate: #5d7193;
+  --color-indigo: #5b62c7;
+  --color-turquoise: #2595b3;
+  --color-pine: #34875a;
+  --color-berry: #ad4688;
 
   --color-float: rgb(252 250 246 / 0.86);
   --color-scrim: rgb(40 30 20 / 0.32);
@@ -131,8 +138,8 @@
 @layer base {
   /* How strongly an Area color shows (not theme colors, so outside @theme). */
   :root {
-    --card-tint: 8%;
-    --area-tint: 13%;
+    --card-tint: 10%;
+    --area-tint: 17%;
     --paper-grain-opacity: 0.05;
   }
 
@@ -141,8 +148,8 @@
     @variant dark {
       color-scheme: dark;
 
-      --card-tint: 11%;
-      --area-tint: 10%;
+      --card-tint: 14%;
+      --area-tint: 14%;
       --paper-grain-opacity: 0.07;
 
       --color-paper: #1c1a18;
@@ -156,11 +163,18 @@
       --color-accent-ink: #ee9677;
       --color-on-accent: #1c1a18;
 
-      --color-sage: #93b28e;
-      --color-sand: #d3ae68;
-      --color-sky: #86a9cb;
-      --color-plum: #b293c0;
-      --color-rose: #d8909c;
+      --color-sage: #8fc289;
+      --color-sand: #e2b55a;
+      --color-sky: #7db0e6;
+      --color-plum: #bb88d6;
+      --color-rose: #ec88a8;
+      --color-teal: #5cc3b7;
+      --color-olive: #bfc866;
+      --color-slate: #92a8cc;
+      --color-indigo: #979cf2;
+      --color-turquoise: #5bc6e2;
+      --color-pine: #6cc690;
+      --color-berry: #e477bd;
 
       --color-float: rgb(39 36 33 / 0.86);
       --color-scrim: rgb(0 0 0 / 0.5);
@@ -234,13 +248,16 @@
   }
 }
 
-/* An Area region: a soft, slightly irregular radial tint with no border. */
+/*
+  An Area region: a soft, slightly irregular radial tint with no border. `--tint-boost`
+  (1 unless set) strengthens it while the Area is lifted (`AreaRegion`, data-lifted).
+*/
 @utility area-tint {
   border-radius: 48% 52% 46% 54% / 52% 44% 56% 48%;
   background-image: radial-gradient(
     ellipse at 50% 45%,
-    color-mix(in oklab, var(--b) var(--area-tint), transparent) 0%,
-    color-mix(in oklab, var(--b) calc(var(--area-tint) * 0.5), transparent) 45%,
+    color-mix(in oklab, var(--b) calc(var(--area-tint) * var(--tint-boost, 1)), transparent) 0%,
+    color-mix(in oklab, var(--b) calc(var(--area-tint) * var(--tint-boost, 1) * 0.5), transparent) 45%,
     transparent 72%
   );
 }

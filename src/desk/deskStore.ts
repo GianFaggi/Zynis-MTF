@@ -30,6 +30,8 @@ export interface DeskState {
   winsOpen: boolean
   /** Goes up on each new Win; the wins counter remounts its number on it to replay the bump. */
   winsBump: number
+  /** The open Area editor; `isNew` for an Area just created, whose name opens selected. */
+  areaEditor: { id: string; isNew: boolean } | null
 
   setView: (view: View) => void
   /** Moves the view with an animation (none with reduced motion: the global CSS drops transitions). */
@@ -45,7 +47,9 @@ export interface DeskState {
   openWins: () => void
   closeWins: () => void
   bumpWins: () => void
-  /** After an Import: closes the editor, search and Mis logros, which may point at Cards that are gone. The view is not reset here. */
+  openAreaEditor: (id: string, options?: { isNew?: boolean }) => void
+  closeAreaEditor: () => void
+  /** After an Import: closes the editors, search and Mis logros, which may point at Cards or Areas that are gone. The view is not reset here. */
   resetAfterImport: () => void
 }
 
@@ -66,6 +70,7 @@ function createDeskStore() {
     toast: null,
     winsOpen: false,
     winsBump: 0,
+    areaEditor: null,
 
     setView: (view) => set({ view, flying: false }),
     flyTo: (view) => {
@@ -91,7 +96,10 @@ function createDeskStore() {
     openWins: () => set({ winsOpen: true }),
     closeWins: () => set({ winsOpen: false }),
     bumpWins: () => set((state) => ({ winsBump: state.winsBump + 1 })),
-    resetAfterImport: () => set({ editingId: null, newCardId: null, searchOpen: false, query: '', winsOpen: false }),
+    openAreaEditor: (id, { isNew = false } = {}) => set({ areaEditor: { id, isNew } }),
+    closeAreaEditor: () => set({ areaEditor: null }),
+    resetAfterImport: () =>
+      set({ editingId: null, newCardId: null, areaEditor: null, searchOpen: false, query: '', winsOpen: false }),
   }))
 }
 

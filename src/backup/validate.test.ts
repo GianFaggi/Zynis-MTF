@@ -72,6 +72,11 @@ describe('isValidData', () => {
     expect(isValidData(broken(change))).toBe(false)
   })
 
+  it('accepts every Area color, the three added in #7 included, and nothing else', () => {
+    expect(isValidData(broken((doc) => (doc.areas[0].color = 'teal')))).toBe(true)
+    expect(isValidData(broken((doc) => Object.assign(doc.areas[0], { color: 'neon' })))).toBe(false)
+  })
+
   it('refuses something that is not a document', () => {
     expect(isValidData(null)).toBe(false)
     expect(isValidData([])).toBe(false)
