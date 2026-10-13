@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react'
 import { useId, useMemo, type CSSProperties } from 'react'
 import { Button } from '../components/ui/Button'
+import { Segmented } from '../components/ui/Segmented'
 import { Sheet } from '../components/ui/Sheet'
 import { areaName } from '../desk/areas'
 import { displayTitle } from '../desk/cardText'
@@ -19,6 +20,9 @@ function relativeDay(time: number, now: number, t: Translate): string {
   return t('daysAgo', days)
 }
 
+/** The filter's "Todas": no Area id is empty. */
+const ALL = ''
+
 /** "martes" / "Tuesday": built into the browser, so it works offline. */
 function weekdayName(time: number, language: Language): string {
   return new Intl.DateTimeFormat(language, { weekday: 'long' }).format(time)
@@ -27,23 +31,46 @@ function weekdayName(time: number, language: Language): string {
 /**
  * The Mis logros sheet: the last 7 days (things done, broken down, a bar per day,
  * the best day) and every Card in the Jar, with "Devolver" to take it back out.
- * It only ever counts up; a quiet week gets a kind line, never a warning.
+ * It only ever counts up; a quiet week gets a kind line, never a warning. While
+ * "Frasco por área" is on (#19) it can show one Area: every number and the Jar list
+ * then count that Area only, by each Card's current Area (`eventsOfArea`).
  */
 export function MisLogros() {
   const t = useT()
   const language = useAppStore((state) => state.language)
   const cards = useAppStore((state) => state.data.cards)
   const areas = useAppStore((state) => state.data.areas)
+  const areaJars = useAppStore((state) => state.areaJars)
   const open = useDeskStore((state) => state.winsOpen)
   const closeWins = useDeskStore((state) => state.closeWins)
-  const { days, week, best, total, now } = useWinStats()
+  const winsAreaId = useDeskStore((state) => state.winsAreaId)
+  // No filter with the option off; an Area gone since (deleted, or an Import) reads as "Todas".
+  const areaId = areaJars && areas.some((area) => area.id === winsAreaId) ? winsAreaId : null
+  const { days, week, best, total, now } = useWinStats(areaId)
   const inJarId = useId()
 
-  const inJar = useMemo(() => cards.filter((card) => card.jarredAt !== null).sort((a, b) => b.jarredAt! - a.jarredAt!), [cards])
+  const inJar = useMemo(
+    () =>
+      cards
+        .filter((card) => card.jarredAt !== null && (areaId === null || card.areaId === areaId))
+        .sort((a, b) => b.jarredAt! - a.jarredAt!),
+    [cards, areaId],
+  )
   const bestLine = best ? `${t('bestDay', weekdayName(best.start, language), best.count)} ${t('quietDays')}` : t('quietDays')
 
   return (
     <Sheet open={open} onClose={closeWins} title={t('wins')} closeLabel={t('close')} wide>
+      {areaJars && (
+        <Segmented
+          label={t('area')}
+          options={[
+            { value: ALL, label: t('allAreas') },
+            ...areas.map((area) => ({ value: area.id, label: areaName(area, t), dot: area.color })),
+          ]}
+          value={areaId ?? ALL}
+          onChange={(value) => useDeskStore.getState().setWinsArea(value === ALL ? null : value)}
+        />
+      )}
       <div className="grid gap-[18px] min-[760px]:grid-cols-[1.15fr_1fr] min-[760px]:items-start">
         <section className="flex flex-col gap-4 rounded-2xl bg-paper p-[18px]">
           <p className="flex flex-wrap items-baseline gap-3">

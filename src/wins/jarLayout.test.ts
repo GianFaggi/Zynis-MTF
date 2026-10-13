@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { overlaps } from '../desk/areas'
 import { makeArea, rowOfAreas } from '../test/fixtures'
 import type { AreaColor } from '../types'
-import { JAR_CAPACITY, isOverJar, jarBounds, jarPieces, jarRect } from './jarLayout'
+import { JAR_CAPACITY, areaJarRect, isOverAreaJar, isOverJar, jarBounds, jarPieces, jarRect, jarTarget } from './jarLayout'
 
 describe('jarRect', () => {
   it('sits where the mockup has it for the default Areas', () => {
@@ -75,6 +75,54 @@ describe('isOverJar', () => {
   ])('%s margin: just inside counts, just outside does not', (_, inside, outside) => {
     expect(isOverJar(jar, inside)).toBe(true)
     expect(isOverJar(jar, outside)).toBe(false)
+  })
+})
+
+describe('areaJarRect', () => {
+  it('sits in the top-right corner of the default Vida, above where Tidy up starts', () => {
+    const vida = rowOfAreas()[1].rect
+    const jar = areaJarRect(vida)
+    expect(jar).toEqual({ x: 1992, y: 136, w: 104, h: 120 })
+    expect(vida.x + vida.w - (jar.x + jar.w)).toBe(24)
+    expect(jar.y - vida.y).toBe(16)
+    expect(jar.y + jar.h - vida.y).toBeLessThan(140)
+  })
+})
+
+describe('isOverAreaJar', () => {
+  const jar = { x: 1992, y: 136, w: 104, h: 120 }
+
+  it.each([
+    ['left', { x: 1963, y: 200 }, { x: 1962, y: 200 }],
+    ['right', { x: 2125, y: 200 }, { x: 2126, y: 200 }],
+    ['top', { x: 2040, y: 107 }, { x: 2040, y: 106 }],
+    ['bottom', { x: 2040, y: 285 }, { x: 2040, y: 286 }],
+  ])('%s margin: just inside counts, just outside does not', (_, inside, outside) => {
+    expect(isOverAreaJar(jar, inside)).toBe(true)
+    expect(isOverAreaJar(jar, outside)).toBe(false)
+  })
+})
+
+describe('jarTarget', () => {
+  const areas = rowOfAreas()
+  const overVidaJar = { x: 2044, y: 196 }
+  const overDeskJar = { x: 1630, y: 1320 }
+  const on = { areaJars: true, far: false }
+
+  it('over an Area Jar is that Area; over the Desk Jar is the Desk; elsewhere nothing', () => {
+    expect(jarTarget(areas, overVidaJar, on)).toEqual({ areaId: 'a2' })
+    expect(jarTarget(areas, overDeskJar, on)).toEqual({ areaId: null })
+    expect(jarTarget(areas, { x: 1600, y: 600 }, on)).toBeNull()
+  })
+
+  it('never returns an Area Jar with the option off or in the far look', () => {
+    expect(jarTarget(areas, overVidaJar, { areaJars: false, far: false })).toBeNull()
+    expect(jarTarget(areas, overVidaJar, { areaJars: true, far: true })).toBeNull()
+    expect(jarTarget(areas, overDeskJar, { areaJars: true, far: true })).toEqual({ areaId: null })
+  })
+
+  it('is null without Areas', () => {
+    expect(jarTarget([], overDeskJar, on)).toBeNull()
   })
 })
 

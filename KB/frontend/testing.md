@@ -66,6 +66,15 @@ Shared helpers live in `e2e/helpers.ts`:
 - The Jar is a button named "Frasco: N tarjetas…", so the Dock's "Frasco" needs `exact: true` or the Dock's `navigation` scope.
 - A finished Card seeded **without** events (a document from before change 3) gets its Card Win from the Jar, so the counter goes 0 → 1: that is how the "counted once" rule shows in e2e.
 - A test on a 360 px viewport (`page.setViewportSize`) checks that the Dock scrolls sideways and still reaches "Frasco".
+- The Desk Jar is located by value, `[data-jar=""]`: a bare `[data-jar]` would find the first Area Jar once "Frasco por área" is on (#19).
+
+### Area Jars (`e2e/area-jars.spec.ts`, #19)
+
+- Only the first test turns "Frasco por área" on through Settings; the others seed it (`seedWithAreaJars`: `mtf_area_jars = '1'`, then reload). An Area Jar is `[data-jar="<areaId>"]`, all of them `[data-jar]:not([data-jar=""])`.
+- **Area Jars hide in the far look**, where the desktop window opens. `zoomInAround(page, point)` zooms with `Ctrl` + wheel around a **Desk** point (converted with `toScreen`, from the world transform) until the near look; `NEAR_VIDA_JAR` keeps a Card at Trabajo's right edge and Vida's Jar both on screen. A hidden Area Jar has no accessible name: after a reload (far look again) its label is checked with `toHaveAttribute('aria-label', …)`.
+- The far-look test drops a Card on the spot where Vida's Jar would be (`toScreen` of its center): no question, the Card is just placed.
+- The question is a dialog named by it ("¿Pasarla a Vida y llevarla al frasco?"); while it is open the Card keeps `data-lifted`. No and `Esc` are checked against the stored document (nothing written), Sí against the Mis logros row ("Vida · hoy") and a reload.
+- **Phone**: the opening view is the first Area's top-left corner, so the phone tests seed a 520 px wide Trabajo, whose Jar is then on screen; the drop holds 450 ms and drags with `Touch.drag`, and the Jar is tapped with `tap()`.
 
 ### Backup (`e2e/backup.spec.ts`, change 4)
 

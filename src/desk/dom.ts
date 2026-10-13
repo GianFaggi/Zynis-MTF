@@ -1,8 +1,9 @@
+import type { JarTarget } from '../wins/jarLayout'
 import type { Viewport } from './geometry'
 
-// The only place that reads sizes and media settings from the DOM. Card heights depend
-// on content and fonts, so they are measured when a rule needs them (drop, Tidy up,
-// See all), never cached.
+// The only place that reads sizes and media settings from the DOM, and finds the Jars.
+// Card heights depend on content and fonts, so they are measured when a rule needs them
+// (drop, Tidy up, See all), never cached.
 
 const WORLD_SELECTOR = '[data-desk-world]'
 
@@ -36,4 +37,20 @@ export function measureCardHeights(): Map<string, number> {
   }
   if (far) world.setAttribute('data-far', '')
   return heights
+}
+
+/**
+ * A Jar on the Desk: the Desk Jar (`data-jar=""`) or an Area's (`data-jar` = its id,
+ * #19). Always by value: a bare `[data-jar]` would find the first Area Jar, since the
+ * Areas come before the Desk Jar.
+ */
+export function jarElement(areaId: string | null = null): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[data-jar="${areaId ?? ''}"]`)
+}
+
+/** Rings the Jar a dragged Card is over (`data-over`) and no other; `null` clears them all. */
+export function highlightJar(target: JarTarget | null): void {
+  for (const jar of document.querySelectorAll<HTMLElement>('[data-jar]')) {
+    jar.toggleAttribute('data-over', target !== null && jar.dataset.jar === (target.areaId ?? ''))
+  }
 }

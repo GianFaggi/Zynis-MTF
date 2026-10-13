@@ -26,6 +26,7 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 - View state (pan/zoom, open sheets) is never part of `mtf_data`.
 - Areas the user creates, renames, recolors, moves, resizes or deletes (#7) need **no schema bump**: `Area` already had an optional `name`, an optional `key` and a `rect`. A user-created Area has no `key`; clearing the name of a default Area removes `name`, so its translated `key` shows again. Moving an Area writes its `rect` and its Desk Cards' positions in one replacement; deleting one moves its Cards to the Area the user chose, and leaves `events` untouched (a Win's `areaId` is a snapshot). Only `AreaColor` grew, from 5 to 12 colors. So a Backup made by this version with one of the new colors is refused as **damaged** by an older MTF; that is acceptable, since a Backup moves data between devices running the same deployed app.
 - Arranging the Areas (#18) needs **no schema bump** either: an arrangement writes every moved Area's `rect` and its Desk Cards' positions in one replacement, like a hand move. "Mi disposición" is a device setting under its own key, `mtf_arrangement` ([Keys](#keys)), not part of `mtf_data`, so the Backup format does not change either.
+- "Frasco por área" (#19) needs **no schema bump** and **no Backup change**: it is one device key, `mtf_area_jars` ([Keys](#keys)). Area Jars are a view of `Card.jarredAt` + `Card.areaId`, and the Mis logros Area filter reads `events` through the Cards at read time (a Win counts in its Card's current Area, falling back to its `areaId` snapshot only when the Card is gone). Moving a Card to another Area as it goes into the Jar (`jarCard(id, { areaId })`) writes `areaId` and `jarredAt` in one replacement.
 
 ## Entities (schema version 1)
 
@@ -93,6 +94,7 @@ interface MtfData {         // the whole `mtf_data` document
 | `mtf_install_nudge_seen` | `'1'` once the install nudge was answered ("Cómo" or "Ahora no") or MTF was installed; a device setting, not part of the Backup | change 4 |
 | `mtf_theme` | `'system'`, `'light'` or `'dark'`; anything else is ignored (= System). A device setting, not part of `mtf_data` or the Backup | change 5 |
 | `mtf_arrangement` | `SavedArrangement` as JSON: every Area's rect when the user last chose "Guardar esta disposición", and when. One slot, replaced by each save. Anything else (invalid JSON, not an object, a rect without four finite numbers) reads as nothing saved. A device setting, not part of `mtf_data` or the Backup; an Import leaves it alone | #18 |
+| `mtf_area_jars` | `'1'` while "Frasco por área" is on, `'0'` once turned off; missing or anything else reads as off. A device setting, not part of `mtf_data` or the Backup; an Import leaves it alone | #19 |
 
 ## Storage layer API (`src/lib/storage.ts`)
 
@@ -110,6 +112,8 @@ interface MtfData {         // the whole `mtf_data` document
 | `saveInstallNudgeSeen()` | Writes `'1'` |
 | `loadArrangement(): SavedArrangement \| null` | `null` when unset, damaged or storage refuses to read: nothing saved |
 | `saveArrangement(arrangement)` | Writes the whole arrangement, replacing the previous one |
+| `loadAreaJars(): boolean` | `true` only when `mtf_area_jars` is `'1'`; `false` when unset, `'0'`, anything else, or storage refuses to read |
+| `saveAreaJars(on)` | Writes `'1'` or `'0'` |
 | `upgradeDocument(doc): UpgradeResult` | The one migration path, used by `loadData()` and by Import. `{ ok: true, data }`, or `{ ok: false, reason }` with `'shape'` (outer shape wrong), `'newer'` (`schemaVersion` above `SCHEMA_VERSION`) or `'migration'` (a step missing, throwing, or breaking the shape). Checks the outer shape only, not the entities |
 | `migrate(doc, steps, target)` | Runs `steps[v]` (v → v + 1) up to `target`; throws if a step is missing. The `migrations` map is private and empty at v1. |
 | `emptyData()` | `{ schemaVersion: SCHEMA_VERSION, areas: [], cards: [], events: [] }` |
@@ -131,7 +135,7 @@ A **Backup** is one JSON file, `mtf-backup-YYYY-MM-DD.json` (local date of the e
 }
 ```
 
-- `data.schemaVersion` is the only version number. Device settings (`mtf_language`, `mtf_theme`, `mtf_hint_seen`, `mtf_install_nudge_seen`, `mtf_arrangement`) are never in the file, and an Import leaves them as they were. Pretty-printed with 2 spaces.
+- `data.schemaVersion` is the only version number. Device settings (`mtf_language`, `mtf_theme`, `mtf_hint_seen`, `mtf_install_nudge_seen`, `mtf_arrangement`, `mtf_area_jars`) are never in the file, and an Import leaves them as they were. Pretty-printed with 2 spaces.
 - The pure functions live in `src/backup/backup.ts`: `backupFileName(date)`, `makeBackup(data, now)` and `readBackup(text)`. `src/backup/validate.ts` (`isValidData`) checks the entities; `src/backup/deliver.ts` shares or downloads the file.
 - **Reading a Backup** (`readBackup`) is stricter than `loadData()`, because the file comes from outside:
   - **not a Backup**: longer than 5 MB, not JSON, not an object, or `format !== 'mtf-backup'`

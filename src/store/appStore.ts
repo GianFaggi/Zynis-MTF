@@ -6,10 +6,12 @@ import { tidyLayout } from '../desk/tidy'
 import { detectLanguage } from '../i18n/detect'
 import { newId } from '../lib/id'
 import {
+  loadAreaJars,
   loadArrangement,
   loadData,
   loadLanguage,
   loadTheme,
+  saveAreaJars,
   saveData,
   saveLanguage,
   saveTheme,
@@ -56,11 +58,14 @@ export interface AppState {
   deleteCard: (id: string) => void
   /** When the editor closes: drops blank Items, and the whole Card if it is left empty. A kept new Card counts as a note. */
   closeCard: (id: string, options?: { isNew?: boolean }) => void
-  /** Puts a Card in the Jar. Refuses, writing nothing, a Card with unchecked Items, an empty one, or one already in the Jar. */
-  jarCard: (id: string) => JarVerdict
+  /**
+   * Puts a Card in the Jar. Refuses, writing nothing, a Card with unchecked Items, an empty one, or one already in the Jar.
+   * With another existing `areaId` (an Area Jar, #19) the Card also moves to that Area, in the same write.
+   */
+  jarCard: (id: string, options?: { areaId?: AreaId }) => JarVerdict
   /** Takes a Card out of the Jar, back inside its Area and on top. */
   returnCard: (id: string) => void
-  /** Import: the whole document becomes `data`, already validated (at least one Area). The language, the theme and the saved arrangement stay. */
+  /** Import: the whole document becomes `data`, already validated (at least one Area). The device settings (language, theme, saved arrangement, Area Jars) stay. */
   replaceData: (data: MtfData) => void
 
   /** A new Area in the first free slot, in the first unused color. `name` is the provisional name, already translated. Returns its id. */
@@ -81,6 +86,10 @@ export interface AppState {
   arrangement: SavedArrangement | null
   /** Saves where every Area is now as "Mi disposición", replacing the previous one. */
   saveArrangement: () => void
+
+  /** "Frasco por área" (#19): a device setting, like the theme. Shows a small Jar in each Area. */
+  areaJars: boolean
+  setAreaJars: (on: boolean) => void
 }
 
 /** Brings `events` in line with a Card that just changed. */
@@ -165,6 +174,11 @@ export function createAppStore() {
         saveTheme(theme)
       },
       arrangement: loadArrangement(),
+      areaJars: loadAreaJars(),
+      setAreaJars: (areaJars) => {
+        set({ areaJars })
+        saveAreaJars(areaJars)
+      },
 
       ensureDefaultAreas: () =>
         update((data) => (data.areas.length > 0 ? data : { ...data, areas: defaultAreas(Date.now()) })),
@@ -312,16 +326,18 @@ export function createAppStore() {
           return { ...data, cards: data.cards.map((candidate) => (candidate.id === id ? kept : candidate)), events }
         }),
 
-      jarCard: (id) => {
+      jarCard: (id, { areaId } = {}) => {
         const card = findCard(get().data, id)
         if (!card || card.jarredAt !== null || isEmptyCard(card)) return { ok: false, pending: 0 }
         const verdict = jarVerdict(card)
         if (!verdict.ok) return verdict
+        const target = get().data.areas.some((area) => area.id === areaId) ? areaId! : card.areaId
         update((data) =>
           withCard(
             data,
             id,
-            (current, now) => ({ ...current, jarredAt: now, updatedAt: now }),
+            // The Area changes in the same replacement, so a new Card Win already carries it.
+            (current, now) => ({ ...current, areaId: target, jarredAt: now, updatedAt: now }),
             (events, current, now) => cardJarred(events, current, now, newId),
           ),
         )

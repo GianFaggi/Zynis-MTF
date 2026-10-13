@@ -1,5 +1,5 @@
 import { useDeskStore } from '../desk/deskStore'
-import { prefersReducedMotion } from '../desk/dom'
+import { jarElement, prefersReducedMotion } from '../desk/dom'
 import { useT } from '../i18n'
 import { useAppStore, type ToggleOutcome } from '../store/appStore'
 import { burst } from './sparks'
@@ -28,8 +28,8 @@ function celebrate(cardId: string) {
 export interface WinFeedback {
   /** After `toggleItem`: a check bumps the counter; a check that finished the Card also celebrates it, with sparks from `box`. */
   itemToggled: (outcome: ToggleOutcome | undefined, cardId: string, box?: Element | null) => void
-  /** After `jarCard` accepted a Card: sparks over the Jar, bump, toast with the week's count. */
-  jarred: () => void
+  /** After `jarCard` accepted a Card: sparks over the Jar that took it (an Area's, #19, or the Desk's), bump, toast with the week's count. */
+  jarred: (areaId?: string | null) => void
   /** The Jar refused a Card: how many Items are still to check. */
   refused: (pending: number) => void
 }
@@ -47,8 +47,8 @@ export function useWinFeedback(): WinFeedback {
         showToast(t('cardDone'), t('cardDoneDetail'))
       }
     },
-    jarred: () => {
-      burst(document.querySelector('[data-jar]')?.getBoundingClientRect())
+    jarred: (areaId = null) => {
+      burst(jarElement(areaId)?.getBoundingClientRect())
       bumpWins()
       const { done } = winStats(useAppStore.getState().data.events, Date.now()).week
       showToast(t('jarred'), t('jarredDetail', done))

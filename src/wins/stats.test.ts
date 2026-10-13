@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { makeCard } from '../test/fixtures'
 import type { WinEvent } from '../types'
-import { dayStart, daysAgo, totalDone, winStats } from './stats'
+import { dayStart, daysAgo, eventsOfArea, totalDone, winStats } from './stats'
 
 // "Today" is pinned with fake timers (Date only), so the 7-day window is the same on
 // every run. Events are placed at local noon N calendar days before today.
@@ -109,5 +110,32 @@ describe('daysAgo', () => {
     expect(daysAgo(new Date(2026, 9, 14, 0, 10).getTime(), lateTonight)).toBe(0)
     expect(daysAgo(new Date(2026, 9, 13, 23, 59).getTime(), new Date(2026, 9, 14, 0, 1).getTime())).toBe(1)
     expect(daysAgo(new Date(2026, 9, 9, 12).getTime(), lateTonight)).toBe(5)
+  })
+})
+
+describe('eventsOfArea', () => {
+  const cards = [makeCard({ id: 'c1', areaId: 'a2' }), makeCard({ id: 'c2', areaId: 'a1' })]
+  const events: WinEvent[] = [
+    // Checked while c1 was in Trabajo, then c1 moved to Vida.
+    { id: 'e1', type: 'item', at: 1, cardId: 'c1', itemId: 'i1', areaId: 'a1' },
+    { id: 'e2', type: 'item', at: 2, cardId: 'c1', itemId: 'i2', areaId: 'a1' },
+    { id: 'e3', type: 'card', at: 3, cardId: 'c2', areaId: 'a1' },
+    // Imported, its Card is gone.
+    { id: 'e4', type: 'note', at: 4, cardId: 'gone', areaId: 'a3' },
+  ]
+
+  it("counts an event in its Card's current Area, not its snapshot", () => {
+    expect(eventsOfArea(events, cards, 'a2').map((e) => e.id)).toEqual(['e1', 'e2'])
+    expect(eventsOfArea(events, cards, 'a1').map((e) => e.id)).toEqual(['e3'])
+  })
+
+  it('falls back to the snapshot for an event whose Card is gone', () => {
+    expect(eventsOfArea(events, cards, 'a3').map((e) => e.id)).toEqual(['e4'])
+  })
+
+  it('the Areas add up to every event', () => {
+    const now = Date.now()
+    const perArea = ['a1', 'a2', 'a3'].map((id) => winStats(eventsOfArea(events, cards, id), now).total)
+    expect(perArea.reduce((sum, n) => sum + n, 0)).toBe(winStats(events, now).total)
   })
 })
