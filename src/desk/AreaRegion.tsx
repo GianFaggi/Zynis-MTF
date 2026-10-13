@@ -20,7 +20,9 @@ type AreaRegionProps = {
  * the Desk moves the whole Area with one `translate` and resizes it by writing
  * `--live-w` / `--live-h`, which win over the stored `--rect-w` / `--rect-h`. It never
  * touches a style React owns. It also writes `data-lifted`, `data-blocked` (over
- * another Area) and `data-returning` (sliding back) on the wrapper.
+ * another Area) and `data-returning` (sliding back) on the wrapper. While the world
+ * is `data-tidying`, a new `left` / `top` slides with Tidy up's timing, so an
+ * arrangement moves the Areas together with their Cards.
  *
  * A pointer press on the label is handled by the Desk's gesture controller (a tap
  * flies, a drag moves the Area, a touch swipe pans); its own click only handles the
@@ -42,7 +44,7 @@ export function AreaRegion({ area, count, onFly, onEdit }: AreaRegionProps) {
     <div
       data-area-id={area.id}
       style={style}
-      className="group/area pointer-events-none absolute [--h:var(--live-h,var(--rect-h))] [--w:var(--live-w,var(--rect-w))] data-lifted:[--tint-boost:1.7] data-returning:[transition:translate_.35s_ease]"
+      className="group/area pointer-events-none absolute [--h:var(--live-h,var(--rect-h))] [--w:var(--live-w,var(--rect-w))] group-data-tidying:[transition:left_.5s_cubic-bezier(.3,.7,.2,1),top_.5s_cubic-bezier(.3,.7,.2,1)] data-lifted:[--tint-boost:1.7] data-returning:[transition:translate_.35s_ease]"
     >
       <div
         aria-hidden="true"

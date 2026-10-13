@@ -6,6 +6,7 @@ import { Segmented } from './components/ui/Segmented'
 import { Sheet } from './components/ui/Sheet'
 import { Toast } from './components/ui/Toast'
 import { AreaEditor } from './desk/AreaEditor'
+import type { Arrangement } from './desk/arrange'
 import { AreasSection } from './desk/AreasSection'
 import { CardEditor } from './desk/CardEditor'
 import { Desk } from './desk/Desk'
@@ -41,6 +42,13 @@ function showNewArea(id: string) {
   if (!area) return
   useDeskStore.getState().flyTo(areaView(area, viewport()))
   useDeskStore.getState().openAreaEditor(id, { isNew: true })
+}
+
+/** An arrangement: the Areas and their Cards slide to their places, like Tidy up, while the view shows the whole Desk. */
+function arrangeDesk(targets: Arrangement) {
+  useDeskStore.getState().animateTidy()
+  useAppStore.getState().arrangeAreas(targets)
+  showWholeDesk()
 }
 
 /** After an Import: nothing open may point at a Card that is gone; the whole new Desk comes into view. */
@@ -125,6 +133,10 @@ export default function App() {
           onCreated={(id) => {
             setSettingsOpen(false)
             showNewArea(id)
+          }}
+          onArranged={(targets) => {
+            setSettingsOpen(false)
+            arrangeDesk(targets)
           }}
         />
         <BackupSection

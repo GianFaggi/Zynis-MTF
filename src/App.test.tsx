@@ -7,7 +7,7 @@ import { useDeskStore } from './desk/deskStore'
 import { HINT_SEEN_KEY, LANGUAGE_KEY, THEME_KEY } from './lib/storage'
 import { useAppStore } from './store/appStore'
 import { USER_AGENTS, restoreDevice, stubDevice } from './test/device'
-import { makeCard, makeData, rowOfAreas } from './test/fixtures'
+import { makeArea, makeCard, makeData, rowOfAreas } from './test/fixtures'
 import { resetStores } from './test/stores'
 
 function desk() {
@@ -192,6 +192,28 @@ describe('App', () => {
     const dock = screen.getByRole('navigation', { name: 'Áreas' })
     expect(within(dock).getByRole('button', { name: 'Facu' })).toBeInTheDocument()
     expect(areaLabels()).toContain('Facu, 0 tarjetas')
+  })
+
+  it('Tabla closes Settings, puts four Areas in two rows of two with their Cards, and shows the whole Desk', async () => {
+    resetStores({
+      areas: [...rowOfAreas(), makeArea({ id: 'a4', name: 'Facu', color: 'plum', rect: { x: 3260, y: 120, w: 980, h: 1000 } })],
+      cards: [makeCard({ id: 'c1', areaId: 'a3', title: 'Turno', position: { x: 2300, y: 400 } })],
+    })
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Ajustes' })).getByRole('button', { name: 'Tabla' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Ajustes' })).not.toBeInTheDocument()
+    expect(useAppStore.getState().data.areas.map((area) => [area.rect.x, area.rect.y])).toEqual([
+      [80, 120],
+      [1140, 120],
+      [80, 1280],
+      [1140, 1280],
+    ])
+    expect(useAppStore.getState().data.cards[0].position).toMatchObject({ x: 180, y: 1560 })
+    expect(useDeskStore.getState()).toMatchObject({ tidying: true, flying: true })
+    const dock = screen.getByRole('navigation', { name: 'Áreas' })
+    for (const name of ['Trabajo', 'Vida', 'Recordar', 'Facu']) expect(within(dock).getByRole('button', { name })).toBeInTheDocument()
   })
 
   it('a confirmed Import closes Settings, shows the new Desk and says so', async () => {

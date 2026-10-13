@@ -1,12 +1,14 @@
-import type { Point, Rect } from '../desk/geometry'
+import { grown, overlaps } from '../desk/areas'
+import { boundingBox, type Point, type Rect } from '../desk/geometry'
 import type { Area, AreaColor } from '../types'
 
 // The Jar's place and fill (KB/frontend/desk.md). Its place is derived from the Areas,
-// never stored: it sits centered under them, so it follows custom Areas (#7) for free.
+// never stored: in their middle when it is free, otherwise centered under them, so it
+// follows custom Areas (#7) and arrangements (#18) for free.
 // The numbers come from the approved mockup (design/mtf-mockup-desk.html).
 
 const JAR_SIZE = { w: 260, h: 300 }
-/** Space between the lowest Area and the Jar. */
+/** Paper between the Jar and the Areas: below the lowest one, or around the Jar and its caption in the middle. */
 const JAR_GAP = 50
 /** "Tu frasco" and the week line under the Jar. */
 const CAPTION = { w: 360, h: 90, gap: 14 }
@@ -26,13 +28,36 @@ export interface JarPiece {
   color: AreaColor
 }
 
-/** Centered under the Areas, 50 px below the lowest one; `null` without Areas (no Jar is drawn). */
+/**
+ * At the center of the Areas when there is room for it there (`centeredJar`), as in
+ * Estrella; otherwise centered under them, 50 px below the lowest one. `null` without
+ * Areas (no Jar is drawn).
+ */
 export function jarRect(areas: readonly Area[]): Rect | null {
   if (areas.length === 0) return null
-  const left = Math.min(...areas.map((area) => area.rect.x))
-  const right = Math.max(...areas.map((area) => area.rect.x + area.rect.w))
-  const bottom = Math.max(...areas.map((area) => area.rect.y + area.rect.h))
-  return { x: Math.round((left + right) / 2 - JAR_SIZE.w / 2), y: bottom + JAR_GAP, ...JAR_SIZE }
+  const rects = areas.map((area) => area.rect)
+  const centered = centeredJar(rects)
+  if (centered) return centered
+  const box = boundingBox(rects)
+  return { x: Math.round(box.x + box.w / 2 - JAR_SIZE.w / 2), y: box.y + box.h + JAR_GAP, ...JAR_SIZE }
+}
+
+/**
+ * The Jar placed so that it and its caption (`jarBounds`) are centered on the bounding
+ * box of `rects`, when that block, with `JAR_GAP` of paper around it, overlaps none of
+ * them; otherwise `null`. Estrella grows its ring until this holds.
+ */
+export function centeredJar(rects: readonly Rect[]): Rect | null {
+  const box = boundingBox(rects)
+  // The block's offset from the Jar's top-left: the caption is wider than the Jar.
+  const block = jarBounds({ x: 0, y: 0, ...JAR_SIZE })
+  const jar = {
+    x: Math.round(box.x + box.w / 2 - block.w / 2 - block.x),
+    y: Math.round(box.y + box.h / 2 - block.h / 2 - block.y),
+    ...JAR_SIZE,
+  }
+  const around = grown(jarBounds(jar), JAR_GAP)
+  return rects.some((rect) => overlaps(rect, around)) ? null : jar
 }
 
 /** Where the caption sits, centered under the Jar. */

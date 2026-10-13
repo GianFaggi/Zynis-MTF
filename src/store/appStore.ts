@@ -1,12 +1,21 @@
 import { create } from 'zustand'
-import { areaForPoint, cleanName, defaultAreas, freeSlot, nextColor, spotIn } from '../desk/areas'
+import { areaForPoint, cleanName, defaultAreas, freeSlot, nextColor, sameRect, spotIn } from '../desk/areas'
 import { isEmptyCard, isFinished } from '../desk/cardText'
 import { CARD_WIDTH, FALLBACK_CARD_HEIGHT, randomTilt, type Point, type Rect } from '../desk/geometry'
 import { tidyLayout } from '../desk/tidy'
 import { detectLanguage } from '../i18n/detect'
 import { newId } from '../lib/id'
-import { loadData, loadLanguage, loadTheme, saveData, saveLanguage, saveTheme } from '../lib/storage'
-import type { Area, AreaColor, AreaId, Card, Item, Language, MtfData, Theme, WinEvent } from '../types'
+import {
+  loadArrangement,
+  loadData,
+  loadLanguage,
+  loadTheme,
+  saveData,
+  saveLanguage,
+  saveTheme,
+  saveArrangement as storeArrangement,
+} from '../lib/storage'
+import type { Area, AreaColor, AreaId, Card, Item, Language, MtfData, SavedArrangement, Theme, WinEvent } from '../types'
 import { cardDeleted, cardJarred, itemToggled, itemsRemoved, jarVerdict, noteWritten, syncCardWin, type JarVerdict } from '../wins/rules'
 
 // The single in-memory source of truth for saved data (KB/frontend/architecture.md).
@@ -51,7 +60,7 @@ export interface AppState {
   jarCard: (id: string) => JarVerdict
   /** Takes a Card out of the Jar, back inside its Area and on top. */
   returnCard: (id: string) => void
-  /** Import: the whole document becomes `data`, already validated (at least one Area). The language and the theme stay. */
+  /** Import: the whole document becomes `data`, already validated (at least one Area). The language, the theme and the saved arrangement stay. */
   replaceData: (data: MtfData) => void
 
   /** A new Area in the first free slot, in the first unused color. `name` is the provisional name, already translated. Returns its id. */
@@ -65,6 +74,13 @@ export interface AppState {
   resizeArea: (id: string, rect: Rect) => void
   /** Removes an Area; its Cards go to `destinationId`. Refuses, writing nothing, the last Area or a missing or same destination. */
   deleteArea: (id: string, destinationId: string) => void
+  /** Moves every Area to its target rect (`arrange.ts`), its Desk Cards along, in one write. Trusts the targets not to overlap. */
+  arrangeAreas: (targets: ReadonlyMap<AreaId, Rect>) => void
+
+  /** "Mi disposición": a device setting, kept out of `data` and of the Backup. `null` until the user saves one. */
+  arrangement: SavedArrangement | null
+  /** Saves where every Area is now as "Mi disposición", replacing the previous one. */
+  saveArrangement: () => void
 }
 
 /** Brings `events` in line with a Card that just changed. */
@@ -109,6 +125,20 @@ function withItem(data: MtfData, cardId: string, itemId: string, change: (item: 
   )
 }
 
+/**
+ * `cards` with every Desk Card of an Area in `shifts` moved by that Area's shift, so
+ * Cards travel with their Area (ADR 0007). Area, tilt and `z` are kept; Cards in the
+ * Jar have no place on the Desk and are left alone.
+ */
+function withAreaCardsShifted(cards: Card[], shifts: ReadonlyMap<AreaId, Point>, now: number): Card[] {
+  if (shifts.size === 0) return cards
+  return cards.map((card) => {
+    const shift = shifts.get(card.areaId)
+    if (!shift || card.jarredAt !== null) return card
+    return { ...card, position: { ...card.position, x: card.position.x + shift.x, y: card.position.y + shift.y }, updatedAt: now }
+  })
+}
+
 /** `data` with one Area replaced by `change(area, now)`. The same `data` when the Area does not exist or did not change. */
 function withArea(data: MtfData, id: string, change: (area: Area, now: number) => Area): MtfData {
   const index = data.areas.findIndex((area) => area.id === id)
@@ -134,6 +164,7 @@ export function createAppStore() {
         set({ theme })
         saveTheme(theme)
       },
+      arrangement: loadArrangement(),
 
       ensureDefaultAreas: () =>
         update((data) => (data.areas.length > 0 ? data : { ...data, areas: defaultAreas(Date.now()) })),
@@ -357,25 +388,33 @@ export function createAppStore() {
             updatedAt: now,
           }))
           if (moved === data) return data
-          const now = Date.now()
-          // Its Cards on the Desk come along; Cards in the Jar have no place on the Desk.
-          return {
-            ...moved,
-            cards: data.cards.map((card) =>
-              card.areaId === id && card.jarredAt === null
-                ? { ...card, position: { ...card.position, x: card.position.x + x, y: card.position.y + y }, updatedAt: now }
-                : card,
-            ),
-          }
+          return { ...moved, cards: withAreaCardsShifted(data.cards, new Map([[id, { x, y }]]), Date.now()) }
         }),
 
       resizeArea: (id, rect) =>
-        update((data) =>
-          withArea(data, id, (area, now) => {
-            const same = (['x', 'y', 'w', 'h'] as const).every((side) => area.rect[side] === rect[side])
-            return same ? area : { ...area, rect: { ...rect }, updatedAt: now }
-          }),
-        ),
+        update((data) => withArea(data, id, (area, now) => (sameRect(area.rect, rect) ? area : { ...area, rect: { ...rect }, updatedAt: now }))),
+
+      arrangeAreas: (targets) =>
+        update((data) => {
+          const now = Date.now()
+          const shifts = new Map<AreaId, Point>()
+          const areas = data.areas.map((area) => {
+            const rect = targets.get(area.id)
+            if (!rect || sameRect(area.rect, rect)) return area
+            // "Mi disposición" may also bring back a saved size; only a new top-left moves the Cards.
+            if (rect.x !== area.rect.x || rect.y !== area.rect.y) shifts.set(area.id, { x: rect.x - area.rect.x, y: rect.y - area.rect.y })
+            return { ...area, rect: { ...rect }, updatedAt: now }
+          })
+          if (areas.every((area, index) => area === data.areas[index])) return data
+          return { ...data, areas, cards: withAreaCardsShifted(data.cards, shifts, now) }
+        }),
+
+      saveArrangement: () => {
+        const rects = Object.fromEntries(get().data.areas.map((area) => [area.id, { ...area.rect }]))
+        const arrangement = { rects, savedAt: Date.now() }
+        set({ arrangement })
+        storeArrangement(arrangement)
+      },
 
       deleteArea: (id, destinationId) =>
         update((data) => {

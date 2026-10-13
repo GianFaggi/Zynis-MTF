@@ -73,6 +73,17 @@ export const es = {
   areaDeleted: 'Área borrada',
   areaDeletedDetail: (n: number, name: string) => (n === 1 ? `1 tarjeta pasó a ${name}` : `${n} tarjetas pasaron a ${name}`),
 
+  // "Acomodar", not "Ordenar": that is Tidy up, which arranges Cards, not Areas.
+  arrangeAreas: 'Acomodar áreas',
+  arrangeRow: 'Fila',
+  arrangeGrid: 'Tabla',
+  arrangeStar: 'Estrella',
+  arrangeMine: 'Mi disposición',
+  saveArrangement: 'Guardar esta disposición',
+  arrangementSaved: 'Disposición guardada',
+  arrangeAsk: 'Tu disposición actual no está guardada. ¿Acomodar igual?',
+  arrange: 'Acomodar',
+
   wins: 'Mis logros',
   winsCounter: (n: number) => `Mis logros: ${thingsDone(n)} en 7 días`,
   cardDone: '¡Tarjeta completa!',

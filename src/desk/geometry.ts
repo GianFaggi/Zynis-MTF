@@ -119,8 +119,11 @@ export function deskBounds(areas: readonly Area[], cards: readonly Card[], heigh
     ...cards.filter((card) => card.jarredAt === null).map((card) => cardRect(card, heights.get(card.id))),
     ...(jar ? [jarBounds(jar)] : []),
   ]
-  if (rects.length === 0) return null
+  return rects.length === 0 ? null : boundingBox(rects)
+}
 
+/** The smallest rect that holds every one of `rects` (at least one). */
+export function boundingBox(rects: readonly Rect[]): Rect {
   const left = Math.min(...rects.map((r) => r.x))
   const top = Math.min(...rects.map((r) => r.y))
   const right = Math.max(...rects.map((r) => r.x + r.w))

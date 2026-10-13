@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CARD_WIDTH } from '../desk/geometry'
-import { DATA_KEY, LANGUAGE_KEY, THEME_KEY } from '../lib/storage'
+import { ARRANGEMENT_KEY, DATA_KEY, LANGUAGE_KEY, THEME_KEY } from '../lib/storage'
 import { makeArea, makeCard, makeData, makeItem, rowOfAreas } from '../test/fixtures'
 import type { MtfData } from '../types'
 import { createAppStore } from './appStore'
@@ -630,5 +630,97 @@ describe('Area actions', () => {
       single.getState().deleteArea('a1', 'a1')
       expect(single.getState().data).toBe(alone)
     })
+  })
+})
+
+describe('Arranging the Areas', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
+  function areaIn(store: ReturnType<typeof createAppStore>, id: string) {
+    return store.getState().data.areas.find((area) => area.id === id)
+  }
+
+  it('arrangeAreas moves the changed Areas and their Desk Cards by each Area’s shift, in one write', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(7000)
+    const store = storeWith([
+      makeCard({ id: 'remember', areaId: 'a3', position: { x: 2300, y: 400, tilt: 1.5, z: 4 } }),
+      makeCard({ id: 'life', areaId: 'a2', position: { x: 1200, y: 300, tilt: -1, z: 2 } }),
+      makeCard({ id: 'jarred', areaId: 'a3', jarredAt: 3, position: { x: 2300, y: 400, tilt: 1, z: 1 } }),
+      makeCard({ id: 'work', areaId: 'a1', position: { x: 200, y: 300, tilt: 0, z: 3 } }),
+    ])
+    const before = store.getState().data
+    const saves = vi.spyOn(Storage.prototype, 'setItem')
+
+    store.getState().arrangeAreas(
+      new Map([
+        ['a1', { x: 80, y: 120, w: 980, h: 1000 }],
+        ['a2', { x: 1140, y: 120, w: 980, h: 1000 }],
+        ['a3', { x: 80, y: 1280, w: 980, h: 1000 }],
+      ]),
+    )
+
+    expect(areaIn(store, 'a3')).toMatchObject({ rect: { x: 80, y: 1280, w: 980, h: 1000 }, updatedAt: 7000 })
+    expect(cardIn(store, 'remember')).toMatchObject({ areaId: 'a3', position: { x: 180, y: 1560, tilt: 1.5, z: 4 }, updatedAt: 7000 })
+    // Unmoved Areas and their Cards, and Cards in the Jar, are the same objects.
+    expect(areaIn(store, 'a1')).toBe(before.areas[0])
+    expect(areaIn(store, 'a2')).toBe(before.areas[1])
+    expect(cardIn(store, 'life')).toBe(before.cards[1])
+    expect(cardIn(store, 'jarred')).toBe(before.cards[2])
+    expect(cardIn(store, 'work')).toBe(before.cards[3])
+    expect(saves.mock.calls.filter(([key]) => key === DATA_KEY)).toHaveLength(1)
+    expect(storedData().areas[2].rect).toEqual({ x: 80, y: 1280, w: 980, h: 1000 })
+  })
+
+  it('arrangeAreas brings back a saved size without moving the Cards when the top-left stays', () => {
+    const store = storeWith([makeCard({ id: 'c1', areaId: 'a2', position: { x: 1200, y: 300 } })])
+    const cards = store.getState().data.cards
+    store.getState().arrangeAreas(new Map([['a2', { x: 1140, y: 120, w: 600, h: 700 }]]))
+    expect(areaIn(store, 'a2')?.rect).toEqual({ x: 1140, y: 120, w: 600, h: 700 })
+    expect(store.getState().data.cards).toBe(cards)
+  })
+
+  it('arrangeAreas with the current rects, or no targets, writes nothing', () => {
+    const store = storeWith([makeCard({ id: 'c1', areaId: 'a1' })])
+    const before = store.getState().data
+    store.getState().arrangeAreas(new Map(rowOfAreas().map((area) => [area.id, { ...area.rect }])))
+    store.getState().arrangeAreas(new Map())
+    expect(store.getState().data).toBe(before)
+  })
+
+  it('has no saved arrangement on a first launch', () => {
+    expect(createAppStore().getState().arrangement).toBeNull()
+  })
+
+  it('saveArrangement keeps every Area’s rect on the device, and saving again replaces it', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(7000)
+    const store = storeWith()
+    store.getState().saveArrangement()
+
+    const first = { rects: Object.fromEntries(rowOfAreas().map((area) => [area.id, area.rect])), savedAt: 7000 }
+    expect(store.getState().arrangement).toEqual(first)
+    expect(JSON.parse(localStorage.getItem(ARRANGEMENT_KEY)!)).toEqual(first)
+    expect(createAppStore().getState().arrangement).toEqual(first)
+
+    vi.setSystemTime(8000)
+    store.getState().moveArea('a3', 0, 1500)
+    store.getState().saveArrangement()
+    expect(store.getState().arrangement).toMatchObject({ rects: { a3: { x: 2200, y: 1620 } }, savedAt: 8000 })
+    expect(createAppStore().getState().arrangement).toEqual(store.getState().arrangement)
+    // Not part of the document, so not part of a Backup.
+    expect(storedData()).not.toHaveProperty('arrangement')
+  })
+
+  it('an Import keeps the saved arrangement', () => {
+    const store = storeWith()
+    store.getState().saveArrangement()
+    const saved = store.getState().arrangement
+    store.getState().replaceData(makeData({ areas: [makeArea({ id: 'x1' })] }))
+    expect(store.getState().arrangement).toBe(saved)
+    expect(createAppStore().getState().arrangement).toEqual(saved)
   })
 })

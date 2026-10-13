@@ -32,10 +32,12 @@ const defaults: { key: DefaultKey; color: AreaColor }[] = [
 // The mockup's row: 980 × 1000 Areas from (80, 120), 80 px apart. The space below
 // the middle Area stays free for the Jar (change 3).
 const AREA_SIZE = { w: 980, h: 1000 }
-const ROW_ORIGIN = { x: 80, y: 120 }
-const AREA_GAP = 80
-/** Rows of new Areas are further apart, so a second row's label stands clear of the first row's Cards. */
-const ROW_GAP = 160
+/** Where the default row starts; the arrangements of `arrange.ts` start there too. */
+export const ROW_ORIGIN = { x: 80, y: 120 }
+/** Paper between two Areas side by side. */
+export const AREA_GAP = 80
+/** Rows of Areas are further apart, so a second row's label stands clear of the first row's Cards. */
+export const ROW_GAP = 160
 const SLOTS_PER_ROW = 3
 /** A slot is free only when this much paper is left around it, against moved Areas too. */
 const SLOT_MARGIN = 40
@@ -83,8 +85,13 @@ export function freeSlot(areas: readonly Area[]): Rect {
   return { x: ROW_ORIGIN.x, y: ROW_ORIGIN.y + MAX_ROWS * (AREA_SIZE.h + ROW_GAP), ...AREA_SIZE }
 }
 
-function grown(rect: Rect, by: number): Rect {
+/** `rect` with `by` px more paper on every side. */
+export function grown(rect: Rect, by: number): Rect {
   return { x: rect.x - by, y: rect.y - by, w: rect.w + 2 * by, h: rect.h + 2 * by }
+}
+
+export function sameRect(a: Rect, b: Rect): boolean {
+  return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h
 }
 
 /** Whether two rects share some area. Touching edges do not count. */

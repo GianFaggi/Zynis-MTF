@@ -73,6 +73,16 @@ export const en: Messages = {
   areaDeleted: 'Area deleted',
   areaDeletedDetail: (n: number, name: string) => (n === 1 ? `1 card went to ${name}` : `${n} cards went to ${name}`),
 
+  arrangeAreas: 'Arrange areas',
+  arrangeRow: 'Row',
+  arrangeGrid: 'Grid',
+  arrangeStar: 'Star',
+  arrangeMine: 'My arrangement',
+  saveArrangement: 'Save this arrangement',
+  arrangementSaved: 'Arrangement saved',
+  arrangeAsk: "Your current arrangement isn't saved. Arrange anyway?",
+  arrange: 'Arrange',
+
   wins: 'My wins',
   winsCounter: (n: number) => `My wins: ${thingsDone(n)} in 7 days`,
   cardDone: 'Card complete!',
