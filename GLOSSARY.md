@@ -24,9 +24,21 @@ _Avoid_: Move to, category, folder
 Where a Card sits on the Desk, in Desk coordinates (independent of zoom), plus a small tilt so it looks like paper.
 _Avoid_: Coordinates (in UI copy), layout
 
-**Tidy up**:
-The action that rearranges the Cards of each Area into loose columns. It only moves Cards; it never changes their Area.
-_Avoid_: Sort, auto-layout
+**Tidy up** (ES "Ordenar"):
+The action that rearranges the Cards of each Area into loose columns. It only moves Cards; it never changes their Area and never moves an Area.
+_Avoid_: Sort, auto-layout, Arrange
+
+**Arrange** (ES "Acomodar"):
+The one-tap action, in Settings → Áreas, that moves every Area into an **Arrangement**: Fila (Row), Tabla (Grid), Estrella (Star) or **My arrangement**. Each Area keeps its size and no two overlap; the Cards of each Area on the Desk travel with it, as in a hand move. It is an action, not a mode: Areas still move and resize by hand afterwards. When the current Arrangement could not be chosen again, MTF asks first.
+_Avoid_: Ordenar (that is Tidy up, for Cards), sort, layout mode, auto-layout
+
+**Arrangement** (ES "disposición"):
+Where every Area sits on the Desk. Fila puts them side by side; Tabla in the smallest square grid; Estrella in a ring around the Jar.
+_Avoid_: Layout, template, view
+
+**My arrangement** (ES "Mi disposición"):
+The one Arrangement the user saved with "Guardar esta disposición" (Save this arrangement), to come back to later. Each save replaces it. Returning to it puts the saved Areas back in their places and sizes; Areas created since go to the first free slot. It belongs to the device, like the theme: it is not in a Backup.
+_Avoid_: Preset, saved layout, favorite
 
 ## Cards
 
@@ -49,7 +61,7 @@ _Avoid_: Favorite, starred
 ## Wins
 
 **Jar**:
-The place on the Desk, centered below the Areas, where the user puts Cards they are done with, by dropping them on it or with "Llevar al frasco" in the editor. It fills up with one piece of paper per Card, in the Card's Area color. A Card with unchecked Items is refused and slides back. Cards in the Jar leave the Desk but are kept.
+The place on the Desk where the user puts Cards they are done with: in the middle of the Areas when that space is free of them (as in Estrella), otherwise centered below them. The user does not move it; it follows the Areas. Cards go in by dropping them on it or with "Llevar al frasco" in the editor. It fills up with one piece of paper per Card, in the Card's Area color. A Card with unchecked Items is refused and slides back. Cards in the Jar leave the Desk but are kept.
 _Avoid_: Archive, trash, done list
 
 **Win**:

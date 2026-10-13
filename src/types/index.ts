@@ -9,6 +9,15 @@ export type Theme = 'system' | 'light' | 'dark'
 
 export type AreaId = string
 
+/**
+ * "Mi disposición": where every Area was when the user saved it. A device setting
+ * (`mtf_arrangement`), like the theme: not part of `MtfData` nor of a Backup.
+ */
+export interface SavedArrangement {
+  rects: Record<AreaId, Area['rect']>
+  savedAt: number
+}
+
 /** The 12 Paper Area colors; `AREA_COLORS` in `src/desk/areas.ts` lists them in swatch order. */
 export type AreaColor =
   | 'sage'

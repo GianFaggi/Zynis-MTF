@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MtfData } from '../types'
 import {
+  ARRANGEMENT_KEY,
   DATA_KEY,
   HINT_SEEN_KEY,
   INSTALL_NUDGE_SEEN_KEY,
@@ -9,6 +10,7 @@ import {
   SCHEMA_VERSION,
   THEME_KEY,
   emptyData,
+  loadArrangement,
   loadData,
   loadHintSeen,
   loadInstallNudgeSeen,
@@ -16,6 +18,7 @@ import {
   loadTheme,
   migrate,
   requestPersistentStorage,
+  saveArrangement,
   saveData,
   saveHintSeen,
   saveInstallNudgeSeen,
@@ -131,7 +134,9 @@ describe('storage', () => {
     expect(loadLanguage()).toBeNull()
     expect(loadTheme()).toBeNull()
     expect(loadHintSeen()).toBe(false)
+    expect(loadArrangement()).toBeNull()
     expect(() => saveData(sample)).not.toThrow()
+    expect(() => saveArrangement({ rects: {}, savedAt: 1 })).not.toThrow()
     expect(() => saveLanguage('en')).not.toThrow()
     expect(() => saveTheme('dark')).not.toThrow()
     expect(() => saveHintSeen()).not.toThrow()
@@ -188,6 +193,37 @@ describe('migrate', () => {
 
   it('throws when a step is missing, so loadData can keep a recovery copy', () => {
     expect(() => migrate({ schemaVersion: 1 }, {}, 2)).toThrow(/no migration from schema version 1/)
+  })
+})
+
+describe('saved arrangement', () => {
+  const arrangement = {
+    rects: { a1: { x: 80, y: 120, w: 980, h: 1000 }, a2: { x: 1140, y: 120, w: 600, h: 700 } },
+    savedAt: 1_760_000_000_000,
+  }
+
+  it('reads back what it saved, under its own device key', () => {
+    expect(loadArrangement()).toBeNull()
+    saveArrangement(arrangement)
+    expect(JSON.parse(localStorage.getItem(ARRANGEMENT_KEY)!)).toEqual(arrangement)
+    expect(loadArrangement()).toEqual(arrangement)
+  })
+
+  it.each([
+    ['invalid JSON', '{not json'],
+    ['an array', '[]'],
+    ['a string', '"Fila"'],
+    ['null', 'null'],
+    ['no rects', JSON.stringify({ savedAt: 1 })],
+    ['rects as a list', JSON.stringify({ rects: [], savedAt: 1 })],
+    ['no savedAt', JSON.stringify({ rects: arrangement.rects })],
+    ['a rect that is not an object', JSON.stringify({ rects: { a1: 7 }, savedAt: 1 })],
+    ['a rect with a missing side', JSON.stringify({ rects: { a1: { x: 80, y: 120, w: 980 } }, savedAt: 1 })],
+    ['a rect with a non-finite number', JSON.stringify({ rects: { a1: { x: 80, y: 120, w: 980, h: null } }, savedAt: 1 })],
+    ['a rect with a string', JSON.stringify({ rects: { a1: { x: '80', y: 120, w: 980, h: 1000 } }, savedAt: 1 })],
+  ])('reads nothing saved from a damaged value (%s), without throwing', (_, raw) => {
+    localStorage.setItem(ARRANGEMENT_KEY, raw)
+    expect(loadArrangement()).toBeNull()
   })
 })
 

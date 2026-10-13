@@ -7,7 +7,7 @@ Defines the Jar: the place on the Desk where the user puts Cards they are done w
 ## Requirements
 
 ### Requirement: The Jar on the Desk
-The Jar SHALL sit on the Desk, centered below the Areas, with a caption showing the things done this week and that tapping it shows more. It SHALL pan and zoom with the Desk like everything on it, and stay where it is when Cards are moved or tidied up.
+The Jar SHALL sit on the Desk at the center of the Areas when that space, with its caption, is free of Areas, and centered below the Areas otherwise, with a caption showing the things done this week and that tapping it shows more. It SHALL pan and zoom with the Desk like everything on it, and stay where it is when Cards are moved or tidied up.
 
 #### Scenario: Default Desk
 - **WHEN** MTF opens with the three default Areas
@@ -15,7 +15,15 @@ The Jar SHALL sit on the Desk, centered below the Areas, with a caption showing 
 
 #### Scenario: Zooming
 - **WHEN** the user zooms the Desk out
-- **THEN** the Jar shrinks with the Desk and stays below the Areas
+- **THEN** the Jar shrinks with the Desk and stays in its place among the Areas
+
+#### Scenario: Areas around an empty center
+- **WHEN** the user arranges the Areas as Estrella
+- **THEN** the Jar and its caption sit in the middle of the ring, overlapping no Area
+
+#### Scenario: An Area takes the center
+- **WHEN** the Areas are arranged as Fila or Tabla, so an Area or the space between two Areas too narrow for the Jar is at their center
+- **THEN** the Jar sits centered below the Areas, as before
 
 ### Requirement: Drop a Card on the Jar
 When a dragged Card is released with its center over the Jar and the Card is finished or has no Items, the Jar SHALL accept it. The Card SHALL shrink into the Jar and leave the Desk, a toast SHALL read "¡Al frasco!" with the things done in the last 7 days, and the wins counter SHALL bump. This SHALL work with the mouse and with press and hold on touch.

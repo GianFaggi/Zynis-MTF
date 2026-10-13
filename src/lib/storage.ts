@@ -1,4 +1,4 @@
-import type { Language, MtfData, Theme } from '../types'
+import type { Language, MtfData, SavedArrangement, Theme } from '../types'
 
 // The only module that touches localStorage (KB/frontend/storage.md, ADR 0004).
 // Every access is wrapped: if the browser refuses storage (blocked, private mode,
@@ -11,6 +11,7 @@ export const LANGUAGE_KEY = 'mtf_language'
 export const THEME_KEY = 'mtf_theme'
 export const HINT_SEEN_KEY = 'mtf_hint_seen'
 export const INSTALL_NUDGE_SEEN_KEY = 'mtf_install_nudge_seen'
+export const ARRANGEMENT_KEY = 'mtf_arrangement'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
 
 type Migration = (doc: Record<string, unknown>) => Record<string, unknown>
@@ -93,6 +94,22 @@ export function saveTheme(theme: Theme): void {
   write(THEME_KEY, theme)
 }
 
+/** "Mi disposición" on this device; `null` when nothing was saved or the stored value is damaged. */
+export function loadArrangement(): SavedArrangement | null {
+  const raw = read(ARRANGEMENT_KEY)
+  if (raw === null) return null
+  try {
+    const value: unknown = JSON.parse(raw)
+    return isArrangement(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+export function saveArrangement(arrangement: SavedArrangement): void {
+  write(ARRANGEMENT_KEY, JSON.stringify(arrangement))
+}
+
 /** Whether the first-run hint was dismissed on this device. A device setting, like the language. */
 export function loadHintSeen(): boolean {
   return read(HINT_SEEN_KEY) === '1'
@@ -142,16 +159,26 @@ export function migrate(
 }
 
 function isDocument(value: unknown): value is StoredDocument {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
-  const doc = value as Record<string, unknown>
   return (
-    typeof doc.schemaVersion === 'number' &&
-    Number.isInteger(doc.schemaVersion) &&
-    doc.schemaVersion >= 1 &&
-    Array.isArray(doc.areas) &&
-    Array.isArray(doc.cards) &&
-    Array.isArray(doc.events)
+    isRecord(value) &&
+    typeof value.schemaVersion === 'number' &&
+    Number.isInteger(value.schemaVersion) &&
+    value.schemaVersion >= 1 &&
+    Array.isArray(value.areas) &&
+    Array.isArray(value.cards) &&
+    Array.isArray(value.events)
   )
+}
+
+function isArrangement(value: unknown): value is SavedArrangement {
+  if (!isRecord(value) || !isRecord(value.rects) || !Number.isFinite(value.savedAt)) return false
+  return Object.values(value.rects).every(
+    (rect) => isRecord(rect) && (['x', 'y', 'w', 'h'] as const).every((side) => Number.isFinite(rect[side])),
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /** Keeps the unreadable text under its own key, then starts from an empty document. */

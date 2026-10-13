@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { overlaps } from '../desk/areas'
 import { makeArea, rowOfAreas } from '../test/fixtures'
 import type { AreaColor } from '../types'
 import { JAR_CAPACITY, isOverJar, jarBounds, jarPieces, jarRect } from './jarLayout'
@@ -12,6 +13,44 @@ describe('jarRect', () => {
     const areas = [...rowOfAreas(), makeArea({ id: 'a4', rect: { x: 80, y: 1300, w: 980, h: 600 } })]
     expect(jarRect(areas)).toEqual({ x: 1500, y: 1950, w: 260, h: 300 })
     expect(jarRect([makeArea({ id: 'one', rect: { x: 0, y: 0, w: 1000, h: 500 } })])).toEqual({ x: 370, y: 550, w: 260, h: 300 })
+  })
+
+  it('stays below a row of four and a 2 × 2 grid, whose middle is taken', () => {
+    const row = [...rowOfAreas(), makeArea({ id: 'a4', rect: { x: 3260, y: 120, w: 980, h: 1000 } })]
+    expect(jarRect(row)).toEqual({ x: 2030, y: 1170, w: 260, h: 300 })
+
+    const grid = [
+      makeArea({ id: 'a1', rect: { x: 80, y: 120, w: 980, h: 1000 } }),
+      makeArea({ id: 'a2', rect: { x: 1140, y: 120, w: 980, h: 1000 } }),
+      makeArea({ id: 'a3', rect: { x: 80, y: 1280, w: 980, h: 1000 } }),
+      makeArea({ id: 'a4', rect: { x: 1140, y: 1280, w: 980, h: 1000 } }),
+    ]
+    expect(jarRect(grid)).toEqual({ x: 970, y: 2330, w: 260, h: 300 })
+  })
+
+  it('goes to the middle of Areas standing around an empty center, overlapping none of them', () => {
+    const ring = [
+      makeArea({ id: 'a1', rect: { x: 0, y: 0, w: 980, h: 1000 } }),
+      makeArea({ id: 'a2', rect: { x: 2000, y: 0, w: 980, h: 1000 } }),
+      makeArea({ id: 'a3', rect: { x: 0, y: 2000, w: 980, h: 1000 } }),
+      makeArea({ id: 'a4', rect: { x: 2000, y: 2000, w: 980, h: 1000 } }),
+    ]
+    const jar = jarRect(ring)!
+    // The Jar and its caption are centered on the Areas' box, (1490, 1500).
+    const block = jarBounds(jar)
+    expect([block.x + block.w / 2, block.y + block.h / 2]).toEqual([1490, 1500])
+    expect(jar).toEqual({ x: 1360, y: 1298, w: 260, h: 300 })
+    for (const area of ring) expect(overlaps(area.rect, block)).toBe(false)
+  })
+
+  it('keeps 50 px of paper around the Jar and its caption in the middle, or goes below', () => {
+    // Two Areas left and right: the block is 360 px wide, so it needs 460 px between them.
+    const apart = (gap: number) => [
+      makeArea({ id: 'a1', rect: { x: 0, y: 0, w: 980, h: 1000 } }),
+      makeArea({ id: 'a2', rect: { x: 980 + gap, y: 0, w: 980, h: 1000 } }),
+    ]
+    expect(jarRect(apart(460))!.y).toBeLessThan(1000)
+    expect(jarRect(apart(458))!.y).toBe(1050)
   })
 
   it('is null without Areas', () => {
