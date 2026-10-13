@@ -28,6 +28,8 @@ export interface DeskState {
   toast: ToastMessage | null
   /** The Mis logros sheet is open. */
   winsOpen: boolean
+  /** The Area Mis logros is filtered to (#19); `null` = "Todas". Only read while "Frasco por área" is on. */
+  winsAreaId: string | null
   /** Goes up on each new Win; the wins counter remounts its number on it to replay the bump. */
   winsBump: number
   /** The open Area editor; `isNew` for an Area just created, whose name opens selected. */
@@ -44,7 +46,9 @@ export interface DeskState {
   setQuery: (query: string) => void
   /** Replaces the current toast, if any, and hides it after 2.8 s. */
   showToast: (title: string, detail?: string) => void
-  openWins: () => void
+  /** Opens Mis logros on "Todas", or on one Area (an Area Jar). */
+  openWins: (areaId?: string | null) => void
+  setWinsArea: (areaId: string | null) => void
   closeWins: () => void
   bumpWins: () => void
   openAreaEditor: (id: string, options?: { isNew?: boolean }) => void
@@ -69,6 +73,7 @@ function createDeskStore() {
     query: '',
     toast: null,
     winsOpen: false,
+    winsAreaId: null,
     winsBump: 0,
     areaEditor: null,
 
@@ -93,7 +98,8 @@ function createDeskStore() {
       set({ toast: { id: ++toastId, title, detail } })
       toastTimer = setTimeout(() => set({ toast: null }), TOAST_MS)
     },
-    openWins: () => set({ winsOpen: true }),
+    openWins: (areaId = null) => set({ winsOpen: true, winsAreaId: areaId }),
+    setWinsArea: (areaId) => set({ winsAreaId: areaId }),
     closeWins: () => set({ winsOpen: false }),
     bumpWins: () => set((state) => ({ winsBump: state.winsBump + 1 })),
     openAreaEditor: (id, { isNew = false } = {}) => set({ areaEditor: { id, isNew } }),

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CARD_WIDTH } from '../desk/geometry'
-import { ARRANGEMENT_KEY, DATA_KEY, LANGUAGE_KEY, THEME_KEY } from '../lib/storage'
+import { AREA_JARS_KEY, ARRANGEMENT_KEY, DATA_KEY, LANGUAGE_KEY, THEME_KEY } from '../lib/storage'
 import { makeArea, makeCard, makeData, makeItem, rowOfAreas } from '../test/fixtures'
 import type { MtfData } from '../types'
 import { createAppStore } from './appStore'
@@ -98,6 +98,32 @@ describe('appStore', () => {
     expect(localStorage.getItem(LANGUAGE_KEY)).toBe('en')
     expect(store.getState().theme).toBe('dark')
     expect(localStorage.getItem(THEME_KEY)).toBe('dark')
+  })
+
+  it('"Frasco por área" is off until turned on, and setAreaJars writes only mtf_area_jars', () => {
+    const store = storeWith()
+    expect(store.getState().areaJars).toBe(false)
+    const before = store.getState().data
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+
+    store.getState().setAreaJars(true)
+    expect(store.getState().areaJars).toBe(true)
+    expect(store.getState().data).toBe(before)
+    expect(setItem.mock.calls.map(([key]) => key)).toEqual([AREA_JARS_KEY])
+    expect(createAppStore().getState().areaJars).toBe(true)
+
+    store.getState().setAreaJars(false)
+    expect(store.getState().data).toBe(before)
+    expect(createAppStore().getState().areaJars).toBe(false)
+    expect(storedData()).not.toHaveProperty('areaJars')
+  })
+
+  it('an Import keeps "Frasco por área"', () => {
+    const store = storeWith()
+    store.getState().setAreaJars(true)
+    store.getState().replaceData(makeData({ areas: [makeArea({ id: 'x1' })] }))
+    expect(store.getState().areaJars).toBe(true)
+    expect(localStorage.getItem(AREA_JARS_KEY)).toBe('1')
   })
 
   it('does not write mtf_data when only the language changes', () => {
@@ -399,6 +425,7 @@ describe('Win events', () => {
 
 describe('The Jar', () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.useRealTimers()
   })
 
@@ -432,6 +459,39 @@ describe('The Jar', () => {
     const store = storeWith([makeCard({ id: 'c1', title: 'Llamar al banco' })])
     store.getState().jarCard('c1')
     expect(store.getState().data.events.map((event) => [event.type, event.cardId])).toEqual([['card', 'c1']])
+  })
+
+  it('jarCard with another Area moves the Card there and jars it, in one save', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(9000)
+    const store = storeWith([makeCard({ id: 'c1', areaId: 'a1', items: [makeItem({ id: 'i1', text: 'Pan', done: true })], position: { x: 300, y: 400 } })])
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+
+    expect(store.getState().jarCard('c1', { areaId: 'a2' })).toEqual({ ok: true })
+    expect(cardIn(store, 'c1')).toMatchObject({ areaId: 'a2', jarredAt: 9000, updatedAt: 9000, position: { x: 300, y: 400 } })
+    expect(setItem.mock.calls.filter(([key]) => key === DATA_KEY)).toHaveLength(1)
+    expect(storedData().cards[0]).toMatchObject({ areaId: 'a2', jarredAt: 9000 })
+  })
+
+  it('jarCard with another Area gives a Card without Items its Card Win in the new Area', () => {
+    const store = storeWith([makeCard({ id: 'c1', areaId: 'a1', title: 'Llamar al banco' })])
+    store.getState().jarCard('c1', { areaId: 'a3' })
+    expect(store.getState().data.events.map((event) => [event.type, event.areaId])).toEqual([['card', 'a3']])
+  })
+
+  it('jarCard with a missing Area or its own Area behaves as without one', () => {
+    const store = storeWith([makeCard({ id: 'c1', areaId: 'a2', title: 'Uno' }), makeCard({ id: 'c2', areaId: 'a2', title: 'Dos' })])
+    expect(store.getState().jarCard('c1', { areaId: 'gone' })).toEqual({ ok: true })
+    expect(store.getState().jarCard('c2', { areaId: 'a2' })).toEqual({ ok: true })
+    expect(cardIn(store, 'c1')!.areaId).toBe('a2')
+    expect(cardIn(store, 'c2')!.areaId).toBe('a2')
+  })
+
+  it('jarCard with an Area still refuses a Card with unchecked Items and writes nothing', () => {
+    const store = storeWith([makeCard({ id: 'c1', items: [makeItem({ id: 'i1', text: 'Pan' })] })])
+    const before = store.getState().data
+    expect(store.getState().jarCard('c1', { areaId: 'a2' })).toEqual({ ok: false, pending: 1 })
+    expect(store.getState().data).toBe(before)
   })
 
   it('returnCard puts the Card inside its Area, on top; a finished Card keeps its Card Win', () => {

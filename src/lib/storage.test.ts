@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MtfData } from '../types'
 import {
+  AREA_JARS_KEY,
   ARRANGEMENT_KEY,
   DATA_KEY,
   HINT_SEEN_KEY,
@@ -10,6 +11,7 @@ import {
   SCHEMA_VERSION,
   THEME_KEY,
   emptyData,
+  loadAreaJars,
   loadArrangement,
   loadData,
   loadHintSeen,
@@ -18,6 +20,7 @@ import {
   loadTheme,
   migrate,
   requestPersistentStorage,
+  saveAreaJars,
   saveArrangement,
   saveData,
   saveHintSeen,
@@ -328,5 +331,32 @@ describe('upgradeDocument', () => {
     expect(upgradeDocument(sample, {}, 2)).toEqual({ ok: false, reason: 'migration' })
     expect(upgradeDocument(sample, failing, 2)).toEqual({ ok: false, reason: 'migration' })
     expect(upgradeDocument(sample, breaking, 2)).toEqual({ ok: false, reason: 'migration' })
+  })
+})
+
+describe('Area Jars setting', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("is on only when '1' is stored", () => {
+    expect(loadAreaJars()).toBe(false)
+    saveAreaJars(true)
+    expect(localStorage.getItem(AREA_JARS_KEY)).toBe('1')
+    expect(loadAreaJars()).toBe(true)
+    saveAreaJars(false)
+    expect(localStorage.getItem(AREA_JARS_KEY)).toBe('0')
+    expect(loadAreaJars()).toBe(false)
+    localStorage.setItem(AREA_JARS_KEY, 'yes')
+    expect(loadAreaJars()).toBe(false)
+  })
+
+  it('reads as off when storage refuses to read', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    localStorage.setItem(AREA_JARS_KEY, '1')
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    expect(loadAreaJars()).toBe(false)
   })
 })

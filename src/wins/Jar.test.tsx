@@ -63,6 +63,20 @@ describe('Jar', () => {
     expect(useDeskStore.getState().winsOpen).toBe(false)
   })
 
+  it('two Jars on the page clip their pieces with their own glass', () => {
+    const { container } = render(
+      <>
+        <JarOnDesk />
+        <JarOnDesk />
+      </>,
+    )
+    const ids = [...container.querySelectorAll('clipPath')].map((clip) => clip.id)
+    expect(ids).toHaveLength(2)
+    expect(new Set(ids).size).toBe(2)
+    const used = [...container.querySelectorAll('g[clip-path]')].map((group) => group.getAttribute('clip-path'))
+    expect(used).toEqual(ids.map((id) => `url(#${id})`))
+  })
+
   it('drops only the piece of a Card that just came in; nothing drops on the first render', () => {
     const { container } = render(<JarOnDesk />)
     expect(container.querySelectorAll('.animate-drop')).toHaveLength(0)

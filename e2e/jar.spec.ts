@@ -25,7 +25,7 @@ const busy = card({
 })
 
 function jar(page: Page) {
-  return page.locator('[data-jar]')
+  return page.locator('[data-jar=""]')
 }
 
 function counter(page: Page) {

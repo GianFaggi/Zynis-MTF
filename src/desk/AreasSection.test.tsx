@@ -85,3 +85,27 @@ describe('AreasSection: Acomodar áreas', () => {
     expect(onArranged).toHaveBeenLastCalledWith(new Map(movedByHand().map((area) => [area.id, area.rect])))
   })
 })
+
+describe('AreasSection: Frasco por área', () => {
+  beforeEach(() => {
+    resetStores()
+  })
+
+  it('shows No by default; Sí turns the Area Jars on and closes nothing, without the accent', async () => {
+    const onOpenArea = vi.fn()
+    const onCreated = vi.fn()
+    const onArranged = vi.fn()
+    render(<AreasSection onOpenArea={onOpenArea} onCreated={onCreated} onArranged={onArranged} />)
+    const group = screen.getByRole('group', { name: 'Frasco por área' })
+    expect(within(group).getByRole('button', { name: 'No' })).toHaveAttribute('aria-pressed', 'true')
+    expect(group.outerHTML).not.toMatch(/accent/)
+
+    await userEvent.click(within(group).getByRole('button', { name: 'Sí' }))
+    expect(useAppStore.getState().areaJars).toBe(true)
+    expect(within(group).getByRole('button', { name: 'Sí' })).toHaveAttribute('aria-pressed', 'true')
+    for (const callback of [onOpenArea, onCreated, onArranged]) expect(callback).not.toHaveBeenCalled()
+
+    await userEvent.click(within(group).getByRole('button', { name: 'No' }))
+    expect(useAppStore.getState().areaJars).toBe(false)
+  })
+})

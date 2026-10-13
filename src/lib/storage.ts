@@ -12,6 +12,7 @@ export const THEME_KEY = 'mtf_theme'
 export const HINT_SEEN_KEY = 'mtf_hint_seen'
 export const INSTALL_NUDGE_SEEN_KEY = 'mtf_install_nudge_seen'
 export const ARRANGEMENT_KEY = 'mtf_arrangement'
+export const AREA_JARS_KEY = 'mtf_area_jars'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
 
 type Migration = (doc: Record<string, unknown>) => Record<string, unknown>
@@ -108,6 +109,15 @@ export function loadArrangement(): SavedArrangement | null {
 
 export function saveArrangement(arrangement: SavedArrangement): void {
   write(ARRANGEMENT_KEY, JSON.stringify(arrangement))
+}
+
+/** Whether "Frasco por área" is on on this device (#19); off unless `'1'` was stored. */
+export function loadAreaJars(): boolean {
+  return read(AREA_JARS_KEY) === '1'
+}
+
+export function saveAreaJars(on: boolean): void {
+  write(AREA_JARS_KEY, on ? '1' : '0')
 }
 
 /** Whether the first-run hint was dismissed on this device. A device setting, like the language. */

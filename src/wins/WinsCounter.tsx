@@ -20,7 +20,7 @@ export function WinsCounter() {
       type="button"
       aria-label={t('winsCounter', done)}
       title={t('wins')}
-      onClick={openWins}
+      onClick={() => openWins()}
       className="flex h-[38px] flex-none cursor-pointer items-center rounded-full bg-accent-soft pr-[13px] pl-2.5 font-bold text-accent-ink tabular-nums"
     >
       <span key={bump} className={`flex items-center gap-1.5 ${bump > 0 ? 'animate-bump' : ''}`}>

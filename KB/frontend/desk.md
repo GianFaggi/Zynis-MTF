@@ -25,12 +25,12 @@ State and components:
 
 | File | What |
 |---|---|
-| `deskStore.ts` | Unsaved Desk UI state ([architecture.md](architecture.md)): view, `flying`, `tidying`, `editingId`, `newCardId`, `areaEditor`, `searchOpen`, `query`, `toast`, `winsOpen`, `winsBump`; actions `setView`, `flyTo`, `animateTidy`, `openEditor`, `closeEditor`, `openAreaEditor`, `closeAreaEditor`, `toggleSearch`, `setQuery`, `showToast`, `openWins`, `closeWins`, `bumpWins`, `resetAfterImport` |
-| `dom.ts` | `measureCardHeights()`, `viewport()` and `prefersReducedMotion()` — the only place that reads sizes and media settings from the DOM |
+| `deskStore.ts` | Unsaved Desk UI state ([architecture.md](architecture.md)): view, `flying`, `tidying`, `editingId`, `newCardId`, `areaEditor`, `searchOpen`, `query`, `toast`, `winsOpen`, `winsAreaId`, `winsBump`; actions `setView`, `flyTo`, `animateTidy`, `openEditor`, `closeEditor`, `openAreaEditor`, `closeAreaEditor`, `toggleSearch`, `setQuery`, `showToast`, `openWins(areaId?)`, `setWinsArea`, `closeWins`, `bumpWins`, `resetAfterImport` |
+| `dom.ts` | `measureCardHeights()`, `viewport()` and `prefersReducedMotion()` — the only place that reads sizes and media settings from the DOM — and `jarElement(areaId?)` / `highlightJar(target)`, the only `data-jar` lookups ([Area Jars](#area-jars-19)) |
 | `Desk.tsx` | The surface: world `div`, grain, gestures, Card drag, the Jar drop, Area move and resize, double-click to create |
-| `AreaRegion.tsx` | One Area, in one wrapper at its rect's top-left: the soft tinted region, its label with the Card count, the edit button and the resize handle |
+| `AreaRegion.tsx` | One Area, in one wrapper at its rect's top-left: the soft tinted region, its label with the Card count, the edit button, the resize handle and, while "Frasco por área" is on, its Area Jar ([Area Jars](#area-jars-19)) |
 | `AreaEditor.tsx` | The Area editor sheet: name, 12 color swatches, Borrar área with the destination of its Cards |
-| `AreasSection.tsx` | The Areas group of Settings: one row per Area (opens its editor), Nueva área, and Acomodar áreas with its in-place confirmation |
+| `AreasSection.tsx` | The Areas group of Settings: one row per Area (opens its editor), Nueva área, Acomodar áreas with its in-place confirmation, and the "Frasco por área" No / Sí option (#19) |
 | `DeskCard.tsx` | One Card on the Desk (memoized); a finished Card wears `card-won`, the filled "Llevala al frasco" chip and a ✓ seal, and plays a one-time pop + stamp when `data-celebrate` is set ([design-system.md](design-system.md)) |
 | `ItemCheck.tsx` | An Item's box, shared by `DeskCard` and `CardEditor`; `onToggle` gets the box element so sparks start from it |
 | `CardEditor.tsx` | The editor sheet, with "Llevar al frasco" |
@@ -63,10 +63,10 @@ Functions that random numbers feed (`spotIn`, `tidyLayout`, `randomTilt`) take a
 | Move an Area (with its Cards) | **press and hold its label 320 ms**, then drag | drag its label after moving > 4 px |
 | Resize an Area | drag the handle in its bottom-right corner (no hold) | drag the handle |
 | Edit an Area (name, color, delete) | the pencil next to its label, or its row in Settings → Áreas | the same |
-| Put a Card in the Jar | press and hold, drag it onto the Jar | drag it onto the Jar |
-| Open Mis logros | tap the Jar (< 6 px) | click the Jar; `Enter` on the focused Jar |
+| Put a Card in the Jar | press and hold, drag it onto the Jar or an Area Jar | drag it onto the Jar or an Area Jar |
+| Open Mis logros | tap the Jar (< 6 px), or an Area Jar for that Area | click the Jar or an Area Jar; `Enter` on the focused Jar |
 
-- One `useGesture` controller on the Desk handles drag, pinch and wheel. `beginPress` sorts each press by what it started on, in this order: an Area's resize handle (`resize`), an Area label (`pending`), the Jar (`pan`, a tap opens Mis logros), a control inside `button, input, textarea, select, a` (ignored, so an Item's box or the Area edit button never starts a drag), a Card (`pending`), empty paper (`pan`). `nextIntent()` decides each move of a `pending` press, the same for a Card and an Area label:
+- One `useGesture` controller on the Desk handles drag, pinch and wheel. `beginPress` sorts each press by what it started on, in this order: an Area's resize handle (`resize`), an Area label (`pending`), a Jar, the Desk's or an Area's (`pan`, a tap opens Mis logros; `jarAreaId` records which), a control inside `button, input, textarea, select, a` (ignored, so an Item's box or the Area edit button never starts a drag), a Card (`pending`), empty paper (`pan`). `nextIntent()` decides each move of a `pending` press, the same for a Card and an Area label:
   - mouse/pen + `pending` + > 4 px → `drag`
   - touch + `pending` + > 9 px before the hold → `pan` (a quick swipe over a Card pans)
   - touch + `pending` + the 320 ms timer fired → `drag`, plus `navigator.vibrate(12)` where supported
@@ -115,6 +115,7 @@ Why Areas became movable and resizable, and why their Cards travel with them →
 - Below `s < 0.55` Cards collapse to their **title only** (34 px Literata, at most 3 lines), so a zoomed-out Desk reads like a map.
 - A Card without a title shows `displayTitle(card)`: its first text line, or its Items joined.
 - The Desk writes `data-far` on the world `div`; Cards switch look with `group-data-[far]:` utilities, so the flip re-renders no React.
+- The Area edit button, the resize handle and the Area Jars (#19) hide in the far look (`group-data-far:hidden`). The Desk Jar always shows.
 
 ## Navigation helpers
 
@@ -131,13 +132,13 @@ Why Areas became movable and resizable, and why their Cards travel with them →
 Built in change 3. Code in `src/wins/` ([files below](#files-srcwins)); the Win rules behind it → [architecture.md](architecture.md#wins-as-events).
 
 - **Place, derived, never stored** (`jarRect(areas)`): 260 × 300. First `centeredJar(rects)` tries the Jar with its caption (`jarBounds`) centered on the Areas' bounding box; when that block, grown by `JAR_GAP` (50 px), overlaps no Area, the Jar sits there, in the middle of the Areas (Estrella, or any hand-made Desk with an empty middle, #18). Otherwise it is centered under the horizontal middle of the bounding box, 50 px below the lowest Area. For the default row, Fila and Tabla an Area or a too-narrow gap is at the center, so the Jar stays below: (1500, 1170) for the default row, the mockup's place. No Areas → `null`, no Jar. It follows custom Areas (#7) and arrangements for free, and moves only when an Area's rect is written (on release, not during a drag). `captionRect` puts "Tu frasco" + "N esta semana · tocalo para ver más" (360 px wide, 14 px below); `jarBounds` is the Jar plus its caption, and `deskBounds` includes it, so See all and the initial view show the Jar. On a 1440 × 900 window the fit stays width-limited (3100 px wide either way), so the Jar costs no zoom; on Playwright's 1280 × 720 it becomes height-limited (≈ 0.375 instead of 0.405), still above the 34% floor.
-- **Drawn** by `Jar.tsx` in the world `div`, after the Areas and before the Cards: a `<button data-jar>` with `aria-label` "Frasco: N tarjetas. Abrir Mis logros", the mockup's SVG (lid in `color-mix(accent 70%, ink)`, glass and neck in `--color-glass`, a shine, a label with "Logros" and the count in `accent-ink` Literata), and the caption as a `pointer-events: none` paragraph.
+- **Drawn** by `Jar.tsx` in the world `div`, after the Areas and before the Cards: a `<button data-jar="">` with `aria-label` "Frasco: N tarjetas. Abrir Mis logros", the mockup's SVG, `JarGlass` (shared with the Area Jars; its `<clipPath>` id comes from `useId()`, so several Jars never collide) (lid in `color-mix(accent 70%, ink)`, glass and neck in `--color-glass`, a shine, a label with "Logros" and the count in `accent-ink` Literata), and the caption as a `pointer-events: none` paragraph.
 - **Fill** (`jarPieces(colors)`): one 21 × 13 paper piece per jarred Card, in its Area color, oldest at the bottom: 7 per row, every other row shifted 11 px, with the mockup's deterministic jitter from the index (±5 px x, ±4 px y, ±38°), clipped to the glass. `JAR_CAPACITY` = 77 (11 rows); beyond it the Jar looks full and the label still counts every Card. A piece whose Card is new since the previous render gets `animate-drop` (tracked in state with React's "previous render" pattern; nothing drops on the first render).
-- **Press rule**: `beginPress` recognizes `[data-jar]` like an Area label, **before** the control rule, so a press on the Jar can still pan. `releaseOutcome` returns `'jar'` for a pan that moved < 6 px from the Jar, which opens Mis logros. The button's own `onClick` only handles the keyboard (`event.detail === 0`), so `Enter`/`Space` open Mis logros too.
-- **While dragging**: the point is the Card's center (the same point `areaForPoint` uses). `isOverJar` grows the Jar by 50 px left and right, 60 px on top and 30 px at the bottom. Over it, the Jar gets `data-over` (glass stroke in `accent`, 4 px, SVG scaled 1.05) and the Card drops its `--b-preview`, so it shows no other Area's color.
-- **Drop over the Jar** (`dropOnJar` in `Desk.tsx`), decided by `jarVerdict(card)` before anything moves:
-  - **Refused** (unchecked Items): `data-returning` on the Card (0.35 s `translate` transition), `style.translate` cleared so it slides back to its stored place, `settle` after 380 ms, toast "Todavía no" + "Te falta(n) N elemento(s)". Nothing is written.
-  - **Accepted** (finished, or no Items): `data-into-jar` (pointer events off, 0.45 s to the Jar's center with `rotate(24deg) scale(.12)` and `opacity: 0`). After 460 ms: `jarCard(id)`, `settle`, then `useWinFeedback().jarred()` (sparks over the Jar, counter bump, toast "¡Al frasco!" with the week's count). React unmounts the Card once `jarredAt` is set.
+- **Press rule**: `beginPress` recognizes `[data-jar]` (any Jar) like an Area label, **before** the control rule, so a press on the Jar can still pan. `releaseOutcome` returns `'jar'` for a pan that moved < 6 px from the Jar, which opens Mis logros. The button's own `onClick` only handles the keyboard (`event.detail === 0`), so `Enter`/`Space` open Mis logros too.
+- **While dragging**: the point is the Card's center (the same point `areaForPoint` uses). `jarTarget` decides which Jar it is over ([Area Jars](#area-jars-19)); for the Desk Jar, `isOverJar` grows it by 50 px left and right, 60 px on top and 30 px at the bottom. Over it, the Jar gets `data-over` (`highlightJar`) (glass stroke in `accent`, 4 px, SVG scaled 1.05) and the Card drops its `--b-preview`, so it shows no other Area's color.
+- **Drop over a Jar** (`dropOnJar` in `Desk.tsx`), decided by `jarVerdict(card)` before anything moves, whichever Jar it is:
+  - **Refused** (unchecked Items), `slideBack`: `data-returning` on the Card (0.35 s `translate` transition), `style.translate` cleared so it slides back to its stored place, `settle` after 380 ms, toast "Todavía no" + "Te falta(n) N elemento(s)". Nothing is written.
+  - **Accepted** (finished, or no Items) by the Desk Jar or its own Area's, `intoJar`: `data-into-jar` (pointer events off, 0.45 s to that Jar's center with `rotate(24deg) scale(.12)` and `opacity: 0`). After 460 ms: `jarCard(id)`, `settle`, then `useWinFeedback().jarred(areaId?)` (sparks over the Jar that took it, counter bump, toast "¡Al frasco!" with the week's count). React unmounts the Card once `jarredAt` is set.
   - Under reduced motion both waits are 0: the outcome comes at once and only the toast shows.
   - Elsewhere: `dropCard`, as before. A drag cancelled by `pointercancel` or a pinch goes through `settle` and never reaches the Jar.
   - The store is written 460 ms after an accepted drop; a reload in that window leaves the Card on the Desk, which is harmless.
@@ -145,18 +146,35 @@ Built in change 3. Code in `src/wins/` ([files below](#files-srcwins)); the Win 
 - **Editor "Llevar al frasco"** is the non-drag way, with the same accept / refuse rules (refused → toast, the editor stays open; accepted → `closeCard`, `closeEditor`, `jarCard`, `jarred()`). Disabled while the Card is empty.
 - Cards in the Jar leave the Desk (not drawn, not counted in their Area, not searched, not tidied) but are kept. Mis logros lists them newest first with **Devolver** → `returnCard`: back inside their Area (`spotIn`), on top.
 
+### Area Jars (#19)
+
+**Settings → Áreas → Frasco por área** (No / Sí, off by default) gives each Area its own small Jar. A device setting (`appStore.areaJars`, key `mtf_area_jars`, [storage.md](storage.md#keys)), not part of the Backup. An Area Jar is a **view** of the same Jar, never a second store: it shows the Cards with `jarredAt !== null && areaId === area.id`, and the Desk Jar still holds every Card. The Dock's "Frasco" still flies to the Desk Jar.
+
+- **Place** (`areaJarRect(rect)`): 104 × 120 (40% of the Desk Jar), 24 px from the Area's right edge and 16 px from its top. Top-right because the label and its pencil hold the top-left and the resize handle the bottom-right; it ends at 136 px, above the 140 px where Tidy up starts placing Cards, so a tidied Card never covers it.
+- **Drawn** by `AreaJar.tsx` inside `AreaRegion`'s wrapper, at `left: calc(var(--w) - 128px)`, so it follows a live move (`translate`) and a live resize (`--live-w`) with no Desk code; `areaJarRect` uses the same numbers for the drop, which only runs when no Area is moving. A `<button data-jar={area.id}>` named "Frasco de Vida: 2 tarjetas. Abrir Mis logros", with `JarGlass` in its `compact` look: the count alone, larger, and thicker strokes ("Logros" would be about 4 Desk px). The Desk passes each Area its Jar Cards only while the option is on; without them no Area Jar is drawn. Hidden in the far look (`group-data-far:hidden`).
+- **`data-jar` values**: `""` on the Desk Jar, the Area id on an Area Jar. Every DOM lookup goes by value through `jarElement(areaId?)` / `highlightJar(target)` in `dom.ts`: a bare `[data-jar]` would find the first Area Jar, since the Areas come before the Desk Jar in the DOM.
+- **Which Jar** (`jarTarget(areas, point, { areaJars, far })`): an Area Jar first, only while the option is on and the view is not in the far look (`view.s < FAR_SCALE`), using `isOverAreaJar` (the Jar grown by 30 px on every side); then the Desk Jar. Returns `{ areaId }`, `{ areaId: null }` (Desk Jar) or `null`. `follow()` and `drop()` both call it (through `jarAt`), so the highlight and the drop always agree, and a hidden Area Jar never catches a Card: released there in the far look, the Card is just placed. Over an Area Jar the Card shows that Area's color (`areaForPoint`), a hint that it would change Area; over the Desk Jar, none.
+- **Dropping on its own Area's Jar**: exactly the Desk Jar's rules and feedback (refused slides back with "Todavía no"; accepted shrinks into that Area Jar, then sparks burst from it). Both Jars play the piece's drop animation: the Card is in both views.
+- **Dropping on another Area's Jar**: a refused Card is refused as above, with no question. Otherwise the Desk keeps the drop in React state (`asking: { press, card, areaId }`) and the Card waits where it was released, still `data-lifted` (with the other Area's color). `JarMoveSheet` asks "¿Pasarla a Vida y llevarla al frasco?", tinted in that Area's color, with **No** and **Sí** (`primary`). It is rendered outside the Desk's `<section>`, so its React events never reach the Desk's handlers, and its scrim blocks any other gesture meanwhile.
+  - **Sí** → `intoJar` toward that Area Jar, then `jarCard(id, { areaId })`: the Card changes Area and goes into the Jar in one write ([architecture.md](architecture.md#two-stores)), and its Wins follow it in Mis logros.
+  - **No**, `Esc`, the close button or the scrim → `slideBack` without a toast: back where the drag started, in its own Area, nothing written. A reload while asking also writes nothing.
+- **Tapping an Area Jar** (or `Enter` on it) opens Mis logros already filtered to that Area (`openWins(areaId)`); the Desk Jar and the wins counter open it on "Todas". Mis logros shows its Area filter only while the option is on ([architecture.md](architecture.md#wins-as-events)).
+- A long name in a narrow (520 px) Area can run under its Area Jar, which is drawn after the label and stays on top; the pencil is still reachable from Settings → Áreas.
+
 ### Files (`src/wins/`)
 
 | File | What |
 |---|---|
 | `rules.ts` (pure) | `jarVerdict`, `hasCardWin`, `itemToggled`, `syncCardWin`, `itemsRemoved`, `cardDeleted`, `cardJarred`, `noteWritten` ([architecture.md](architecture.md#wins-as-events)) |
-| `stats.ts` (pure) | `winStats(events, now)`, `dayStart`, `daysAgo` |
-| `jarLayout.ts` (pure) | `jarRect`, `centeredJar`, `captionRect`, `jarBounds`, `isOverJar`, `jarPieces`, `JAR_CAPACITY`. Not `jar.ts`: next to `Jar.tsx`, `./Jar` would resolve to it on case-insensitive file systems |
-| `useWinStats.ts` | `useWinStats()`: `winStats` over the stored events, for a "now" taken once and refreshed at each local midnight |
-| `feedback.ts` | `useWinFeedback()`: `itemToggled(outcome, element)`, `jarred()`, `refused(pending)` → toast, sparks, bump |
+| `stats.ts` (pure) | `winStats(events, now)`, `eventsOfArea(events, cards, areaId)`, `totalDone`, `dayStart`, `daysAgo` |
+| `jarLayout.ts` (pure) | `jarRect`, `centeredJar`, `captionRect`, `jarBounds`, `isOverJar`, `areaJarRect`, `isOverAreaJar`, `jarTarget`, `jarPieces`, `JAR_CAPACITY`. Not `jar.ts`: next to `Jar.tsx`, `./Jar` would resolve to it on case-insensitive file systems |
+| `useWinStats.ts` | `useWinStats(areaId?)`: `winStats` over the stored events (one Area's with `eventsOfArea`), for a "now" taken once and refreshed at each local midnight |
+| `feedback.ts` | `useWinFeedback()`: `itemToggled(outcome, element)`, `jarred(areaId?)`, `refused(pending)` → toast, sparks (from the Jar that took the Card), bump |
 | `sparks.ts` | `burst(rect)`: 16 sparks; the only DOM side effect, skipped under reduced motion |
 | `Jar.tsx`, `JarIcon.ts` | The Jar on the Desk; the jar icon made with lucide's `createLucideIcon` |
-| `WinsCounter.tsx`, `MisLogros.tsx`, `WinsChart.tsx` | The counter in the tools pill, the Mis logros sheet, its 7-day bar chart |
+| `JarGlass.tsx` | The Jar's SVG (lid, glass, pieces, label), shared by `Jar` and `AreaJar`; `compact` for an Area Jar |
+| `AreaJar.tsx`, `JarMoveSheet.tsx` | An Area's small Jar (#19); the "¿Pasarla a…?" question |
+| `WinsCounter.tsx`, `MisLogros.tsx`, `WinsChart.tsx` | The counter in the tools pill, the Mis logros sheet (with its Area filter while "Frasco por área" is on), its 7-day bar chart |
 
 ## Accessibility
 

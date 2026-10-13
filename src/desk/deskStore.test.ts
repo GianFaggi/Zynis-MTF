@@ -41,6 +41,21 @@ describe('deskStore feedback', () => {
     useDeskStore.getState().bumpWins()
     expect(useDeskStore.getState().winsBump).toBe(2)
   })
+
+  it('opens Mis logros on all Areas or on one, and switches the Area', () => {
+    useDeskStore.getState().openWins('a2')
+    expect(useDeskStore.getState()).toMatchObject({ winsOpen: true, winsAreaId: 'a2' })
+    useDeskStore.getState().setWinsArea('a3')
+    expect(useDeskStore.getState().winsAreaId).toBe('a3')
+    useDeskStore.getState().setWinsArea(null)
+    expect(useDeskStore.getState().winsAreaId).toBeNull()
+
+    useDeskStore.getState().closeWins()
+    useDeskStore.getState().openWins('a1')
+    useDeskStore.getState().closeWins()
+    useDeskStore.getState().openWins()
+    expect(useDeskStore.getState()).toMatchObject({ winsOpen: true, winsAreaId: null })
+  })
 })
 
 describe('deskStore Area editor', () => {

@@ -96,7 +96,7 @@ function expectCardsInTheirAreas(data: MtfData) {
 
 /** The Jar's rect in Desk coordinates, as drawn. */
 function jarRect(page: Page): Promise<Rect> {
-  return page.locator('[data-jar]').evaluate((jar: HTMLElement) => ({
+  return page.locator('[data-jar=""]').evaluate((jar: HTMLElement) => ({
     x: parseFloat(jar.style.left),
     y: parseFloat(jar.style.top),
     w: parseFloat(jar.style.width),
@@ -131,7 +131,7 @@ test('Estrella, Tabla, Fila after a hand move, and Mi disposición, which surviv
   // The centered Jar still takes a finished Card.
   const box = (await deskCard(page, 'done').boundingBox())!
   const grip = { x: box.x + box.width / 2, y: box.y + Math.min(20, box.height / 3) }
-  const [from, to] = [await center(deskCard(page, 'done')), await center(page.locator('[data-jar]'))]
+  const [from, to] = [await center(deskCard(page, 'done')), await center(page.locator('[data-jar=""]'))]
   await drag(page, isMobile, grip, { x: grip.x + to.x - from.x, y: grip.y + to.y - from.y })
   await expect(deskCard(page, 'done')).toHaveCount(0)
   await expect(page.getByRole('status')).toContainText('¡Al frasco!')

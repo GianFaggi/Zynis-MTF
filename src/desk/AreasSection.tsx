@@ -1,6 +1,7 @@
 import { Pencil, Plus } from 'lucide-react'
 import { useState, type CSSProperties } from 'react'
 import { Button } from '../components/ui/Button'
+import { Segmented } from '../components/ui/Segmented'
 import { useT } from '../i18n'
 import { useAppStore } from '../store/appStore'
 import type { Area } from '../types'
@@ -19,14 +20,15 @@ type AreasSectionProps = {
 
 /**
  * The Areas group of the Settings sheet: every Area in Desk order, each opening its
- * editor, "Nueva área", and "Acomodar áreas". Arranging when the current arrangement
- * could not be chosen again first asks, in place, like "Borrar área"; the question is
- * local state, so it is gone when Settings closes.
+ * editor, "Nueva área", "Acomodar áreas" and "Frasco por área" (#19). Arranging when
+ * the current arrangement could not be chosen again first asks, in place, like "Borrar
+ * área"; the question is local state, so it is gone when Settings closes.
  */
 export function AreasSection({ onOpenArea, onCreated, onArranged }: AreasSectionProps) {
   const t = useT()
   const areas = useAppStore((state) => state.data.areas)
   const saved = useAppStore((state) => state.arrangement)
+  const areaJars = useAppStore((state) => state.areaJars)
   const [asking, setAsking] = useState<Arrangement | null>(null)
 
   const arrange = (layout: (current: readonly Area[]) => Arrangement) => {
@@ -106,6 +108,21 @@ export function AreasSection({ onOpenArea, onCreated, onArranged }: AreasSection
             </Button>
           </div>
         )}
+      </div>
+
+      <div className="mt-2 flex flex-col gap-2">
+        <span aria-hidden="true" className="text-[13px] font-semibold text-pencil">
+          {t('areaJarsOption')}
+        </span>
+        <Segmented
+          label={t('areaJarsOption')}
+          options={[
+            { value: 'no', label: t('no') },
+            { value: 'yes', label: t('yes') },
+          ]}
+          value={areaJars ? 'yes' : 'no'}
+          onChange={(value) => useAppStore.getState().setAreaJars(value === 'yes')}
+        />
       </div>
     </div>
   )

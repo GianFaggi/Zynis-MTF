@@ -15,6 +15,13 @@ const CAPTION = { w: 360, h: 90, gap: 14 }
 /** The hit area is forgiving: the Jar grown by these margins. */
 const HIT = { side: 50, top: 60, bottom: 30 }
 
+/** An Area Jar (#19): 40% of the Jar, inside its Area's top-right corner. */
+const AREA_JAR_SIZE = { w: 104, h: 120 }
+/** Paper between an Area Jar and its Area's right and top edges. */
+const AREA_JAR_INSET = { right: 24, top: 16 }
+/** An Area Jar's hit area: the Desk Jar's margins, scaled down. */
+const AREA_JAR_HIT = 30
+
 /** Pieces per row, and how many rows fit inside the glass before the Jar looks full. */
 const PER_ROW = 7
 const ROWS = 11
@@ -80,6 +87,49 @@ export function isOverJar(jar: Rect, point: Point): boolean {
     point.y > jar.y - HIT.top &&
     point.y < jar.y + jar.h + HIT.bottom
   )
+}
+
+/**
+ * An Area's own small Jar (#19), in its top-right corner: the label and its pencil hold
+ * the top-left and the resize handle the bottom-right. It ends above the 140 px where
+ * Tidy up starts placing Cards, so a tidied Card never covers it. `AreaRegion` draws it
+ * at the same place, from `--w`, so it follows a live move or resize.
+ */
+export function areaJarRect(rect: Rect): Rect {
+  return { x: rect.x + rect.w - AREA_JAR_INSET.right - AREA_JAR_SIZE.w, y: rect.y + AREA_JAR_INSET.top, ...AREA_JAR_SIZE }
+}
+
+/** Whether a dragged Card's center is over an Area Jar, with its forgiving margin. */
+export function isOverAreaJar(jar: Rect, point: Point): boolean {
+  return (
+    point.x > jar.x - AREA_JAR_HIT &&
+    point.x < jar.x + jar.w + AREA_JAR_HIT &&
+    point.y > jar.y - AREA_JAR_HIT &&
+    point.y < jar.y + jar.h + AREA_JAR_HIT
+  )
+}
+
+/** The Jar a dragged Card is over: an Area's (`areaId`) or the Desk's (`areaId: null`). */
+export interface JarTarget {
+  areaId: string | null
+}
+
+/**
+ * Which Jar a dragged Card's center is over, if any: an Area Jar first, only while
+ * "Frasco por área" is on and the Desk is not in the far look (where Area Jars are
+ * hidden), then the Desk Jar. The highlight and the drop both ask this, so they agree.
+ */
+export function jarTarget(
+  areas: readonly Area[],
+  point: Point,
+  { areaJars, far }: { areaJars: boolean; far: boolean },
+): JarTarget | null {
+  if (areaJars && !far) {
+    const area = areas.find((candidate) => isOverAreaJar(areaJarRect(candidate.rect), point))
+    if (area) return { areaId: area.id }
+  }
+  const jar = jarRect(areas)
+  return jar && isOverJar(jar, point) ? { areaId: null } : null
 }
 
 /** The mockup's jitter: a number in [-1, 1) that only depends on its inputs. */

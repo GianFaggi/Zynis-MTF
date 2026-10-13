@@ -61,8 +61,12 @@ _Avoid_: Favorite, starred
 ## Wins
 
 **Jar**:
-The place on the Desk where the user puts Cards they are done with: in the middle of the Areas when that space is free of them (as in Estrella), otherwise centered below them. The user does not move it; it follows the Areas. Cards go in by dropping them on it or with "Llevar al frasco" in the editor. It fills up with one piece of paper per Card, in the Card's Area color. A Card with unchecked Items is refused and slides back. Cards in the Jar leave the Desk but are kept.
+The place on the Desk where the user puts Cards they are done with: in the middle of the Areas when that space is free of them (as in Estrella), otherwise centered below them. The user does not move it; it follows the Areas. Cards go in by dropping them on it or with "Llevar al frasco" in the editor. It fills up with one piece of paper per Card, in the Card's Area color. A Card with unchecked Items is refused and slides back. Cards in the Jar leave the Desk but are kept. It always holds every Card in the Jar, from every Area, even when each Area also shows its Area Jar.
 _Avoid_: Archive, trash, done list
+
+**Area Jar** (ES: **frasco del área**):
+A small Jar in an Area's top-right corner, shown in every Area while the device option **Frasco por área** (EN: **A jar per area**, in Settings → Áreas, off by default, not in the Backup) is on. It shows that Area's Cards in the Jar: a view of the same Jar, not a second one, so a Card in it is also in the Jar. Dropping a Card on its own Area's Jar follows the Jar's rules. Dropping it on another Area's Jar first asks "¿Pasarla a Vida y llevarla al frasco?": Sí moves the Card to that Area and puts it in the Jar; No puts it back where it was. Tapping it opens Mis logros on that Area. Hidden when zoomed out to the far look.
+_Avoid_: Area archive, second jar, sub-jar
 
 **Win**:
 Something the user did that counts toward Mis logros: checking an Item (an Item Win) or finishing a Card (a Card Win). A Card has one Card Win exactly while it is finished (in the Jar it always has one, so a Card without Items gets it there). A half-done Card counts only its checked Items. A Win goes away with what it counts: unchecking or removing an Item, unfinishing or deleting a Card. The passing of time never removes one ([ADR 0005](docs/adr/0005-win-events-with-removals.md)).
@@ -77,7 +81,7 @@ A newly created Card that the user kept (it was not empty when its editor closed
 _Avoid_: Post, entry
 
 **Mis logros** (EN: **My wins**):
-The view that shows the user's Wins: things done in the last 7 days, a bar per day, notes written, the total since you started, and the Cards in the Jar (which can be taken back out). It only counts; it never punishes quiet days.
+The view that shows the user's Wins: things done in the last 7 days, a bar per day, notes written, the total since you started, and the Cards in the Jar (which can be taken back out). It only counts; it never punishes quiet days. While Frasco por área is on it can be filtered to one Area ("Todas" shows them all): each Win then counts in the Area its Card belongs to now, not the one it was in when it happened, so the Areas always add up to "Todas". The wins counter always counts every Area.
 _Avoid_: Stats, dashboard, streak, progress report
 
 **Devolver** (EN: **Take out**):

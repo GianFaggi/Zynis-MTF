@@ -7,6 +7,7 @@ import { makeCard } from '../test/fixtures'
 import { resetStores } from '../test/stores'
 import type { WinEvent } from '../types'
 import { MisLogros } from './MisLogros'
+import { WinsCounter } from './WinsCounter'
 
 // Today is pinned to Wednesday 14 October 2026 (Date only, so user events still run).
 const TODAY = new Date(2026, 9, 14, 18, 0)
@@ -127,5 +128,106 @@ describe('MisLogros', () => {
     expect(within(dialog).getByText('Since you started: 2 things done.')).toBeInTheDocument()
     expect(within(dialog).getByText('Work · 2 days ago')).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: 'Take out' })).toBeInTheDocument()
+  })
+})
+
+describe('MisLogros by Area', () => {
+  // Trabajo: 3 things done (2 Items of one Card, then its Card Win). Vida: 2. Recordar: nothing.
+  const cards = [
+    makeCard({ id: 't1', areaId: 'a1', title: 'Informe', jarredAt: daysBefore(1) }),
+    makeCard({ id: 'v1', areaId: 'a2', title: 'Compras', jarredAt: daysBefore(0) }),
+    makeCard({ id: 'v2', areaId: 'a2', title: 'Plantas' }),
+  ]
+  const events: WinEvent[] = [
+    { id: 'w1', type: 'item', at: daysBefore(2), cardId: 't1', areaId: 'a1' },
+    { id: 'w2', type: 'item', at: daysBefore(2), cardId: 't1', areaId: 'a1' },
+    { id: 'w3', type: 'card', at: daysBefore(1), cardId: 't1', areaId: 'a1' },
+    { id: 'w4', type: 'card', at: daysBefore(0), cardId: 'v1', areaId: 'a2' },
+    // Checked while Plantas was in Trabajo; it counts in Vida, where the Card is now.
+    { id: 'w5', type: 'item', at: daysBefore(0), cardId: 'v2', areaId: 'a1' },
+  ]
+
+  function mainNumber(dialog: HTMLElement) {
+    return within(dialog).getByText(/cosas? hechas? en los últimos 7 días/).previousElementSibling!.textContent
+  }
+
+  function jarList(dialog: HTMLElement) {
+    return within(within(dialog).getByRole('region', { name: 'En el frasco' }))
+      .queryAllByRole('listitem')
+      .map((row) => row.querySelector('b')!.textContent)
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(TODAY)
+    resetStores({ cards, events })
+    useAppStore.setState({ areaJars: true })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('has no filter with "Frasco por área" off, and counts every Area', () => {
+    useAppStore.setState({ areaJars: false })
+    useDeskStore.getState().openWins('a2')
+    render(<MisLogros />)
+    const dialog = screen.getByRole('dialog', { name: 'Mis logros' })
+    expect(within(dialog).queryByRole('group', { name: 'Área' })).not.toBeInTheDocument()
+    expect(mainNumber(dialog)).toBe('5')
+  })
+
+  it('opens on "Todas", followed by every Area', () => {
+    const dialog = openMisLogros()
+    const filter = within(dialog).getByRole('group', { name: 'Área' })
+    expect(within(filter).getAllByRole('button').map((button) => button.textContent)).toEqual(['Todas', 'Trabajo', 'Vida', 'Recordar'])
+    expect(within(filter).getByRole('button', { name: 'Todas' })).toHaveAttribute('aria-pressed', 'true')
+    expect(mainNumber(dialog)).toBe('5')
+  })
+
+  it("one Area counts its Cards' Wins only, and lists only its Cards in the Jar; Todas counts them all again", async () => {
+    const dialog = openMisLogros()
+    const filter = within(dialog).getByRole('group', { name: 'Área' })
+
+    await userEvent.click(within(filter).getByRole('button', { name: 'Vida' }))
+    expect(mainNumber(dialog)).toBe('2')
+    expect(within(dialog).getByText('Desde que empezaste: 2 cosas hechas.')).toBeInTheDocument()
+    expect(jarList(dialog)).toEqual(['Compras'])
+
+    await userEvent.click(within(filter).getByRole('button', { name: 'Trabajo' }))
+    expect(mainNumber(dialog)).toBe('3')
+    expect(jarList(dialog)).toEqual(['Informe'])
+
+    await userEvent.click(within(filter).getByRole('button', { name: 'Todas' }))
+    expect(mainNumber(dialog)).toBe('5')
+    expect(jarList(dialog)).toEqual(['Compras', 'Informe'])
+  })
+
+  it('a quiet Area says that quiet days count too, and shows no warning', async () => {
+    const dialog = openMisLogros()
+    await userEvent.click(within(within(dialog).getByRole('group', { name: 'Área' })).getByRole('button', { name: 'Recordar' }))
+    expect(mainNumber(dialog)).toBe('0')
+    expect(within(dialog).getByText('Los días tranquilos también cuentan.')).toBeInTheDocument()
+    expect(within(dialog).getByText('Cuando lleves una tarjeta al frasco, aparece acá.')).toBeInTheDocument()
+  })
+
+  it('opened from an Area Jar it shows that Area; an Area that is gone reads as Todas', () => {
+    useDeskStore.getState().openWins('a2')
+    const { unmount } = render(<MisLogros />)
+    expect(screen.getByRole('button', { name: 'Vida' })).toHaveAttribute('aria-pressed', 'true')
+    expect(mainNumber(screen.getByRole('dialog'))).toBe('2')
+    unmount()
+
+    useDeskStore.getState().openWins('gone')
+    render(<MisLogros />)
+    expect(screen.getByRole('button', { name: 'Todas' })).toHaveAttribute('aria-pressed', 'true')
+    expect(mainNumber(screen.getByRole('dialog'))).toBe('5')
+  })
+
+  it('the wins counter stays global while one Area is chosen', async () => {
+    render(<WinsCounter />)
+    const dialog = openMisLogros()
+    await userEvent.click(within(within(dialog).getByRole('group', { name: 'Área' })).getByRole('button', { name: 'Vida' }))
+    expect(screen.getByRole('button', { name: 'Mis logros: 5 cosas hechas en 7 días' })).toBeInTheDocument()
   })
 })

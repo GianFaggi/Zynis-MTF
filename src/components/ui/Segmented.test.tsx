@@ -22,4 +22,18 @@ describe('Segmented', () => {
     await userEvent.click(screen.getByRole('button', { name: 'English' }))
     expect(onChange).toHaveBeenCalledWith('en')
   })
+
+  it('shows a color dot only on the options that have one, without changing their names', () => {
+    const areas = [
+      { value: 'all', label: 'Todas' },
+      { value: 'a2', label: 'Vida', dot: 'sand' },
+    ] as const
+    render(<Segmented label="Área" options={areas} value="a2" onChange={() => {}} />)
+    const all = screen.getByRole('button', { name: 'Todas' })
+    const life = screen.getByRole('button', { name: 'Vida' })
+    expect(all.querySelector('[data-dot]')).toBeNull()
+    expect(life.querySelector<HTMLElement>('[data-dot]')!.style.background).toBe('var(--color-sand)')
+    expect(all).toHaveAttribute('aria-pressed', 'false')
+    expect(life).toHaveAttribute('aria-pressed', 'true')
+  })
 })

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAppStore } from '../store/appStore'
-import { winStats, type WinStats } from './stats'
+import type { AreaId } from '../types'
+import { eventsOfArea, winStats, type WinStats } from './stats'
 
 /**
  * The current time, taken once and refreshed at each local midnight. The 7-day
@@ -18,9 +19,14 @@ function useToday(): number {
   return now
 }
 
-/** `winStats` over the stored events, for today. */
-export function useWinStats(): WinStats & { now: number } {
+/** `winStats` over the stored events, for today; with an Area, over that Area's events only (`eventsOfArea`). */
+export function useWinStats(areaId: AreaId | null = null): WinStats & { now: number } {
   const events = useAppStore((state) => state.data.events)
+  // Only an Area filter depends on the Cards: the global numbers stay put while Cards move.
+  const cards = useAppStore((state) => (areaId === null ? null : state.data.cards))
   const now = useToday()
-  return useMemo(() => ({ ...winStats(events, now), now }), [events, now])
+  return useMemo(() => {
+    const counted = areaId === null || cards === null ? events : eventsOfArea(events, cards, areaId)
+    return { ...winStats(counted, now), now }
+  }, [events, cards, areaId, now])
 }

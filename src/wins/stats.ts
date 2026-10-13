@@ -1,4 +1,4 @@
-import type { WinEvent } from '../types'
+import type { AreaId, Card, WinEvent } from '../types'
 
 // The numbers Mis logros, the wins counter and the Jar caption show, computed from
 // `events` (KB/frontend/architecture.md). "Things done" are `item` + `card` events;
@@ -41,6 +41,18 @@ export function daysAgo(time: number, now: number): number {
 /** Things done since the user started (`winStats().total`), without needing today. */
 export function totalDone(events: readonly WinEvent[]): number {
   return events.filter((event) => event.type !== 'note').length
+}
+
+/**
+ * The events that count for one Area in Mis logros (#19): those whose Card belongs to
+ * it now, not when the Win happened, so the Areas always add up to "Todas" and a Card
+ * that changes Area brings its Wins along. An event whose Card is gone (only possible
+ * from an imported file) falls back to its own `areaId` snapshot.
+ */
+export function eventsOfArea(events: readonly WinEvent[], cards: readonly Card[], areaId: AreaId): WinEvent[] {
+  const areaOf = new Map(cards.map((card) => [card.id, card.areaId]))
+  const current = (event: WinEvent) => (event.cardId === undefined ? undefined : areaOf.get(event.cardId)) ?? event.areaId
+  return events.filter((event) => current(event) === areaId)
 }
 
 export function winStats(events: readonly WinEvent[], now: number): WinStats {

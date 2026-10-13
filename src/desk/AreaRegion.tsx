@@ -1,7 +1,8 @@
 import { Pencil } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useT } from '../i18n'
-import type { Area } from '../types'
+import type { Area, Card } from '../types'
+import { AreaJar } from '../wins/AreaJar'
 import { areaName } from './areas'
 
 type AreaRegionProps = {
@@ -10,6 +11,8 @@ type AreaRegionProps = {
   count: number
   onFly: (area: Area) => void
   onEdit: (area: Area) => void
+  /** Its Cards in the Jar, oldest first, while "Frasco por área" is on (#19); without it, no Area Jar. */
+  jarCards?: readonly Card[]
 }
 
 /**
@@ -26,9 +29,9 @@ type AreaRegionProps = {
  *
  * A pointer press on the label is handled by the Desk's gesture controller (a tap
  * flies, a drag moves the Area, a touch swipe pans); its own click only handles the
- * keyboard. The edit button and the handle exist only in the near look.
+ * keyboard. The edit button, the handle and the Area Jar exist only in the near look.
  */
-export function AreaRegion({ area, count, onFly, onEdit }: AreaRegionProps) {
+export function AreaRegion({ area, count, onFly, onEdit, jarCards }: AreaRegionProps) {
   const t = useT()
   const { x, y, w, h } = area.rect
   const name = areaName(area, t)
@@ -72,6 +75,7 @@ export function AreaRegion({ area, count, onFly, onEdit }: AreaRegionProps) {
           <Pencil size={26} strokeWidth={1.75} aria-hidden="true" />
         </button>
       </div>
+      {jarCards && <AreaJar area={area} name={name} cards={jarCards} />}
       {/* 56 Desk px: at least 31 screen px at the far-zoom threshold, where it hides. Centered on the corner. */}
       <div
         data-area-resize={area.id}
