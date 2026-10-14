@@ -33,7 +33,7 @@
 - [x] 5.2 Clean-code pass over the new code (one drop path for both Jars, one `jarTarget` for highlight and drop, `data-jar` lookups in one helper, names consistent with the Desk Jar, comments only where the why is not obvious); verify lint and tests still pass
 - [x] 5.3 Run `command npm run lint`, `command npm test`, `command npm run build` and `command npm run test:e2e`; verify all pass with no warnings, and fill Technical Context / Modified Files in `KB/developers/active.md`
 - [x] 5.4 Check by hand in the dev server at phone and desktop width, in light and dark, with the option on: Area Jars in the default row, Tabla and Estrella, a narrow 520 px Area with a long name, the question and both answers, the far look, the Mis logros filter with 12 Areas on a phone; verify nothing overlaps badly and no accent appears outside the Jars
-- [ ] 5.5 (User) On a real Android phone and an iPhone, installed: turn the option on, drop a finished Card on its Area Jar while zoomed in on a list, drop one on another Area's Jar and answer Sí and No, open Mis logros from an Area Jar; verify each works with press and hold
+- [x] 5.5 (User) On a real Android phone and an iPhone, installed: turn the option on, drop a finished Card on its Area Jar while zoomed in on a list, drop one on another Area's Jar and answer Sí and No, open Mis logros from an Area Jar; verify each works with press and hold
 
 ## Workflow follow-up
 
