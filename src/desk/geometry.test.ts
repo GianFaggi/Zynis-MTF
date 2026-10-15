@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { makeCard, rowOfAreas } from '../test/fixtures'
+import { welcomeCard } from '../welcome/welcomeCard'
 import { jarBounds, jarRect } from '../wins/jarLayout'
 import {
+  CARD_WIDTH,
+  FAR_SCALE,
   MAX_SCALE,
   MIN_SCALE,
   areaView,
+  cardView,
   clampScale,
   deskBounds,
   fitRect,
@@ -12,7 +16,9 @@ import {
   randomTilt,
   toScreen,
   toWorld,
+  welcomeView,
   zoomAt,
+  type View,
 } from './geometry'
 
 const view = { x: -120, y: 45, s: 0.6 }
@@ -128,6 +134,42 @@ describe('initialView', () => {
   it('shows the first Area on a phone', () => {
     const viewport = { w: 412, h: 915 }
     expect(initialView(rowOfAreas(), [], noHeights, viewport)).toEqual(areaView(rowOfAreas()[0], viewport))
+  })
+})
+
+describe('welcomeView', () => {
+  const area = rowOfAreas()[0]
+  const card = welcomeCard(area, { title: 'Hola', body: '', items: ['1', '2', '3'] }, { z: 1, now: 1, newId: () => 'w' })
+  const height = 300
+
+  /** The Card's rect on screen under `view`. */
+  function onScreen(view: View) {
+    const topLeft = toScreen(view, card.position)
+    return { left: topLeft.x, top: topLeft.y, right: topLeft.x + CARD_WIDTH * view.s, bottom: topLeft.y + height * view.s }
+  }
+
+  it("is the Area's view on a phone, with the Card in it and readable", () => {
+    const viewport = { w: 390, h: 844 }
+    const view = welcomeView(area, card, height, viewport)
+    expect(view).toEqual(areaView(area, viewport))
+    expect(view.s).toBeGreaterThanOrEqual(FAR_SCALE)
+    const rect = onScreen(view)
+    expect(rect.left).toBeGreaterThanOrEqual(0)
+    expect(rect.top).toBeGreaterThanOrEqual(0)
+    expect(rect.right).toBeLessThanOrEqual(viewport.w)
+    expect(rect.bottom).toBeLessThanOrEqual(viewport.h)
+  })
+
+  it('frames the Card itself on a desktop window, closer than the far look', () => {
+    const viewport = { w: 1280, h: 720 }
+    const view = welcomeView(area, card, height, viewport)
+    expect(view).toEqual(cardView(card, height, viewport))
+    expect(view.s).toBeGreaterThanOrEqual(FAR_SCALE)
+    const rect = onScreen(view)
+    expect(rect.left).toBeGreaterThanOrEqual(0)
+    expect(rect.top).toBeGreaterThanOrEqual(0)
+    expect(rect.right).toBeLessThanOrEqual(viewport.w)
+    expect(rect.bottom).toBeLessThanOrEqual(viewport.h)
   })
 })
 

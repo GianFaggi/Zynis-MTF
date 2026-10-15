@@ -423,6 +423,51 @@ describe('Win events', () => {
   })
 })
 
+describe('The Welcome Card', () => {
+  const content = { title: 'Hola', body: 'Probá esto:', items: ['Arrastrame', 'Tildá este', 'Al frasco'] as [string, string, string] }
+
+  it('lands in the first Area on top of every Card, leaves the others alone, writes no event, and is saved', () => {
+    const others = [makeCard({ id: 'c1', areaId: 'a2', position: { z: 4 } }), makeCard({ id: 'c2', position: { z: 9 } })]
+    const store = storeWith(others)
+
+    const id = store.getState().placeWelcomeCard(content)!
+    const card = cardIn(store, id)!
+    expect(card.areaId).toBe('a1')
+    expect(card.position.z).toBe(10)
+    expect(card.title).toBe('Hola')
+    expect(store.getState().data.cards.filter((candidate) => candidate.id !== id)).toEqual(others)
+    expect(store.getState().data.events).toEqual([])
+    expect(storedData().cards.map((candidate) => candidate.id)).toContain(id)
+  })
+
+  it('counts its Items and its finish as Wins, and never a note, not even when its editor closes', () => {
+    const store = storeWith()
+    const id = store.getState().placeWelcomeCard(content)!
+    const items = cardIn(store, id)!.items
+
+    store.getState().closeCard(id)
+    for (const item of items) store.getState().toggleItem(id, item.id)
+    store.getState().closeCard(id)
+
+    const types = store.getState().data.events.map((event) => event.type)
+    expect(types.filter((type) => type === 'item')).toHaveLength(3)
+    expect(types.filter((type) => type === 'card')).toHaveLength(1)
+    expect(types).not.toContain('note')
+  })
+
+  it('places a new one on each call', () => {
+    const store = storeWith()
+    const first = store.getState().placeWelcomeCard(content)!
+    const before = cardIn(store, first)
+    const second = store.getState().placeWelcomeCard(content)!
+
+    expect(second).not.toBe(first)
+    expect(store.getState().data.cards).toHaveLength(2)
+    expect(cardIn(store, first)).toEqual(before)
+    expect(cardIn(store, second)!.position.z).toBeGreaterThan(before!.position.z)
+  })
+})
+
 describe('The Jar', () => {
   afterEach(() => {
     vi.restoreAllMocks()

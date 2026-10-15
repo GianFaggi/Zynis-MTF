@@ -5,8 +5,8 @@ type CalloutProps = {
 }
 
 /**
- * A short ink note above the Dock with its own buttons: the first-run hint and the
- * install nudge. `role="note"`; never the accent.
+ * A short ink note above the Dock with its own buttons: the install nudge.
+ * `role="note"`; never the accent.
  */
 export function Callout({ message, actions }: CalloutProps) {
   return (

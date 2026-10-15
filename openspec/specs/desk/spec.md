@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the Desk: the one free surface where every Card lives. It covers how the user pans and zooms it on touch and PC, how its Areas appear, and how the user finds their way around it (Dock, See all, Tidy up, search, first view, first-run hint).
+Defines the Desk: the one free surface where every Card lives. It covers how the user pans and zooms it on touch and PC, how its Areas appear, and how the user finds their way around it (Dock, See all, Tidy up, search, first view).
 
 ## Requirements
 
@@ -142,7 +142,7 @@ The Dock's "Ordenar" (Tidy up) SHALL rearrange the Cards of each Area into loose
 - **THEN** the Cards are where Tidy up put them
 
 ### Requirement: Initial view
-On opening, MTF SHALL show the whole Desk when it fits at 34% zoom or more; otherwise it SHALL show the first Area at a size readable on a phone.
+On opening, MTF SHALL show the whole Desk when it fits at 34% zoom or more; otherwise it SHALL show the first Area at a size readable on a phone. On the launch that placed a Welcome Card, MTF SHALL instead show the Welcome Card at a size where its text and Items are readable.
 
 #### Scenario: Desktop
 - **WHEN** MTF opens in a wide desktop window
@@ -151,6 +151,14 @@ On opening, MTF SHALL show the whole Desk when it fits at 34% zoom or more; othe
 #### Scenario: Phone
 - **WHEN** MTF opens on a phone-sized screen
 - **THEN** the first Area is shown and its Cards' text is readable
+
+#### Scenario: Welcome Card on a desktop
+- **WHEN** MTF opens in a wide desktop window and places a Welcome Card
+- **THEN** the Welcome Card is in view and its Items are readable
+
+#### Scenario: Welcome Card on a phone
+- **WHEN** MTF opens on a phone-sized screen and places a Welcome Card
+- **THEN** the Welcome Card is in view and its Items are readable
 
 ### Requirement: Search
 A search button SHALL open a search field. While the user types, Cards whose title, text or Items contain the text SHALL be outlined and the rest dimmed, ignoring case and accents. `Enter` SHALL fly to the first match. Closing the search SHALL restore every Card.
@@ -171,19 +179,8 @@ A search button SHALL open a search field. While the user types, Cards whose tit
 - **WHEN** the user closes the search with its button or `Esc`
 - **THEN** the field is cleared and no Card is dimmed or outlined
 
-### Requirement: First-run hint
-On a device's first launch, MTF SHALL show a short hint that Cards can be dragged anywhere, and held on a phone to move them. Once dismissed, it SHALL NOT appear again on that device.
-
-#### Scenario: First launch
-- **WHEN** MTF opens for the first time on a device
-- **THEN** the hint is shown with a button to dismiss it
-
-#### Scenario: Dismissed for good
-- **WHEN** the user dismisses the hint and reloads MTF
-- **THEN** the hint is not shown
-
 ### Requirement: Accent reserved for wins on the Desk
-The Desk, its Areas, the Dock, search highlights and the first-run hint SHALL NOT use the accent color. On the Desk, only things the user did may use it: checked Items, a finished Card (its fill, border, halo, title, chip and seal), and the Jar.
+The Desk, its Areas, the Dock and search highlights SHALL NOT use the accent color. On the Desk, only things the user did may use it: checked Items, a finished Card (its fill, border, halo, title, chip and seal), and the Jar.
 
 #### Scenario: Search highlight
 - **WHEN** a search outlines matching Cards

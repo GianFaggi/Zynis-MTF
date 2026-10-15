@@ -45,13 +45,14 @@ Shared helpers live in `e2e/helpers.ts`:
 
 | Helper | What |
 |---|---|
-| `openApp(page, { hintSeen })` | Opens MTF and waits for the Desk's first view (after `document.fonts.ready`) |
-| `seedDesk(page, data, { hintSeen })` | Writes `mtf_data` (default Areas `a1`–`a3` unless given) with `page.evaluate`, reloads, waits. Not `addInitScript`: that would overwrite the data on every reload and break "survives a reload" tests |
+| `openApp(page, { welcome })` | Opens MTF and waits for the Desk's first view (after `document.fonts.ready`). A blank Desk unless `welcome: true` (a first launch, with its Welcome Card) |
+| `seedDesk(page, data, { welcome })` | Writes `mtf_data` (default Areas `a1`–`a3` unless given) with `page.evaluate`, reloads, waits. Not `addInitScript` for the data: that would overwrite it on every reload and break "survives a reload" tests. With `welcome: true` it also removes `mtf_welcome_placed` before the reload, so the seeded Desk is a device in use that never had its Welcome Card |
+| `waitForDesk(page)` | Waits for an Area label, the fonts and two frames, so the first view has reached the DOM; for a test's own `reload()` |
 | `card(...)`, `AREAS` | Builders for seeded data |
 | `areaLabel`, `deskCard`, `storedData`, `center`, `deskScale`, `cardColor`, `cssColor` | Locators and reads (scale from the world's computed transform; `--b` resolved to a color) |
 | `Touch` | Real touch input through CDP `Input.dispatchTouchEvent`: `drag(from, to, { holdMs })` for hold-then-drag or a quick swipe, `pinch(at, startGap, endGap)`, and `send(type, points)` for custom sequences (a second finger during a drag) |
 
-- **The first-run hint is marked seen by default** in `openApp` / `seedDesk`, so it never covers a gesture; only the hint's own test passes `hintSeen: false`.
+- **The Welcome Card is marked as placed by default** in `openApp` / `seedDesk` (#20), so every other spec keeps exactly the Desk it seeds. The flag `mtf_welcome_placed = '1'` is written with `page.addInitScript` **before the first `goto`**: written after the first load (as the old hint flag was) it would come too late, because that load already placed a Welcome Card and saved it in `mtf_data`. `addInitScript` is safe here, unlike for `mtf_data`, because it writes only the flag, on every load. Only `e2e/welcome.spec.ts` passes `welcome: true`. Specs that call `page.goto` themselves (`offline.spec.ts`) get a Welcome Card; their locators must not trip over it (the wordmark is `getByRole('heading', { name: 'mtf', exact: true })`, since "¡Hola! Esto es MTF" also contains "mtf").
 - **Touch only through CDP.** Playwright has no touch drag or pinch API. Both projects are Chromium and the phone project emulates a touch screen, so Chrome turns CDP touches into touch and pointer events, which is what use-gesture listens to. Mouse and wheel tests skip the phone project, touch tests skip the desktop one (`test.skip(({ isMobile }) => …)`).
 - **Desktop opens zoomed out**: on Playwright's 1280 × 720 window the whole Desk, Jar included, fits at ~37%, below the 55% far threshold, where Cards show only their title (their `h3` and Item boxes are `display: none`, with no bounding box). Tests that need a Card's checklist zoom in first with `Ctrl` + wheel (`zoomToNearLook` in `jar.spec.ts`).
 - After a wheel, fly (0.55 s) or Tidy up (0.5 s), wait a little before measuring: use-gesture ends a wheel gesture after a short pause.
@@ -75,6 +76,14 @@ Shared helpers live in `e2e/helpers.ts`:
 - The far-look test drops a Card on the spot where Vida's Jar would be (`toScreen` of its center): no question, the Card is just placed.
 - The question is a dialog named by it ("¿Pasarla a Vida y llevarla al frasco?"); while it is open the Card keeps `data-lifted`. No and `Esc` are checked against the stored document (nothing written), Sí against the Mis logros row ("Vida · hoy") and a reload.
 - **Phone**: the opening view is the first Area's top-left corner, so the phone tests seed a 520 px wide Trabajo, whose Jar is then on screen; the drop holds 450 ms and drags with `Touch.drag`, and the Jar is tapped with `tap()`.
+
+### The Welcome Card (`e2e/welcome.spec.ts`, #20)
+
+- Its id is a fresh uuid, so the spec finds it in `storedData(page)` by its Spanish title ("¡Hola! Esto es MTF") and then uses `deskCard(page, id)`.
+- **Readable on the first launch**, on both projects: the world has no `data-far` and the Card is fully in the viewport (`toBeInViewport({ ratio: 1 })`), with its three Item boxes `aria-pressed="false"`. After a reload the desktop window is back to the far look (the usual whole-Desk view), and the same single Card is still there.
+- **The Jar on desktop**: "Ver todo" first, so the Card and the Jar are both on screen (far look), then a mouse drop grabbed near the Card's top edge (`grip`). Unchecked: "Todavía no" + "Te faltan 3 elementos". After checking the three Items at the first view (near look) the counter reads 4 (3 Item Wins + 1 Card Win); the drop puts it in and the counter stays 4.
+- **Phone**: press and hold 450 ms on the title, then `Touch.drag`; it moves, and no Item becomes checked.
+- Delete through the editor and reload: nothing comes back. Settings → "Ver introducción" on a blank Desk places one and shows it in the near look.
 
 ### Backup (`e2e/backup.spec.ts`, change 4)
 

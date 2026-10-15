@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { makeBackup } from './backup/backup'
 import { useDeskStore } from './desk/deskStore'
-import { HINT_SEEN_KEY, LANGUAGE_KEY, THEME_KEY } from './lib/storage'
+import { LANGUAGE_KEY, THEME_KEY } from './lib/storage'
 import { useAppStore } from './store/appStore'
 import { USER_AGENTS, restoreDevice, stubDevice } from './test/device'
 import { makeArea, makeCard, makeData, rowOfAreas } from './test/fixtures'
@@ -143,13 +143,13 @@ describe('App', () => {
     expect(useDeskStore.getState()).toMatchObject({ editingId: card.id, newCardId: card.id })
   })
 
-  it('Settings shows the language, the theme, the Areas, the Backup section and the install section, in that order', async () => {
+  it('Settings shows the language, the theme, the Areas, the Backup, the install and the introduction sections, in that order', async () => {
     render(<App />)
     await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
     const settings = screen.getByRole('dialog', { name: 'Ajustes' })
 
     const labels = [...settings.querySelectorAll('span.uppercase')].map((label) => label.textContent)
-    expect(labels).toEqual(['Idioma', 'Tema', 'Áreas', 'Copia de seguridad', 'Instalar la app'])
+    expect(labels).toEqual(['Idioma', 'Tema', 'Áreas', 'Copia de seguridad', 'Instalar la app', 'Introducción'])
     expect(within(settings).getByRole('button', { name: 'Exportar copia' })).toBeInTheDocument()
     expect(within(settings).getByRole('button', { name: 'Importar copia' })).toBeInTheDocument()
   })
@@ -236,7 +236,6 @@ describe('App', () => {
 
   it('the install nudge\'s "Cómo" opens Settings with the install section', async () => {
     stubDevice({ userAgent: USER_AGENTS.iphone, touchPoints: 5 })
-    localStorage.setItem(HINT_SEEN_KEY, '1')
     render(<App />)
     act(() => {
       const { data } = useAppStore.getState()
@@ -246,6 +245,50 @@ describe('App', () => {
 
     const settings = screen.getByRole('dialog', { name: 'Ajustes' })
     expect(within(settings).getByText('Elegí “Agregar a inicio”.')).toBeInTheDocument()
+  })
+
+  it('"Ver introducción" closes Settings, places a Welcome Card on top in the first Area and flies to it', async () => {
+    resetStores({ cards: [makeCard({ id: 'c1', areaId: 'a2', title: 'Viaje', position: { z: 5 } })] })
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ver introducción' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Ajustes' })).not.toBeInTheDocument()
+    const { cards } = useAppStore.getState().data
+    expect(cards).toHaveLength(2)
+    const welcome = cards[1]
+    expect(welcome).toMatchObject({ areaId: 'a1', title: '¡Hola! Esto es MTF', position: { z: 6 } })
+    expect(welcome.items.map((item) => item.done)).toEqual([false, false, false])
+    expect(useDeskStore.getState().flying).toBe(true)
+  })
+
+  it('"Ver introducción" adds a second Welcome Card and leaves the first one as it was', async () => {
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ver introducción' }))
+    const [first] = useAppStore.getState().data.cards
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ver introducción' }))
+
+    const { cards } = useAppStore.getState().data
+    expect(cards).toHaveLength(2)
+    expect(cards[0]).toEqual(first)
+    expect(cards[1].position.z).toBeGreaterThan(first.position.z)
+  })
+
+  it('"See the introduction" writes the new Welcome Card in English', async () => {
+    useAppStore.setState({ language: 'en' })
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
+    await userEvent.click(screen.getByRole('button', { name: 'See the introduction' }))
+
+    const [card] = useAppStore.getState().data.cards
+    expect(card.title).toBe('Hi! This is MTF')
+    expect(card.items.map((item) => item.text)).toEqual([
+      'Drag me somewhere else (on a phone, press and hold, then move)',
+      'Check this item',
+      'Check everything and drop me in the jar',
+    ])
   })
 
   it('closes Settings with Esc', async () => {

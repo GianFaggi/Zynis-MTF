@@ -11,12 +11,11 @@ import { AreasSection } from './desk/AreasSection'
 import { CardEditor } from './desk/CardEditor'
 import { Desk } from './desk/Desk'
 import { Dock } from './desk/Dock'
-import { FirstRunHint } from './desk/FirstRunHint'
 import { useDeskStore } from './desk/deskStore'
 import { viewport } from './desk/dom'
 import { SearchBox } from './desk/SearchBox'
 import { areaView, toWorld } from './desk/geometry'
-import { showWholeDesk } from './desk/view'
+import { showWholeDesk, welcomeCardView } from './desk/view'
 import { languageNames, useT } from './i18n'
 import { InstallNudge } from './install/InstallNudge'
 import { InstallSection } from './install/InstallSection'
@@ -24,6 +23,8 @@ import { applyTheme } from './lib/theme'
 import { useAppStore } from './store/appStore'
 import { usePersistentStorage } from './store/usePersistentStorage'
 import type { Theme } from './types'
+import { placeWelcome } from './welcome/welcome'
+import { WelcomeSection } from './welcome/WelcomeSection'
 import { MisLogros } from './wins/MisLogros'
 import { WinsCounter } from './wins/WinsCounter'
 
@@ -49,6 +50,12 @@ function arrangeDesk(targets: Arrangement) {
   useDeskStore.getState().animateTidy()
   useAppStore.getState().arrangeAreas(targets)
   showWholeDesk()
+}
+
+/** "Ver introducción": a new Welcome Card in the current language, and the view flies to it. */
+function showNewWelcomeCard() {
+  const view = welcomeCardView(placeWelcome())
+  if (view) useDeskStore.getState().flyTo(view)
 }
 
 /** After an Import: nothing open may point at a Card that is gone; the whole new Desk comes into view. */
@@ -99,7 +106,6 @@ export default function App() {
 
       <SearchBox />
       <Dock />
-      <FirstRunHint />
       <InstallNudge onHow={() => setSettingsOpen(true)} />
 
       <button
@@ -146,6 +152,12 @@ export default function App() {
           }}
         />
         <InstallSection />
+        <WelcomeSection
+          onShow={() => {
+            setSettingsOpen(false)
+            showNewWelcomeCard()
+          }}
+        />
       </Sheet>
 
       <Toast message={toast} />

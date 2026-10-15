@@ -2,8 +2,8 @@ import { expect, type CDPSession, type Locator, type Page } from '@playwright/te
 import type { Area, Card, MtfData } from '../src/types/index.ts'
 
 // Shared e2e helpers (KB/frontend/testing.md). Tests seed `mtf_data` directly and
-// reload, so each one starts from a known Desk. The first-run hint is marked as seen
-// unless a test asks for it, so it never covers a gesture.
+// reload, so each one starts from a known Desk. The Welcome Card is marked as placed
+// unless a test asks for it, so no extra Card sits on the Desk.
 
 export const AREAS: Area[] = [
   { id: 'a1', key: 'work', color: 'sage', rect: { x: 80, y: 120, w: 980, h: 1000 }, createdAt: 1, updatedAt: 1 },
@@ -28,26 +28,34 @@ export function card({ position, ...rest }: CardInput): Card {
   }
 }
 
-/** Opens MTF, waits for the Desk's first view and its fonts. */
-export async function openApp(page: Page, { hintSeen = true } = {}) {
+/**
+ * Marks the Welcome Card as already placed before any page script runs. It must come
+ * before the first `goto`: by the time a later write lands, that first load has already
+ * saved a Welcome Card in `mtf_data`. Only the flag, never the data, so reloads stay safe.
+ */
+async function skipWelcome(page: Page) {
+  await page.addInitScript(() => localStorage.setItem('mtf_welcome_placed', '1'))
+}
+
+/** Opens MTF, waits for the Desk's first view and its fonts. A blank Desk unless `welcome`. */
+export async function openApp(page: Page, { welcome = false } = {}) {
+  if (!welcome) await skipWelcome(page)
   await page.goto('/')
-  if (hintSeen) {
-    await page.evaluate(() => localStorage.setItem('mtf_hint_seen', '1'))
-    await page.reload()
-  }
   await waitForDesk(page)
 }
 
-/** Opens MTF over a stored document (default Areas a1–a3 unless given). */
-export async function seedDesk(page: Page, data: Partial<MtfData>, { hintSeen = true } = {}) {
+/** Opens MTF over a stored document (default Areas a1–a3 unless given). With `welcome`, as a device that never had its Welcome Card. */
+export async function seedDesk(page: Page, data: Partial<MtfData>, { welcome = false } = {}) {
   const doc: MtfData = { schemaVersion: 1, areas: AREAS, cards: [], events: [], ...data }
+  if (!welcome) await skipWelcome(page)
   await page.goto('/')
   await page.evaluate(
-    ({ doc, hintSeen }) => {
+    ({ doc, welcome }) => {
       localStorage.setItem('mtf_data', JSON.stringify(doc))
-      if (hintSeen) localStorage.setItem('mtf_hint_seen', '1')
+      // The first load placed a Welcome Card on a blank Desk; forget it, so the seeded Desk gets its own.
+      if (welcome) localStorage.removeItem('mtf_welcome_placed')
     },
-    { doc, hintSeen },
+    { doc, welcome },
   )
   await page.reload()
   await waitForDesk(page)

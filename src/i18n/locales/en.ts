@@ -55,8 +55,6 @@ export const en: Messages = {
   tidyUp: 'Tidy up',
   search: 'Search',
   searchField: 'Search your cards',
-  hint: 'Drag cards wherever you like. On your phone, press and hold a card to move it.',
-  hintOk: 'Got it',
 
   area: 'Area',
   newArea: 'New area',
@@ -150,4 +148,12 @@ export const en: Messages = {
   installNudge: 'Install MTF to keep your notes safer.',
   installHow: 'How',
   notNow: 'Not now',
+
+  welcomeTitle: 'Hi! This is MTF',
+  welcomeBody: 'Your desk for notes. Try this:',
+  welcomeDrag: 'Drag me somewhere else (on a phone, press and hold, then move)',
+  welcomeCheck: 'Check this item',
+  welcomeJar: 'Check everything and drop me in the jar',
+  introduction: 'Introduction',
+  seeIntro: 'See the introduction',
 }

@@ -76,7 +76,7 @@ The install section SHALL show what fits the device: a short "installed" line wi
 - **THEN** the install section shows generic steps to look for the install option in the browser menu
 
 ### Requirement: One-time install nudge
-When the user keeps a new Card in a session where MTF is not installed and the device can install it (iPhone/iPad, or a browser that offers installing), MTF SHALL show a short, positive nudge to install MTF, with a button that opens Settings and a button to dismiss it. It SHALL NOT appear while the first-run hint is still shown.
+When the user keeps a new Card in a session where MTF is not installed and the device can install it (iPhone/iPad, or a browser that offers installing), MTF SHALL show a short, positive nudge to install MTF, with a button that opens Settings and a button to dismiss it. Placing a Welcome Card SHALL NOT trigger it, since the user did not write it.
 
 #### Scenario: First kept Card on an iPhone
 - **WHEN** the user, in Safari on an iPhone with MTF not installed, keeps a new Card for the first time
@@ -92,6 +92,10 @@ When the user keeps a new Card in a session where MTF is not installed and the d
 
 #### Scenario: Browser that cannot install
 - **WHEN** the browser is not on iOS and does not offer installing MTF
+- **THEN** no install nudge appears
+
+#### Scenario: Welcome Card
+- **WHEN** MTF places a Welcome Card in Safari on an iPhone with MTF not installed
 - **THEN** no install nudge appears
 
 ### Requirement: The nudge shows once per device

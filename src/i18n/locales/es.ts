@@ -55,8 +55,6 @@ export const es = {
   tidyUp: 'Ordenar',
   search: 'Buscar',
   searchField: 'Buscar en tus tarjetas',
-  hint: 'Arrastrá las tarjetas a donde quieras. En el celu, mantené apretada una tarjeta para moverla.',
-  hintOk: 'Entendido',
 
   area: 'Área',
   newArea: 'Nueva área',
@@ -154,6 +152,14 @@ export const es = {
   installNudge: 'Instalá MTF para que tus notas estén más seguras.',
   installHow: 'Cómo',
   notNow: 'Ahora no',
+
+  welcomeTitle: '¡Hola! Esto es MTF',
+  welcomeBody: 'Tu escritorio para anotar. Probá esto:',
+  welcomeDrag: 'Arrastrame a otro lugar (en el celu, mantené apretado y mové)',
+  welcomeCheck: 'Tildá este ítem',
+  welcomeJar: 'Tildá todo y llevame al frasco',
+  introduction: 'Introducción',
+  seeIntro: 'Ver introducción',
 }
 
 export type Messages = typeof es
