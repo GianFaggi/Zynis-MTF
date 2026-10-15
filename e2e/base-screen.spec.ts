@@ -99,15 +99,3 @@ test('Settings closes when tapping outside it', async ({ page }) => {
   await page.mouse.click(10, 10)
   await expect(page.getByRole('dialog')).toBeHidden()
 })
-
-test('the first-run hint shows once and, dismissed, stays gone after a reload', async ({ page }) => {
-  await openApp(page, { hintSeen: false })
-  const hint = page.getByRole('note')
-  await expect(hint).toContainText('Arrastrá las tarjetas a donde quieras')
-  await hint.getByRole('button', { name: 'Entendido' }).click()
-  await expect(hint).toBeHidden()
-
-  await page.reload()
-  await expect(areaLabel(page, 'Trabajo')).toBeVisible()
-  await expect(hint).toBeHidden()
-})

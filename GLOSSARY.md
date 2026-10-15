@@ -54,6 +54,10 @@ _Avoid_: Task, subtask, todo, checkbox
 A Card whose Items with text are all checked (it has at least one). A Card without Items is never finished, but it can still go into the Jar. Adding an unchecked Item makes a finished Card unfinished again, and it loses its Card Win until it is finished again. On the Desk, a finished Card shows the "Llevala al frasco" chip.
 _Avoid_: Completed, closed, done card
 
+**Welcome Card** (ES: **Tarjeta de bienvenida**):
+The Card MTF places in the first Area, on top, on a device's first launch (once per device, also on a device already in use), in the current language. Its three Items teach by doing: drag it, check an Item, check everything and drop it in the Jar. It is an ordinary Card: the user checks its Items by hand, they count as Wins, and it is not a note written. Settings → **Ver introducción** (EN: **See the introduction**) places a new one.
+_Avoid_: Tutorial, onboarding, hint, sample card
+
 **Pinned Card**:
 A Card the user marked to stay on top of others in its Area when tidying up.
 _Avoid_: Favorite, starred
@@ -77,7 +81,7 @@ The number of Wins (Item Wins plus Card Wins) in a period. The wins counter and 
 _Avoid_: Score, total points, productivity
 
 **Note written** (ES: **nota escrita**):
-A newly created Card that the user kept (it was not empty when its editor closed). It is counted on its own, more quietly, and is not a Win. Deleting the Card removes it.
+A newly created Card that the user kept (it was not empty when its editor closed). It is counted on its own, more quietly, and is not a Win. A Welcome Card is not one: MTF wrote it. Deleting the Card removes it.
 _Avoid_: Post, entry
 
 **Mis logros** (EN: **My wins**):

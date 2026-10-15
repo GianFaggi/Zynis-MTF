@@ -18,6 +18,7 @@ import {
   saveArrangement as storeArrangement,
 } from '../lib/storage'
 import type { Area, AreaColor, AreaId, Card, Item, Language, MtfData, SavedArrangement, Theme, WinEvent } from '../types'
+import { welcomeCard, type WelcomeContent } from '../welcome/welcomeCard'
 import { cardDeleted, cardJarred, itemToggled, itemsRemoved, jarVerdict, noteWritten, syncCardWin, type JarVerdict } from '../wins/rules'
 
 // The single in-memory source of truth for saved data (KB/frontend/architecture.md).
@@ -41,6 +42,11 @@ export interface AppState {
   ensureDefaultAreas: () => void
   /** A new empty Card centered on `point` (Desk coordinates), on top of the others. Returns its id. */
   createCard: (point: Point) => string | undefined
+  /**
+   * A Welcome Card (#20) in the first Area, on top, with `content` already translated
+   * by the caller. Writes no event: MTF wrote it, so it is not a note. Returns its id.
+   */
+  placeWelcomeCard: (content: WelcomeContent) => string | undefined
   updateCard: (id: string, patch: Partial<Pick<Card, 'title' | 'body'>>) => void
   /** A new empty Item at the end, or right after `afterItemId`. Returns its id; its text is typed with `updateItem`. */
   addItem: (cardId: string, afterItemId?: string) => string | undefined
@@ -205,6 +211,15 @@ export function createAppStore() {
           createdAt: now,
           updatedAt: now,
         }
+        update((current) => ({ ...current, cards: [...current.cards, card] }))
+        return card.id
+      },
+
+      placeWelcomeCard: (content) => {
+        const { data } = get()
+        const area = data.areas[0]
+        if (!area) return undefined
+        const card = welcomeCard(area, content, { z: topZ(data.cards), now: Date.now(), newId })
         update((current) => ({ ...current, cards: [...current.cards, card] }))
         return card.id
       },

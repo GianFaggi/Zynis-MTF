@@ -34,6 +34,8 @@ export interface DeskState {
   winsBump: number
   /** The open Area editor; `isNew` for an Area just created, whose name opens selected. */
   areaEditor: { id: string; isNew: boolean } | null
+  /** The Card the first view shows instead of the usual one: the Welcome Card placed at this launch (#20). */
+  focusCardId: string | null
 
   setView: (view: View) => void
   /** Moves the view with an animation (none with reduced motion: the global CSS drops transitions). */
@@ -53,6 +55,7 @@ export interface DeskState {
   bumpWins: () => void
   openAreaEditor: (id: string, options?: { isNew?: boolean }) => void
   closeAreaEditor: () => void
+  setFocusCard: (id: string | null) => void
   /** After an Import: closes the editors, search and Mis logros, which may point at Cards or Areas that are gone. The view is not reset here. */
   resetAfterImport: () => void
 }
@@ -76,6 +79,7 @@ function createDeskStore() {
     winsAreaId: null,
     winsBump: 0,
     areaEditor: null,
+    focusCardId: null,
 
     setView: (view) => set({ view, flying: false }),
     flyTo: (view) => {
@@ -104,6 +108,7 @@ function createDeskStore() {
     bumpWins: () => set((state) => ({ winsBump: state.winsBump + 1 })),
     openAreaEditor: (id, { isNew = false } = {}) => set({ areaEditor: { id, isNew } }),
     closeAreaEditor: () => set({ areaEditor: null }),
+    setFocusCard: (id) => set({ focusCardId: id }),
     resetAfterImport: () =>
       set({ editingId: null, newCardId: null, areaEditor: null, searchOpen: false, query: '', winsOpen: false }),
   }))

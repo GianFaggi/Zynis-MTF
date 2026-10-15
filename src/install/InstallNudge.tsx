@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Callout } from '../components/ui/Callout'
 import { useT } from '../i18n'
-import { loadHintSeen, loadInstallNudgeSeen, saveInstallNudgeSeen } from '../lib/storage'
+import { loadInstallNudgeSeen, saveInstallNudgeSeen } from '../lib/storage'
 import { useAppStore } from '../store/appStore'
 import type { MtfData } from '../types'
 import { installMode, useInstallStore } from './installStore'
 
 // A one-time nudge to install MTF (KB/frontend/pwa.md#install-guidance). It waits for
 // the user to keep a new Card in this session (a new `note` event), so it never greets
-// a new user with a demand nor shows on a reload. Only where installing is possible
-// and MTF is not installed, and never on top of the first-run hint. Once per device.
+// a new user with a demand nor shows on a reload; a Welcome Card writes no `note`, so
+// it does not count. Only where installing is possible and MTF is not installed. Once
+// per device.
 
 const notesIn = (data: MtfData) => data.events.filter((event) => event.type === 'note').length
 
@@ -28,7 +29,7 @@ export function InstallNudge({ onHow }: InstallNudgeProps) {
       useAppStore.subscribe((state, previous) => {
         if (notesIn(state.data) <= notesIn(previous.data)) return
         const mode = installMode()
-        if ((mode === 'ios' || mode === 'prompt') && loadHintSeen() && !loadInstallNudgeSeen()) setShown(true)
+        if ((mode === 'ios' || mode === 'prompt') && !loadInstallNudgeSeen()) setShown(true)
       }),
     [],
   )

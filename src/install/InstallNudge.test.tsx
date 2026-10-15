@@ -1,11 +1,12 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { HINT_SEEN_KEY, INSTALL_NUDGE_SEEN_KEY } from '../lib/storage'
+import { INSTALL_NUDGE_SEEN_KEY } from '../lib/storage'
 import { useAppStore } from '../store/appStore'
 import { USER_AGENTS, restoreDevice, stubDevice } from '../test/device'
 import { resetStores } from '../test/stores'
 import type { WinEvent } from '../types'
+import { welcomeContent } from '../welcome/welcome'
 import { useInstallStore, type BeforeInstallPromptEvent } from './installStore'
 import { InstallNudge } from './InstallNudge'
 
@@ -33,7 +34,6 @@ describe('InstallNudge', () => {
   beforeEach(() => {
     resetStores({ events: [{ id: 'old', type: 'note', at: 1 }] })
     useInstallStore.setState(useInstallStore.getInitialState(), true)
-    localStorage.setItem(HINT_SEEN_KEY, '1')
   })
 
   afterEach(() => {
@@ -76,11 +76,12 @@ describe('InstallNudge', () => {
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
-  it('does not show while the first-run hint is still up', () => {
-    localStorage.removeItem(HINT_SEEN_KEY)
+  it('does not show when MTF places a Welcome Card, which the user did not write', () => {
     stubDevice(iphone)
     renderNudge()
-    keepNewCard()
+    act(() => {
+      useAppStore.getState().placeWelcomeCard(welcomeContent('es'))
+    })
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 

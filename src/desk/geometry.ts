@@ -111,6 +111,15 @@ export function cardView(card: Card, height: number | undefined, viewport: Viewp
   return fitRect({ x: rect.x - 200, y: rect.y - 120, w: rect.w + 400, h: rect.h + 240 }, viewport)
 }
 
+/**
+ * A view of a Welcome Card (#20) with its Items readable. On a phone that is the
+ * Area's view, whose top-left part is where the Card sits; wider, fitting the whole
+ * Area would leave the Card near the far look, so the view frames the Card itself.
+ */
+export function welcomeView(area: Area, card: Card, height: number | undefined, viewport: Viewport): View {
+  return viewport.w < PHONE_WIDTH ? areaView(area, viewport) : cardView(card, height, viewport)
+}
+
 /** The union of every Area, every Card on the Desk and the Jar with its caption; `null` when there is nothing. */
 export function deskBounds(areas: readonly Area[], cards: readonly Card[], heights: ReadonlyMap<string, number>): Rect | null {
   const jar = jarRect(areas)

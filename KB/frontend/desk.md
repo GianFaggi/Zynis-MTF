@@ -13,7 +13,7 @@ Pure modules (no React, no DOM; each has a co-located `*.test.ts`):
 
 | File | What |
 |---|---|
-| `geometry.ts` | View math: `toWorld`, `toScreen`, `clampScale`, `zoomAt`, `fitScale`, `fitRect`, `areaView`, `cardRect`, `cardView`, `deskBounds`, `boundingBox`, `initialView`; `randomTilt`, `between`; constants `MIN_SCALE`, `MAX_SCALE`, `FAR_SCALE`, `CARD_WIDTH`, `FALLBACK_CARD_HEIGHT` |
+| `geometry.ts` | View math: `toWorld`, `toScreen`, `clampScale`, `zoomAt`, `fitScale`, `fitRect`, `areaView`, `cardRect`, `cardView`, `welcomeView`, `deskBounds`, `boundingBox`, `initialView`; `randomTilt`, `between`; constants `MIN_SCALE`, `MAX_SCALE`, `FAR_SCALE`, `CARD_WIDTH`, `FALLBACK_CARD_HEIGHT` |
 | `areas.ts` | `defaultAreas(now)`, `areaForPoint(areas, point)`, `areaName(area, t)`, `spotIn(area, random)`; the Area rules of #7: `AREA_COLORS`, `nextColor`, `freeSlot`, `overlaps`, `overlapsAny`, `grown`, `sameRect`, `resizedRect`, `nearestArea`, `cleanName`, `MIN_AREA_SIZE`, `AREA_NAME_MAX`; the layout constants `ROW_ORIGIN`, `AREA_GAP`, `ROW_GAP` ([Areas](#areas)) |
 | `arrange.ts` | Arranging the Areas (#18): `rowArrangement`, `gridArrangement`, `starArrangement`, `savedArrangement(areas, rects)`, `canRestore(areas, saved)`, `isRecoverable(areas, saved)`; type `Arrangement` ([Arranging the Areas](#arranging-the-areas-18)) |
 | `tidy.ts` | `tidyLayout(areas, cards, heights, random)`, `columnCount(width)` |
@@ -25,7 +25,8 @@ State and components:
 
 | File | What |
 |---|---|
-| `deskStore.ts` | Unsaved Desk UI state ([architecture.md](architecture.md)): view, `flying`, `tidying`, `editingId`, `newCardId`, `areaEditor`, `searchOpen`, `query`, `toast`, `winsOpen`, `winsAreaId`, `winsBump`; actions `setView`, `flyTo`, `animateTidy`, `openEditor`, `closeEditor`, `openAreaEditor`, `closeAreaEditor`, `toggleSearch`, `setQuery`, `showToast`, `openWins(areaId?)`, `setWinsArea`, `closeWins`, `bumpWins`, `resetAfterImport` |
+| `deskStore.ts` | Unsaved Desk UI state ([architecture.md](architecture.md)): view, `flying`, `tidying`, `editingId`, `newCardId`, `areaEditor`, `searchOpen`, `query`, `toast`, `winsOpen`, `winsAreaId`, `winsBump`, `focusCardId`; actions `setView`, `flyTo`, `animateTidy`, `openEditor`, `closeEditor`, `openAreaEditor`, `closeAreaEditor`, `setFocusCard`, `toggleSearch`, `setQuery`, `showToast`, `openWins(areaId?)`, `setWinsArea`, `closeWins`, `bumpWins`, `resetAfterImport` |
+| `view.ts` | View moves shared by more than one control: `showWholeDesk()` (See all, after an Import) and `welcomeCardView(id, heights?)` (the first view, "Ver introducción") |
 | `dom.ts` | `measureCardHeights()`, `viewport()` and `prefersReducedMotion()` — the only place that reads sizes and media settings from the DOM — and `jarElement(areaId?)` / `highlightJar(target)`, the only `data-jar` lookups ([Area Jars](#area-jars-19)) |
 | `Desk.tsx` | The surface: world `div`, grain, gestures, Card drag, the Jar drop, Area move and resize, double-click to create |
 | `AreaRegion.tsx` | One Area, in one wrapper at its rect's top-left: the soft tinted region, its label with the Card count, the edit button, the resize handle and, while "Frasco por área" is on, its Area Jar ([Area Jars](#area-jars-19)) |
@@ -36,7 +37,6 @@ State and components:
 | `CardEditor.tsx` | The editor sheet, with "Llevar al frasco" |
 | `Dock.tsx` | Area buttons, Frasco, See all, Tidy up |
 | `SearchBox.tsx` | The search field |
-| `FirstRunHint.tsx` | The one-time hint above the Dock |
 
 Functions that random numbers feed (`spotIn`, `tidyLayout`, `randomTilt`) take a `random: () => number`, so tests pass a fixed sequence.
 
@@ -124,7 +124,8 @@ Why Areas became movable and resizable, and why their Cards travel with them →
 - **See all** fits `deskBounds`: every Area, every Card on the Desk and the Jar with its caption. The 8% zoom floor wins: on a phone, a Desk wider than ~5,000 px (a Card dropped very far out) cannot fit entirely, and See all shows its middle at 8%.
 - **Tidy up** (`tidyLayout`), per Area: its Cards on the Desk sorted pinned first, then `createdAt` newest first; `cols = max(1, floor((w + 52) / (236 + 52)))` columns, centered in the Area, starting 140 px below its top; each Card goes into the shortest column with x jitter ±14 px, y jitter −8…+10 px and a new tilt (±2.2°); 40 px between Cards in a column. Positions only: no Card changes Area. Animated for 560 ms unless reduced motion.
 - **Search**: matches (`matchesQuery`: title, text and Items, ignoring case and accents) get a 3 px **ink** ring and the rest drop to 18% opacity. `Enter` flies to the first match in Desk order (highest `z` first) with `cardView`. `Esc` or the search button closes and clears it. An empty query dims nothing.
-- **Initial view** (`initialView`), after `document.fonts.ready`: the whole Desk if it fits at `s ≥ 0.34`, otherwise the first Area with `areaView`.
+- **Initial view**, after `document.fonts.ready` (`firstView()` in `Desk.tsx`): when `deskStore.focusCardId` names a Card on the Desk (the Welcome Card placed at this launch, [below](#the-welcome-card-20)), `welcomeView` for it, and `focusCardId` is cleared, so a reload gets the usual view. Otherwise `initialView`: the whole Desk if it fits at `s ≥ 0.34`, otherwise the first Area with `areaView`.
+- **`welcomeView(area, card, height, viewport)`**: narrower than 640 px it is `areaView(area)`, whose top-left corner is where the Welcome Card sits; wider it is `cardView(card, height)`. Fitting a whole 980 × 1000 Area on Playwright's 1280 × 720 window gives ≈ 0.56, right at the far threshold, where one small resize would hide the Card's Items; framing the Card gives close to 100% there.
 - `Esc` closes the open sheet first.
 
 ## The Jar
@@ -175,6 +176,16 @@ Built in change 3. Code in `src/wins/` ([files below](#files-srcwins)); the Win 
 | `JarGlass.tsx` | The Jar's SVG (lid, glass, pieces, label), shared by `Jar` and `AreaJar`; `compact` for an Area Jar |
 | `AreaJar.tsx`, `JarMoveSheet.tsx` | An Area's small Jar (#19); the "¿Pasarla a…?" question |
 | `WinsCounter.tsx`, `MisLogros.tsx`, `WinsChart.tsx` | The counter in the tools pill, the Mis logros sheet (with its Area filter while "Frasco por área" is on), its 7-day bar chart |
+
+## The Welcome Card (#20)
+
+The introduction is a Card, not a tour: its checklist makes the user drag it, check an Item, and finish it into the Jar. It replaced the first-run hint above the Dock.
+
+- **An ordinary Card.** `welcomeCard(area, content, { z, now, newId })` (`src/welcome/welcomeCard.ts`) builds a plain `Card`: title, one line of text, three unchecked Items, `tilt: 0` (the first thing a new user reads sits straight; the first drag tilts it like any Card), at `(area.x + 70, area.y + 150)`, the top-left of where `spotIn` places Cards. Nothing marks it in the data, so drag, check, the Jar, Wins, search and Tidy up have no special case for it, and MTF never checks its Items for the user. Dropped on the Jar with Items unchecked, the Jar refuses it with "Todavía no", which also teaches.
+- **Copy** (`welcomeTitle`, `welcomeBody`, `welcomeDrag`, `welcomeCheck`, `welcomeJar`), built by `welcomeContent(language)` in the UI language at the moment it is placed. Once placed it is the user's Card: switching the language does not translate it.
+- **Wins.** `appStore.placeWelcomeCard(content)` writes no event, and its editor never counts it as a note (`closeCard` without `isNew`): MTF wrote it. Its Items and its finish count as Item and Card Wins as usual. Because there is no `note`, it never triggers the install nudge.
+- **Once per device.** `placeWelcomeOnce()` (`src/welcome/welcome.ts`), called from `main.tsx` before the first render, places it with `placeWelcome()` (in the first Area, on top) when `mtf_welcome_placed` is not `'1'`, then writes the key and sets `deskStore.focusCardId` so the first view frames it. A device already in use gets it once too, on top of its own Cards; deleting it or putting it in the Jar never brings it back, and an Import does not touch the key ([storage.md](storage.md#keys)). Outside React on purpose: an effect would run twice under StrictMode and in every `App` test.
+- **Settings → Introducción → "Ver introducción"** (`WelcomeSection`, last in Settings): closes Settings, places a **new** Welcome Card with the same `placeWelcome()`, in the current language (even when an earlier one is still on the Desk) and flies to it with `welcomeCardView`. It does not touch `mtf_welcome_placed`.
 
 ## Accessibility
 

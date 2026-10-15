@@ -27,6 +27,7 @@ import {
   type View,
 } from './geometry'
 import { HOLD_MS, nextIntent, releaseOutcome, type Intent, type PointerKind } from './intent'
+import { welcomeCardView } from './view'
 
 // The Desk (KB/frontend/desk.md, ADR 0003): one world `div` moved with a CSS
 // transform, and one gesture controller for the whole surface. Gesture frames write
@@ -342,6 +343,16 @@ function flyToArea(area: Area) {
   useDeskStore.getState().flyTo(areaView(area, viewport()))
 }
 
+/** The view MTF opens on: the Welcome Card placed at this launch, if any (then forgotten), otherwise `initialView`. */
+function firstView(): View {
+  const { areas, cards } = useAppStore.getState().data
+  const heights = measureCardHeights()
+  const { focusCardId, setFocusCard } = useDeskStore.getState()
+  const welcome = welcomeCardView(focusCardId, heights)
+  if (focusCardId !== null) setFocusCard(null)
+  return welcome ?? initialView(areas, cards, heights, viewport())
+}
+
 function editArea(area: Area) {
   useDeskStore.getState().openAreaEditor(area.id)
 }
@@ -403,8 +414,7 @@ export function Desk() {
     let cancelled = false
     void (document.fonts?.ready ?? Promise.resolve()).then(() => {
       if (cancelled) return
-      const { areas, cards } = useAppStore.getState().data
-      useDeskStore.getState().setView(initialView(areas, cards, measureCardHeights(), viewport()))
+      useDeskStore.getState().setView(firstView())
     })
     return () => {
       cancelled = true

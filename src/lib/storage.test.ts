@@ -4,29 +4,29 @@ import {
   AREA_JARS_KEY,
   ARRANGEMENT_KEY,
   DATA_KEY,
-  HINT_SEEN_KEY,
   INSTALL_NUDGE_SEEN_KEY,
   LANGUAGE_KEY,
   RECOVERY_KEY_PREFIX,
   SCHEMA_VERSION,
   THEME_KEY,
+  WELCOME_PLACED_KEY,
   emptyData,
   loadAreaJars,
   loadArrangement,
   loadData,
-  loadHintSeen,
   loadInstallNudgeSeen,
   loadLanguage,
   loadTheme,
+  loadWelcomePlaced,
   migrate,
   requestPersistentStorage,
   saveAreaJars,
   saveArrangement,
   saveData,
-  saveHintSeen,
   saveInstallNudgeSeen,
   saveLanguage,
   saveTheme,
+  saveWelcomePlaced,
   upgradeDocument,
 } from './storage'
 
@@ -136,21 +136,31 @@ describe('storage', () => {
     expect(loadData()).toEqual(emptyData())
     expect(loadLanguage()).toBeNull()
     expect(loadTheme()).toBeNull()
-    expect(loadHintSeen()).toBe(false)
+    expect(loadWelcomePlaced()).toBe(false)
     expect(loadArrangement()).toBeNull()
     expect(() => saveData(sample)).not.toThrow()
     expect(() => saveArrangement({ rects: {}, savedAt: 1 })).not.toThrow()
     expect(() => saveLanguage('en')).not.toThrow()
     expect(() => saveTheme('dark')).not.toThrow()
-    expect(() => saveHintSeen()).not.toThrow()
+    expect(() => saveWelcomePlaced()).not.toThrow()
     expect(warn).toHaveBeenCalled()
   })
 
-  it('remembers that the first-run hint was dismissed', () => {
-    expect(loadHintSeen()).toBe(false)
-    saveHintSeen()
-    expect(localStorage.getItem(HINT_SEEN_KEY)).toBe('1')
-    expect(loadHintSeen()).toBe(true)
+  it("remembers that the Welcome Card was placed, and reads anything but '1' as not placed", () => {
+    expect(loadWelcomePlaced()).toBe(false)
+    saveWelcomePlaced()
+    expect(localStorage.getItem(WELCOME_PLACED_KEY)).toBe('1')
+    expect(loadWelcomePlaced()).toBe(true)
+    localStorage.setItem(WELCOME_PLACED_KEY, 'true')
+    expect(loadWelcomePlaced()).toBe(false)
+  })
+
+  it('reads the Welcome Card as not placed when storage refuses to read', () => {
+    localStorage.setItem(WELCOME_PLACED_KEY, '1')
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    expect(loadWelcomePlaced()).toBe(false)
   })
 
   it('stores and reads the language', () => {

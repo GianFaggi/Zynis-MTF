@@ -9,7 +9,7 @@ export const SCHEMA_VERSION = 1
 export const DATA_KEY = 'mtf_data'
 export const LANGUAGE_KEY = 'mtf_language'
 export const THEME_KEY = 'mtf_theme'
-export const HINT_SEEN_KEY = 'mtf_hint_seen'
+export const WELCOME_PLACED_KEY = 'mtf_welcome_placed'
 export const INSTALL_NUDGE_SEEN_KEY = 'mtf_install_nudge_seen'
 export const ARRANGEMENT_KEY = 'mtf_arrangement'
 export const AREA_JARS_KEY = 'mtf_area_jars'
@@ -120,13 +120,13 @@ export function saveAreaJars(on: boolean): void {
   write(AREA_JARS_KEY, on ? '1' : '0')
 }
 
-/** Whether the first-run hint was dismissed on this device. A device setting, like the language. */
-export function loadHintSeen(): boolean {
-  return read(HINT_SEEN_KEY) === '1'
+/** Whether MTF already placed this device's Welcome Card (#20). A device setting, like the theme: never in the Backup. */
+export function loadWelcomePlaced(): boolean {
+  return read(WELCOME_PLACED_KEY) === '1'
 }
 
-export function saveHintSeen(): void {
-  write(HINT_SEEN_KEY, '1')
+export function saveWelcomePlaced(): void {
+  write(WELCOME_PLACED_KEY, '1')
 }
 
 /** Whether the install nudge was shown and answered (or MTF was installed) on this device. */
