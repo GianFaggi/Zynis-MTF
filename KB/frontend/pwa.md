@@ -29,7 +29,10 @@ Risk: a page still running old JS that lazy-loads a chunk the new worker removed
 
 ## Manifest
 
-- `name`: "MTF — Más Tareas Fáciles", `short_name`: "MTF", `description` in Spanish, `lang`: `es`
+- `name` and `short_name`: "MTF By Zynis" (#27), `description` in Spanish, `lang`: `es`. The page `<title>` in `index.html` is the same text, so the browser tab matches
+- `<meta name="apple-mobile-web-app-title" content="MTF By Zynis">` in `index.html`: Safari's Add to Home Screen ignores the manifest name and suggests the page `<title>` unless this meta is set, so it is what fixes the label under the icon on iPhone, whatever the title says
+- Fallback: at 12 characters "MTF By Zynis" is at the edge of what launchers show under an icon. If a real phone cuts it ("MTF By Zy…"), `short_name` and the Apple title go back to "MTF"; `name` and `<title>` stay "MTF By Zynis"
+- A name change reaches installed apps unevenly: Android updates the label from the manifest on its own after a while; iPhone fixes the label when the app is added, so it shows the new one only after adding MTF to the home screen again (same address, so localStorage is kept)
 - `start_url` / `scope`: `/`
 - `display`: `standalone`, `orientation`: any (the Desk works in landscape too)
 - `theme_color` / `background_color`: paper (`#F5F1EA`), fixed at install time, so the splash stays light paper whatever the theme. The app paints the theme itself; the status bar comes from the light/dark `theme-color` metas in `index.html`, which follow the device under System and are set to the chosen paper under Light or Dark by `applyTheme` ([design-system.md](design-system.md#how-the-theme-switches))

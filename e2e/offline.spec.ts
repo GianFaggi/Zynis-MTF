@@ -22,7 +22,7 @@ test('opens offline after the first visit, with its fonts', async ({ page, conte
   await context.setOffline(true)
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: 'mtf', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'MTF By Zynis', exact: true })).toBeVisible()
   await expect(areaLabel(page, 'Trabajo')).toBeVisible()
   expect(await fontLoaded(page, 'italic 16px "Literata Variable"')).toBe(true)
 

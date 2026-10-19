@@ -34,7 +34,7 @@ describe('App', () => {
 
   it('shows the wordmark and the Desk with its three Areas', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'mtf' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'MTF By Zynis' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Escritorio' })).toBeInTheDocument()
     expect(areaLabels()).toEqual(['Trabajo, 0 tarjetas', 'Vida, 0 tarjetas', 'Recordar, 0 tarjetas'])
     expect(document.documentElement.lang).toBe('es')
@@ -81,11 +81,12 @@ describe('App', () => {
     expect(screen.getByRole('group', { name: 'Tema' })).toBeInTheDocument()
   })
 
-  it('switching to English changes every text, the Area names and the page language, and is remembered', async () => {
+  it('switching to English changes every text but the brand, the Area names and the page language, and is remembered', async () => {
     render(<App />)
     await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
     await userEvent.click(screen.getByRole('button', { name: 'English' }))
 
+    expect(screen.getByRole('heading', { name: 'MTF By Zynis' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Desk' })).toBeInTheDocument()
     expect(areaLabels()).toEqual(['Work, 0 cards', 'Life, 0 cards', 'Remember, 0 cards'])
     expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
