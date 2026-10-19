@@ -3,9 +3,11 @@ import { areaLabel, openApp } from './helpers.ts'
 
 test.use({ locale: 'es-AR' })
 
-test('opens to the Desk with its Areas, under the floating wordmark', async ({ page }) => {
+test('opens to the Desk with its Areas, under the floating wordmark', async ({ page, isMobile }) => {
   await openApp(page)
-  await expect(page.getByRole('heading', { name: 'mtf' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'MTF By Zynis', exact: true })).toBeVisible()
+  // The tagline follows the wordmark only on wide screens.
+  await expect(page.getByText('más tareas fáciles')).toBeVisible({ visible: !isMobile })
   await expect(page.getByRole('region', { name: 'Escritorio' })).toBeVisible()
   await expect(areaLabel(page, 'Trabajo')).toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('lang', 'es')

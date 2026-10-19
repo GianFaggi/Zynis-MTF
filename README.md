@@ -1,4 +1,4 @@
-# MTF — Más Tareas Fáciles
+# MTF By Zynis — Más Tareas Fáciles
 
 Un anotador con forma de **escritorio**. Escribís tarjetas, las dejás donde quieras y, cuando terminás algo, lo tirás al **frasco**: se va llenando y te muestra todo lo que hiciste.
 

@@ -94,8 +94,14 @@ export default function App() {
       <Desk />
 
       <div className="pointer-events-none fixed top-[calc(16px+env(safe-area-inset-top,0px))] left-[calc(18px+env(safe-area-inset-left,0px))] z-10 flex items-baseline gap-2.5">
-        <h1 className="font-display text-[28px] leading-none font-semibold tracking-[-0.01em] italic">mtf</h1>
-        <p className="hidden text-[12.5px] text-pencil min-[521px]:block">{t('tagline')}</p>
+        {/* "By Zynis" is the brand: part of the heading's name, and never translated. */}
+        <h1 className="font-display text-[26px] leading-none font-semibold tracking-[-0.01em] italic">
+          MTF <span className="font-ui text-[12.5px] font-medium tracking-normal text-pencil not-italic">By Zynis</span>
+        </h1>
+        <p className="hidden text-[12.5px] text-pencil min-[521px]:block">
+          <span aria-hidden="true" className="mr-2.5">·</span>
+          {t('tagline')}
+        </p>
       </div>
 
       <div className="fixed top-[calc(12px+env(safe-area-inset-top,0px))] right-[calc(14px+env(safe-area-inset-right,0px))] z-10 flex items-center gap-1 rounded-full bg-float p-1 shadow-paper backdrop-blur-[10px]">

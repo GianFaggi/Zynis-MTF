@@ -18,8 +18,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'MTF — Más Tareas Fáciles',
-        short_name: 'MTF',
+        name: 'MTF By Zynis',
+        short_name: 'MTF By Zynis',
         description: 'Un anotador con forma de escritorio que celebra lo que terminás.',
         lang: 'es',
         start_url: '/',

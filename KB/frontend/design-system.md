@@ -102,8 +102,8 @@ Everything else stays ink, pencil and paper: the Dock (its "Frasco" button inclu
 
 ## Typography
 
-- **Literata** (serif) — Card titles, Area labels (italic), wordmark `mtf` (italic), big numbers in Mis logros
-- **Figtree** (sans) — everything else
+- **Literata** (serif) — Card titles, Area labels (italic), wordmark `MTF` (26 px semibold italic; the capitals read heavier than the old lowercase `mtf` at 28 px), big numbers in Mis logros
+- **Figtree** (sans) — everything else, including the wordmark's **By Zynis** (12.5 px medium, `pencil`, upright) on the same baseline as `MTF`. It sits inside the `<h1>`, so the heading is named "MTF By Zynis", and it is the brand: a literal, never translated (#27). On screens wider than 520 px a `·` (`aria-hidden`) and the translated tagline follow, in `pencil`. No accent: the wordmark is not a Win
 - Both bundled via `@fontsource` (offline). Tabular numbers wherever digits line up.
 - Packages: `@fontsource-variable/literata` (normal + `wght-italic.css`) and `@fontsource-variable/figtree` (normal), imported in `src/main.tsx`. Variable fonts: one file per style covers every weight.
 - Family names: `"Literata Variable"` and `"Figtree Variable"`.
