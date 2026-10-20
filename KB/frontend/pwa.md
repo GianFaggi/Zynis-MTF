@@ -27,6 +27,15 @@ A new deploy → the browser fetches the new `sw.js` (Vercel serves it with `max
 
 Risk: a page still running old JS that lazy-loads a chunk the new worker removed. MTF has one bundle and no lazy routes; revisit if code splitting is added.
 
+## Address
+
+Added in #28 ([ADR 0008](../../docs/adr/0008-own-address.md)).
+
+- MTF is served at **`https://mtf.zynis.com.ar`**. The old production alias, `zynis-mtf.vercel.app`, redirects every path there (308) through `vercel.json`; preview deployments are not redirected ([stack.md](stack.md#deployment)).
+- **A new origin is a new app.** localStorage, the service worker, its precache and an installed app all belong to one origin (scheme + host). On a new address MTF starts with empty storage, its own install and its own Welcome Card; the notes arrive only through a Backup ([storage.md](storage.md#export--import)). On iPhone, Import inside the installed app, since it has storage of its own ([iOS specifics](#ios-specifics)).
+- **Apps installed from the old address never see the redirect.** The service worker serves every page load from its precache (`NavigationRoute` → `index.html`), so the page never reaches the server; only the update check asks for `sw.js`, and a service worker update refuses a redirected script. Those apps keep opening with their notes, offline too, on the version they have, and never update. They are a safety copy until their notes are imported on the new address, then uninstalled.
+- **The manifest stays origin-free**: `start_url` and `scope` are `/` and there is no `id`, so the same build works on any address. An `id` would not link two installs: an app's identity includes its origin.
+
 ## Manifest
 
 - `name` and `short_name`: "MTF By Zynis" (#27), `description` in Spanish, `lang`: `es`. The page `<title>` in `index.html` is the same text, so the browser tab matches

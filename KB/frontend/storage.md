@@ -155,3 +155,4 @@ A **Backup** is one JSON file, `mtf-backup-YYYY-MM-DD.json` (local date of the e
 
 - Safari can evict data of sites not opened for ~7 days; installed PWAs are treated better. Mitigation: install guidance in Settings + the one-time install nudge ([pwa.md](pwa.md)), the persistent storage request, and the Backup.
 - Clearing site data deletes everything. Mitigation: Backup.
+- Changing MTF's address strands the notes on the old one; a Backup per device is the only bridge ([ADR 0008](../../docs/adr/0008-own-address.md)). Mitigation: the address is chosen once (`mtf.zynis.com.ar`, #28), and hosting moves change only the DNS record.

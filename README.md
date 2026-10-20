@@ -14,6 +14,10 @@ Es parte de la familia **Zynis**. Funciona en el celu y en la PC, se instala com
 - **Tuyo y offline.** En esta primera versión tus notas se guardan en tu navegador. Más adelante, un backend .NET va a sincronizar el celu y la PC.
 - **Español e inglés.**
 
+## Abrí MTF
+
+**[mtf.zynis.com.ar](https://mtf.zynis.com.ar)** — abrila en el celu o en la PC e instalala desde el navegador para usarla sin internet. Tus notas quedan en ese dispositivo; para pasarlas a otro, usá Ajustes → Exportar copia / Importar copia.
+
 ## Probá la maqueta
 
 Abrí [`design/mtf-mockup-desk.html`](design/mtf-mockup-desk.html) en el navegador (es un solo archivo, no hace falta instalar nada):

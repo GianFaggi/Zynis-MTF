@@ -95,7 +95,7 @@ _Avoid_: Restore, undo, unarchive
 ## Data
 
 **Backup** (ES: **copia de seguridad**, **copia**):
-A file (`mtf-backup-YYYY-MM-DD.json`) with all of the user's Areas, Cards (on the Desk and in the Jar) and Wins, made by Export and loaded by Import. It does not carry device settings such as the language or the theme. In the MVP it is how data moves between phone and PC ([ADR 0006](docs/adr/0006-backup-file-format.md)).
+A file (`mtf-backup-YYYY-MM-DD.json`) with all of the user's Areas, Cards (on the Desk and in the Jar) and Wins, made by Export and loaded by Import. It does not carry device settings such as the language or the theme. In the MVP it is how data moves between phone and PC ([ADR 0006](docs/adr/0006-backup-file-format.md)), and the only way notes reach MTF at a new address, which the browser treats as a new app with empty storage ([ADR 0008](docs/adr/0008-own-address.md)).
 _Avoid_: Sync, save file, archive
 
 **Export** (ES: **Exportar copia**):
