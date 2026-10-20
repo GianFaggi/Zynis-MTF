@@ -96,6 +96,6 @@ The user must be able to:
 ## Stack Summary
 
 React + TypeScript + Vite · Tailwind CSS v4 · @use-gesture/react · Zustand · vite-plugin-pwa · localStorage · lucide-react · @fontsource
-Dev: Vitest + Testing Library + jsdom · Playwright · ESLint · GitHub Actions CI · Vercel
+Dev: Vitest + Testing Library + jsdom · Playwright · ESLint · GitHub Actions CI · Vercel (production at `https://mtf.zynis.com.ar`, [ADR 0008](docs/adr/0008-own-address.md))
 
 Full details → [KB/frontend/stack.md](KB/frontend/stack.md)

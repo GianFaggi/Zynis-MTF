@@ -13,7 +13,8 @@ context: |
   Stack: React + TypeScript + Vite, Tailwind CSS v4, @use-gesture/react, Zustand,
   vite-plugin-pwa (full offline precache), localStorage behind src/lib/storage,
   lucide-react, @fontsource. Tests: Vitest + Testing Library + jsdom (`npm test`),
-  Playwright for gesture flows (`npm run test:e2e`). Hosting: Vercel.
+  Playwright for gesture flows (`npm run test:e2e`). Hosting: Vercel, at https://mtf.zynis.com.ar
+  (the address is chosen once: the notes live on its origin, see docs/adr/0008-own-address.md).
 
   Before writing any artifact, read CLAUDE.md and the KB for the area the change
   touches (KB/frontend/*.md, KB/roadmap.md). The active ticket, its GitHub issue and

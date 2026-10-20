@@ -82,7 +82,9 @@ Node: 24 locally, 22 in CI.
 - **npm** — `package-lock.json` is the only lockfile; CI uses `npm ci`. The user's shell aliases `npm` to `pnpm`, so always run `command npm …`. Do not commit `pnpm-lock.yaml` or `yarn.lock`.
 
 ## Deployment
-- **MVP: Vercel** — static hosting, zero-config deploy for Vite
+- **MVP: Vercel** — static hosting, zero-config deploy for Vite (Vercel project `zynis-mtf`, production branch `main`, a preview per PR)
+- **Production address: `https://mtf.zynis.com.ar`** (#28) — a production domain of the Vercel project, pointed at it by a `CNAME mtf` record in the Don Web DNS of `zynis.com.ar` (like `cal.zynis.com.ar`); Vercel issues the HTTPS certificate. The address is chosen once, because the notes live on it ([ADR 0008](../../docs/adr/0008-own-address.md), [pwa.md](pwa.md#address))
+- **`vercel.json`** holds only one redirect: every path of the old alias `zynis-mtf.vercel.app` → the same path on `https://mtf.zynis.com.ar` (308), conditioned on that host so preview deployments and the new domain are untouched. Vite detection, `dist/` and the default headers (`sw.js` with `max-age=0, must-revalidate`) stay as Vercel sets them
 - **V2: .NET backend** — accounts, phone ↔ PC sync; hosting and database chosen when V2 starts
 
 ## Rules
