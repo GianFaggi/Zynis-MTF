@@ -84,7 +84,7 @@ Node: 24 locally, 22 in CI.
 ## Deployment
 - **MVP: Vercel** — static hosting, zero-config deploy for Vite (Vercel project `zynis-mtf`, production branch `main`, a preview per PR)
 - **Production address: `https://mtf.zynis.com.ar`** (#28) — a production domain of the Vercel project, pointed at it by a `CNAME mtf` record in the Don Web DNS of `zynis.com.ar` (like `cal.zynis.com.ar`); Vercel issues the HTTPS certificate. The address is chosen once, because the notes live on it ([ADR 0008](../../docs/adr/0008-own-address.md), [pwa.md](pwa.md#address))
-- **`vercel.json`** holds only one redirect: every path of the old alias `zynis-mtf.vercel.app` → the same path on `https://mtf.zynis.com.ar` (308), conditioned on that host so preview deployments and the new domain are untouched. Vite detection, `dist/` and the default headers (`sw.js` with `max-age=0, must-revalidate`) stay as Vercel sets them
+- **`vercel.json`** holds only two redirects, both from the old alias `zynis-mtf.vercel.app` to `https://mtf.zynis.com.ar` (308) and conditioned on that host so preview deployments and the new domain are untouched: the root `/` → `/` (#31), and every other path (`/:path*`) → the same path (#28). The root needs its own rule because Vercel does not match `/:path*` against the bare `/`; the query string is kept by Vercel on both. Vite detection, `dist/` and the default headers (`sw.js` with `max-age=0, must-revalidate`) stay as Vercel sets them
 - **V2: .NET backend** — accounts, phone ↔ PC sync; hosting and database chosen when V2 starts
 
 ## Rules

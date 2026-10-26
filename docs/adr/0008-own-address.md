@@ -1,6 +1,6 @@
 # MTF lives at mtf.zynis.com.ar, chosen once
 
-MTF is served at `https://mtf.zynis.com.ar`, a subdomain of the Zynis brand registered at Don Web, pointed at the Vercel project `zynis-mtf` by a `CNAME mtf` record, like `cal.zynis.com.ar` for Zynis Cal. The old production alias, `https://zynis-mtf.vercel.app`, permanently redirects (308) every path to the same path on the new address, through a host-conditioned rule in `vercel.json` (#28).
+MTF is served at `https://mtf.zynis.com.ar`, a subdomain of the Zynis brand registered at Don Web, pointed at the Vercel project `zynis-mtf` by a `CNAME mtf` record, like `cal.zynis.com.ar` for Zynis Cal. The old production alias, `https://zynis-mtf.vercel.app`, permanently redirects (308) every path to the same path on the new address, through host-conditioned rules in `vercel.json` (#28); the root `/` has a rule of its own, added in #31, because Vercel does not match `/:path*` against it.
 
 The address is where the notes live. localStorage, the service worker and an installed app all belong to one **origin** (scheme + host) ([ADR 0002](0002-local-first-storage.md)): a new address is a new app with empty storage, and MTF has no server to carry the notes across. So the address is chosen **once**:
 
