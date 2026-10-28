@@ -59,7 +59,15 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 
 ## V2 Backlog (do not implement in MVP)
 
-- .NET backend: accounts + login, phone ↔ PC sync, offline queue
+- .NET backend: accounts + login ([#36](https://github.com/GianFaggi/Zynis-MTF/issues/36)), phone ↔ PC sync and offline queue ([#37](https://github.com/GianFaggi/Zynis-MTF/issues/37)). Runs on Render Free (API) + Neon Free (Postgres), built to move to a VM ([ADR 0009](../docs/adr/0009-v2-backend-hosting.md), [#34](https://github.com/GianFaggi/Zynis-MTF/issues/34)). Portability rules, worded and explained in the ADR:
+  - [ ] `Dockerfile` listening on `${PORT}`
+  - [ ] Connection string only from `ConnectionStrings__DefaultConnection`
+  - [ ] Migrations at start-up
+  - [ ] `/health` never touches the database
+  - [ ] Standard Postgres 17, no Neon-only features
+  - [ ] Own address `api.mtf.zynis.com.ar`, low TTL
+  - [ ] A Neon project of its own, never shared with Zynis Cal
+  - [ ] Encrypted nightly backup
 - Sharing a Card or an Area with someone
 - Reminders on a Card
 - Export wins to a Sheet / CSV
