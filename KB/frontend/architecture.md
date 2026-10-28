@@ -38,6 +38,7 @@ One screen: the **Desk**. Everything else (Card editor, Mis logros, settings) op
        |
        +--> MVP: localStorage
        +--> V2:  .NET API (same interface, plus sync)
+                 API on Render, Postgres on Neon
 ```
 
 ## Two stores
@@ -138,6 +139,7 @@ Removing events makes V2 sync need tombstones or a deletion log next to `events`
 | Accounts | none (one user per browser) | login |
 | Phone ↔ PC | Export / Import backup file | automatic sync |
 | Offline | always | always (sync when back online) |
+| Hosting | Vercel only (static) | Vercel + API on Render Free + Postgres on Neon Free ([ADR 0009](../../docs/adr/0009-v2-backend-hosting.md)) |
 
 ## Data model decision
 
