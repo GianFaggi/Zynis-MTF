@@ -156,4 +156,11 @@ export const en: Messages = {
   welcomeJar: 'Check everything and drop me in the jar',
   introduction: 'Introduction',
   seeIntro: 'See the introduction',
+
+  waitEntering: 'Signing in…',
+  waitConnecting: 'Connecting…',
+  waitWaking: 'The server is waking up. The first time each day it can take up to a minute.',
+  waitAlmost: 'Almost there…',
+  waitFailed: "We couldn't connect right now. Your desk still works; try again in a while.",
+  syncing: 'Syncing…',
 }

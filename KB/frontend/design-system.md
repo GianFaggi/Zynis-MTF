@@ -45,6 +45,9 @@ Live in the `@theme static` block of `src/index.css` (Tailwind v4). TypeScript n
 | `--animate-spark` | `spark .75s … forwards` (to `translate(var(--dx), var(--dy)) scale(.4)`, opacity 0) | — | One spark of a celebration (`src/wins/sparks.ts`) |
 | `--animate-pop` | `pop .6s` (scale 1.06 at 35%, a fading accent glow) | — | A Card just finished by checking its last Item (`data-celebrate`); uses `scale`, not `transform`, so it never fights the tilt or a drag |
 | `--animate-stamp` | `stamp .45s`, 0.12 s delay (from `scale(2.2)`, faded, `rotate(-30deg)`) | — | The finished Card's seal landing on its corner |
+| `--animate-fly` | `fly 3.2s linear infinite` (11 `translate` + `rotate` stops in scene units, 0–88 %, then off-screen) | — | The paper plane looping along its arc while MTF waits for the server (`src/sync/PaperPlane.tsx`, #35) |
+| `--animate-trail` | `trail 3.2s linear infinite` (`clip-path: inset(0 R% 0 0)` at the same stops, fading out 88–96 %) | — | The plane's dotted pencil trail drawing itself behind it |
+| `--animate-sway` | `sway 1.6s ease-in-out infinite alternate` (±1 px, ±8°) | — | The sync indicator's `Send` icon in the tools pill |
 
 **Area colors.** There are 12, listed in swatch order by `AREA_COLORS` in `src/desk/areas.ts` (sage, sand, sky, plum, rose, teal, olive, slate, indigo, turquoise, pine, berry); `AreaColor` in `src/types` is the same union. The user picks one per Area in the Area editor, and two Areas may share one. None of them is the accent, which stays reserved for wins: there is no orange, and rose and berry lean pink and magenta, away from the terracotta. During #7, after seeing the Desk, the user asked for **more colors and stronger ones**: the palette went from 8 to 12 (indigo, turquoise, pine and berry fill the empty parts of the hue wheel) and every Area color, the original five included, got more saturated in both themes, together with stronger `--card-tint` and `--area-tint`. Checked on a Desk with 12 Areas in light and dark (tint, label, Card, Jar piece, swatch). Hex values live only in `src/index.css`, never in TypeScript.
 
@@ -100,6 +103,8 @@ Other Desk paint, as arbitrary values in the components: Card border `color-mix(
 
 Everything else stays ink, pencil and paper: the Dock (its "Frasco" button included), the editor's "Llevar al frasco" button, toasts and the rest of Mis logros.
 
+**The paper plane is the sign of sync: ink and paper, never the accent** (#35). Travelling between devices is not a Win. The plane (`PaperPlane`) has an `ink` outline, a `sheet` wing and a `paper` keel, and its dotted trail is `pencil`. The sync indicator's `Send` icon is `ink-2`. It lives in a 320 × 72 scene (`viewBox`) whose edges fade with a `mask-image`, so the plane leaves on the right and comes back in from the left. At rest (reduced motion, or a wait that gave up at 90 s) it sits mid-arc on the whole trail. Approved in [design/mtf-mockup-avion.html](../../design/mtf-mockup-avion.html).
+
 ## Typography
 
 - **Literata** (serif) — Card titles, Area labels (italic), wordmark `MTF` (26 px semibold italic; the capitals read heavier than the old lowercase `mtf` at 28 px), big numbers in Mis logros
@@ -131,6 +136,7 @@ Feature pieces that use the accent live outside the kit, which never does: `Item
 ## Rules
 
 - **Color is information.** Area colors identify Areas; the accent means "you did something". Never use the accent for decoration or navigation — not even the focus ring (the mockup used accent there; the app uses ink).
+- **The paper plane is the sign of sync: ink and paper, never the accent.** Waiting for the server shows the plane and calm messages, never a spinner, a progress bar or a countdown ([Where the accent is allowed](#tokens)).
 - **No chrome bars.** Controls float on the paper (pill groups, dock, FAB); there is no header bar and no tab bar.
 - **Positive copy only.** Celebrate, never scold ("Los días tranquilos también cuentan").
 - Light and dark themes both designed; dark is warm charcoal, not pure black. The user can follow the system or pick one in Settings.

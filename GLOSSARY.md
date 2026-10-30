@@ -105,3 +105,9 @@ _Avoid_: Save, sync, download (as the name of the action)
 **Import** (ES: **Importar copia**):
 Loading a Backup on this device. MTF checks the file first and, after the user confirms, **replaces** everything on the device with it; it never merges. A file that is not a valid Backup changes nothing.
 _Avoid_: Restore, sync, merge, open
+
+## Sync
+
+**Paper plane** (ES: **avión de papel**):
+The sign that the Desk is travelling between devices, or that MTF is waiting for its server. It is drawn in ink and paper, never the accent, because travelling is not a Win. While waiting it loops along a soft arc over a dotted pencil trail, with calm messages instead of a progress bar; in the tools pill it is a small swaying icon.
+_Avoid_: Spinner, loader, progress bar

@@ -14,11 +14,25 @@ import { placeWelcomeOnce } from './welcome/welcome'
 listenForInstall()
 // A chosen Light or Dark in place before React's first commit (System needs nothing).
 applyTheme(useAppStore.getState().theme)
-// Once per device, before the Desk's first view, which frames it.
-placeWelcomeOnce()
+const root = createRoot(document.getElementById('root')!)
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// Dev only: `/?avion` shows the paper plane preview instead of the Desk. A production
+// build replaces `import.meta.env.DEV` with `false`, so this branch and its chunk are dropped.
+if (import.meta.env.DEV && new URLSearchParams(location.search).has('avion')) {
+  void import('./sync/PlanePreview').then(({ PlanePreview }) =>
+    root.render(
+      <StrictMode>
+        <PlanePreview />
+      </StrictMode>,
+    ),
+  )
+} else {
+  // Once per device, before the Desk's first view, which frames it.
+  placeWelcomeOnce()
+
+  root.render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+}

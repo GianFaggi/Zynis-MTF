@@ -160,6 +160,13 @@ export const es = {
   welcomeJar: 'Tildá todo y llevame al frasco',
   introduction: 'Introducción',
   seeIntro: 'Ver introducción',
+
+  waitEntering: 'Entrando…',
+  waitConnecting: 'Conectando…',
+  waitWaking: 'El servidor se está despertando. La primera vez del día puede tardar hasta un minuto.',
+  waitAlmost: 'Ya casi…',
+  waitFailed: 'No pudimos conectar ahora. Tu escritorio sigue funcionando; probá en un rato.',
+  syncing: 'Sincronizando…',
 }
 
 export type Messages = typeof es
