@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { loadSession, saveSession, SESSION_KEY } from '../lib/storage'
 import { apiRequest, type ApiResult } from './api'
 import {
@@ -33,6 +33,18 @@ const sentRefreshTokens = () =>
 
 function answer(...results: ApiResult<unknown>[]) {
   for (const result of results) request.mockResolvedValueOnce(result)
+}
+
+/** A stand-in for the browser's Web Locks (jsdom has none): one task at a time, in order. */
+function fakeLocks() {
+  let last: Promise<unknown> = Promise.resolve()
+  return {
+    request<T>(_name: string, task: () => Promise<T>): Promise<T> {
+      const run = last.then(task)
+      last = run.catch(() => undefined)
+      return run
+    },
+  }
 }
 
 describe('accountStore', () => {
@@ -88,6 +100,18 @@ describe('accountStore', () => {
     await refreshSession()
 
     expect(sentRefreshTokens()).toEqual(['rt-from-other-tab'])
+  })
+
+  it('renewals run one at a time, across tabs too, each with the token the last one saved', async () => {
+    Object.defineProperty(navigator, 'locks', { value: fakeLocks(), configurable: true })
+    onTestFinished(() => void Reflect.deleteProperty(navigator, 'locks'))
+    signedIn(tokens('rt-1'))
+    answer({ ok: true, data: tokens('rt-2') }, { ok: true, data: tokens('rt-3') })
+
+    await Promise.all([refreshSession(), refreshSession()])
+
+    expect(sentRefreshTokens()).toEqual(['rt-1', 'rt-2'])
+    expect(loadSession()?.refreshToken).toBe('rt-3')
   })
 
   it('only session_ended ends the session, quietly', async () => {

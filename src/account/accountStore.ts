@@ -92,21 +92,35 @@ export function signOut(): void {
   if (session && navigator.onLine) void apiRequest('/api/auth/logout', { body: { refreshToken: session.refreshToken } })
 }
 
-/** Renews the access token. Only `session_ended` ends the session; any other failure keeps it for next time. */
-export async function refreshSession(signal?: AbortSignal): Promise<ApiResult<string>> {
-  const session = currentSession()
-  if (!session) {
-    // Another tab signed out: nothing left to renew.
-    forget({ sessionEnded: false })
-    return { ok: false, code: 'session_ended' }
-  }
-  const result = await apiRequest<Tokens>('/api/auth/refresh', { body: { refreshToken: session.refreshToken }, signal })
-  if (result.ok) {
-    signedIn(result.data)
-    return { ok: true, data: result.data.accessToken }
-  }
-  if (result.code === 'session_ended') forget({ sessionEnded: true })
-  return result
+/**
+ * Renews the access token. Only `session_ended` ends the session; any other failure keeps it for next time.
+ * One renewal at a time across this browser's tabs, each reading the token the last one saved: two
+ * renewals racing with the same token would leave two live tokens, and the older one, kept on the
+ * device, would end the session at its next use.
+ */
+export function refreshSession(signal?: AbortSignal): Promise<ApiResult<string>> {
+  return oneAtATime(async () => {
+    const session = currentSession()
+    if (!session) {
+      // Another tab signed out: nothing left to renew.
+      forget({ sessionEnded: false })
+      return { ok: false, code: 'session_ended' }
+    }
+    const result = await apiRequest<Tokens>('/api/auth/refresh', { body: { refreshToken: session.refreshToken }, signal })
+    if (result.ok) {
+      signedIn(result.data)
+      return { ok: true, data: result.data.accessToken }
+    }
+    if (result.code === 'session_ended') forget({ sessionEnded: true })
+    return result
+  })
+}
+
+const RENEWAL_LOCK = 'mtf_session_renewal'
+
+/** Runs `task` under a lock shared by this origin's tabs (Web Locks); a browser without them runs it at once. */
+function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
+  return 'locks' in navigator ? navigator.locks.request(RENEWAL_LOCK, task) : task()
 }
 
 export function sessionAccess(signal?: AbortSignal): SessionAccess {

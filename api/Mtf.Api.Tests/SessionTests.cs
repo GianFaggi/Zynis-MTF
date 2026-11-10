@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Mtf.Api.DTOs;
+using Mtf.Api.Services;
 using Mtf.Api.Tests.Infrastructure;
 
 namespace Mtf.Api.Tests;
@@ -119,14 +120,23 @@ public class SessionTests(ApiFactory factory)
     [Fact]
     public async Task Two_renewals_at_the_same_moment_both_work_and_the_session_continues()
     {
-        var session = await factory.SignedInUser(Accounts.NewEmail());
+        var email = Accounts.NewEmail();
+        var session = await factory.SignedInUser(email);
 
         var answers = await Task.WhenAll(_client.Refresh(session.RefreshToken), _client.Refresh(session.RefreshToken));
 
         Assert.All(answers, a => Assert.Equal(HttpStatusCode.OK, a.StatusCode));
+        // The two rotations run one after the other, so one answer holds the session's token and the
+        // other the one it retired. Tabs renew one at a time (accountStore), so a device keeps the newest.
         var tokens = await Task.WhenAll(answers.Select(a => a.Content.ReadFromJsonAsync<TokensResponse>()));
-        foreach (var token in tokens)
-            Assert.Equal(HttpStatusCode.OK, (await _client.Refresh(token!.RefreshToken)).StatusCode);
+        var hashes = tokens.Select(t => SecretToken.Hash(t!.RefreshToken)).ToList();
+        var current = await factory.Db(db =>
+            db.Sessions.Where(s => hashes.Contains(s.TokenHash)).Select(s => s.TokenHash).SingleAsync());
+        var newest = tokens[hashes.IndexOf(current)]!;
+
+        factory.Clock.Advance(TimeSpan.FromMinutes(2) + TimeSpan.FromSeconds(1));
+        await Renewed(newest.RefreshToken);
+        Assert.Equal(1, await SessionCount(email));
     }
 
     [Fact]
