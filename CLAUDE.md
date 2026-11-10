@@ -10,6 +10,7 @@
 It is a personal notepad shaped like a **desk**: the user writes Cards (text and/or a checklist) and places them freely on one big surface, grouped in soft Areas (Trabajo, Vida, Recordar). Finished Cards go into the **Jar**, which fills up and shows the user how much they got done.
 
 It is built for its author first; other people may use it later.
+**The MVP is finished and V2 has started**: #36 added optional accounts on a .NET backend in `api/`; #37 will sync the Desk between devices.
 It is **not a calendar and not a to-do app**. It is a notepad that celebrates what you finish.
 
 The approved direction is the clickable mockup [design/mtf-mockup-desk.html](design/mtf-mockup-desk.html). The rejected tabs + grid version, [design/mtf-mockup.html](design/mtf-mockup.html), is kept for reference ([ADR 0001](docs/adr/0001-desk-instead-of-tabs.md)).
@@ -18,7 +19,7 @@ The approved direction is the clickable mockup [design/mtf-mockup-desk.html](des
 
 ## Core Rules
 
-- **MVP = no backend.** Data lives in the browser (localStorage) behind a storage layer. Accounts and phone ↔ PC sync come in V2 with a **.NET** backend. Anything that needs a server goes to the V2 backlog.
+- **The Desk never needs a server.** Notes live in the browser (localStorage) behind a storage layer. The **.NET backend** in `api/` (Render + Neon, [ADR 0009](docs/adr/0009-v2-backend-hosting.md)) holds accounts, and will hold sync (#37), but an account is always **optional**: MTF opens and works fully with no account and no connection, makes no request at launch, and only the Account sheet calls the API ([KB/backend/api.md](KB/backend/api.md)).
 - **Offline first.** Unlike Zynis Pulse, the service worker precaches the whole app: MTF must open with no signal. Fonts are bundled, never loaded from Google Fonts.
 - **Sync-ready data.** Every entity has a `uuid` id and `createdAt` / `updatedAt` timestamps from day one, so V2 sync is an addition, not a rewrite.
 - **The desk is free.** No tabs, columns or grids that decide where Cards go. Areas are regions of one surface, not containers ([ADR 0001](docs/adr/0001-desk-instead-of-tabs.md)).
@@ -29,7 +30,7 @@ The approved direction is the clickable mockup [design/mtf-mockup-desk.html](des
 ## Collaboration Rules
 
 - **Always explain the why.** Before asking the user to make a change, explain the reason behind it: what problem it solves, why it's needed, and what breaks if it's skipped. The user is learning this stack; explain new tools in plain words and point to `aprendizaje/`.
-- **Always reference KBs before touching any area.** Before working on any specific area (stack, architecture, desk, design system, storage, PWA, testing, roadmap), read CLAUDE.md first and then the corresponding KB. This is mandatory, not optional.
+- **Always reference KBs before touching any area.** Before working on any specific area (stack, architecture, backend, desk, design system, storage, PWA, testing, roadmap), read CLAUDE.md first and then the corresponding KB. This is mandatory, not optional.
 - **Always keep KBs up to date.** When any decision, pattern, or context changes, update the relevant KB immediately. KBs are always written in English.
 - **Mockups are local HTML files** in `design/`, opened in the browser. They are not published as artifacts.
 
@@ -41,12 +42,13 @@ The approved direction is the clickable mockup [design/mtf-mockup-desk.html](des
 |------|------|----------------|
 | Tech stack | [KB/frontend/stack.md](KB/frontend/stack.md) | All libraries, tools and deployment targets with rationale |
 | Architecture | [KB/frontend/architecture.md](KB/frontend/architecture.md) | Data flow, state store, storage layer, V2 sync path |
+| Backend API | [KB/backend/api.md](KB/backend/api.md) | .NET 10 API in `api/`: Controllers → Services → DAOs, settings, running it locally, data model, sessions, Google, rate limits |
 | Desk | [KB/frontend/desk.md](KB/frontend/desk.md) | World coordinates, pan/zoom, drag, long-press, Areas, the Jar |
 | Design system | [KB/frontend/design-system.md](KB/frontend/design-system.md) | Paper tokens, fonts, Area colors, accent reserved for wins |
 | Storage | [KB/frontend/storage.md](KB/frontend/storage.md) | localStorage schema, entity shapes, Export / Import backup |
 | PWA | [KB/frontend/pwa.md](KB/frontend/pwa.md) | Manifest, full offline precache, install, iOS specifics |
 | Testing | [KB/frontend/testing.md](KB/frontend/testing.md) | Vitest + Testing Library vs Playwright, conventions, CI |
-| Roadmap | [KB/roadmap.md](KB/roadmap.md) | MVP changes 1–4 and the V2 backlog |
+| Roadmap | [KB/roadmap.md](KB/roadmap.md) | MVP changes 1–4 (done), V2 (#36 accounts, #37 sync) and the backlog |
 | Domain glossary | [GLOSSARY.md](GLOSSARY.md) | Canonical domain terms (Desk, Area, Card, Item, Jar, Win…), updated during `/opsx:propose` when a term appears or sharpens |
 | Decisions | [docs/adr/](docs/adr/) | Hard-to-reverse decisions and why they were made |
 | Specs | [openspec/specs/](openspec/specs/) | Living behavior specs per capability; changes in progress live in [openspec/changes/](openspec/changes/) |
@@ -61,7 +63,7 @@ Every change follows the same flow as the other Zynis projects:
 
 1. **Ticket** — `/crear-ticket <description>` (new GitHub issue) or `/select-ticket <n>` (existing one). This creates the issue in `GianFaggi/Zynis-MTF`, the branch `{type}/{number}-{slug}` from an up-to-date `main`, and fills `KB/developers/active.md`.
 2. **Propose** — `/opsx:propose`: creates an OpenSpec change named like the branch slug (e.g. `1-fundacion-pwa`) with `proposal.md` (why + scope), delta `specs/`, `design.md` and `tasks.md` in `openspec/changes/<name>/`. Use `/opsx:explore` first when the rules are still fuzzy. New or sharpened domain terms go to `GLOSSARY.md`, hard-to-reverse decisions to `docs/adr/`. The user reviews the artifacts before any code is written.
-3. **Implement** — `/opsx:apply`: works through `tasks.md`. Read the relevant KB first; keep tests green (`npm test`).
+3. **Implement** — `/opsx:apply`: works through `tasks.md`. Read the relevant KB first; keep tests green (`npm test`, and `dotnet test api/Mtf.slnx` when `api/` changes, with Docker Desktop running).
 4. **Archive** — on the ticket branch, once every task is done (manual phone checks included): `/opsx:archive` merges the delta specs into `openspec/specs/` and moves the change to `openspec/changes/archive/`. The archive travels with the code, so `main` gets it through the same PR: no direct push, no archive-only PR.
 5. **Merge** — the user commits, pushes the ticket branch and opens the PR; it merges once CI is green. The PR carries the code, tests, docs and the archived change with its synced specs.
 6. **Close** — after the merge, on an up-to-date `main` (`git checkout main`, `git pull`): `/close-ticket` closes the issue, archives the ticket to `KB/developers/done/NNN-type-slug.md`, empties `active.md`. `/postpone-ticket` parks it under Postponed instead.
@@ -80,9 +82,9 @@ Other commands: `/active` (current ticket summary), `/daily-summary`, `/sync-kb`
 
 ---
 
-## MVP Goal
+## MVP Goal (done)
 
-The user must be able to:
+The user can:
 - Write Cards with a title, free text and an optional checklist
 - Place Cards anywhere on the Desk, move them between Areas, pan and zoom, on phone and PC
 - Check Items and see a Card become finished
@@ -91,11 +93,17 @@ The user must be able to:
 - Use it fully offline, installed as a PWA
 - Export / Import a backup file (the bridge between devices until V2 sync)
 
+## V2
+
+- **#36 Accounts** (optional): email + password with verification and recovery by mail, and Google; sessions that never expire offline and never block the Desk ([ADR 0010](docs/adr/0010-account-sessions.md), [ADR 0011](docs/adr/0011-google-sign-in-handoff.md))
+- **#37 Sync**: the Desk between phone and PC, on top of the account
+
 ---
 
 ## Stack Summary
 
 React + TypeScript + Vite · Tailwind CSS v4 · @use-gesture/react · Zustand · vite-plugin-pwa · localStorage · lucide-react · @fontsource
 Dev: Vitest + Testing Library + jsdom · Playwright · ESLint · GitHub Actions CI · Vercel (production at `https://mtf.zynis.com.ar`, [ADR 0008](docs/adr/0008-own-address.md))
+Backend (`api/`): .NET 10 Web API · EF Core + Npgsql on Postgres 17 · JWT bearer · BCrypt.Net-Next · Google.Apis.Auth · Resend · Docker · xUnit + Testcontainers · Render Free + Neon Free at `https://api.mtf.zynis.com.ar` ([ADR 0009](docs/adr/0009-v2-backend-hosting.md), [KB/backend/api.md](KB/backend/api.md))
 
 Full details → [KB/frontend/stack.md](KB/frontend/stack.md)

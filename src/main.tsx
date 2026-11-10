@@ -5,6 +5,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { listenForAccountLinks } from './account/links'
 import { listenForInstall } from './install/installStore'
 import { applyTheme } from './lib/theme'
 import { useAppStore } from './store/appStore'
@@ -29,6 +30,8 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('avion')) {
 } else {
   // Once per device, before the Desk's first view, which frames it.
   placeWelcomeOnce()
+  // A mail link (#verify= / #reset=), now or later: opens the Account sheet on its step and clears the address.
+  listenForAccountLinks()
 
   root.render(
     <StrictMode>

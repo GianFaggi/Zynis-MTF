@@ -58,17 +58,31 @@ The MVP is split into four changes, each a ticket + OpenSpec change. After chang
 
 ---
 
-## V2 Backlog (do not implement in MVP)
+## V2
 
-- .NET backend: accounts + login ([#36](https://github.com/GianFaggi/Zynis-MTF/issues/36)), phone ↔ PC sync and offline queue ([#37](https://github.com/GianFaggi/Zynis-MTF/issues/37)). Runs on Render Free (API) + Neon Free (Postgres), built to move to a VM ([ADR 0009](../docs/adr/0009-v2-backend-hosting.md), [#34](https://github.com/GianFaggi/Zynis-MTF/issues/34)). Portability rules, worded and explained in the ADR:
-  - [ ] `Dockerfile` listening on `${PORT}`
-  - [ ] Connection string only from `ConnectionStrings__DefaultConnection`
-  - [ ] Migrations at start-up
-  - [ ] `/health` never touches the database
-  - [ ] Standard Postgres 17, no Neon-only features
-  - [ ] Own address `api.mtf.zynis.com.ar`, low TTL
-  - [ ] A Neon project of its own, never shared with Zynis Cal
-  - [ ] Encrypted nightly backup
+The MVP is finished. V2 runs a .NET backend on Render Free (API) + Neon Free (Postgres), built to move to a VM ([ADR 0009](../docs/adr/0009-v2-backend-hosting.md), [#34](https://github.com/GianFaggi/Zynis-MTF/issues/34)); [KB/backend/api.md](backend/api.md).
+
+- [x] Accounts ([#36](https://github.com/GianFaggi/Zynis-MTF/issues/36), change `36-cuentas-login-email-google`): the .NET 10 API in `api/` (Controllers → Services → DAOs behind interfaces); register with email + password, verify by mail, resend with a 60-second wait, recover by mail, sign in with Google by hand-off ([ADR 0011](../docs/adr/0011-google-sign-in-handoff.md)), linking by email; rate limits; sessions with a 15-minute access token in memory and a rotating 180-day renewal token on the device that never expire offline ([ADR 0010](../docs/adr/0010-account-sessions.md)); Settings → Cuenta and the Account sheet in Spanish and English, waiting with the paper plane; a Content Security Policy; the `check-api` CI job. An account is optional and the Desk never waits for it
+- [ ] Phone ↔ PC sync and offline queue ([#37](https://github.com/GianFaggi/Zynis-MTF/issues/37)), on top of the account
+
+Portability rules, worded and explained in ADR 0009, each checked by a test or in CI since #36:
+- [x] `Dockerfile` listening on `${PORT}`
+- [x] Connection string only from `ConnectionStrings__DefaultConnection`
+- [x] Migrations at start-up
+- [x] `/health` never touches the database
+- [x] Standard Postgres 17, no Neon-only features
+- [x] Own address `api.mtf.zynis.com.ar`, low TTL
+- [x] A Neon project of its own, never shared with Zynis Cal
+- [ ] Encrypted nightly backup: must exist before #37 stores notes on the server (#36 stores none)
+
+## V2 Backlog
+
+- Encrypted nightly backup of the Neon database (`pg_dump`, encrypted, as a GitHub Actions artifact; ADR 0009, rule 8), before #37
+- Deleting an account
+- Changing the email of an account
+- Changing the password while signed in (recovery by mail covers a forgotten one)
+- Before opening MTF to other people: the hand-off phishing guard of ADR 0011, and checking that `X-Forwarded-For` gives the real client on Render ([KB/backend/api.md](backend/api.md#rate-limits))
+- A list of a user's devices or sessions, two-factor sign-in, other sign-in providers
 - Sharing a Card or an Area with someone
 - Reminders on a Card
 - Export wins to a Sheet / CSV

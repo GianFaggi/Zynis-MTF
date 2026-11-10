@@ -15,11 +15,13 @@ Configured in `vite.config.ts` (`VitePWA({...})`), strategy `generateSW` (the pl
 
 - `registerType: 'autoUpdate'`, `injectRegister` left on `'auto'`: since nothing imports `virtual:pwa-register`, the plugin injects `<script src="/registerSW.js">` into `index.html`, which registers `/sw.js` on page load.
 - **Precache = the whole app shell.** `workbox.globPatterns`:
-  - `**/*.{html,js,css,svg,png,ico}` — `index.html`, the bundle, CSS, `registerSW.js`, logo and icons
+  - `**/*.{html,js,css,svg,png,ico}` — `index.html`, the bundle, CSS, `registerSW.js`, logo and icons, and `privacidad.html` (#36, below)
   - `**/*-latin-wght-*.woff2`, `**/*-latin-ext-wght-*.woff2` — only the latin / latin-ext font files (Spanish + English). Fontsource also emits cyrillic, greek and vietnamese files; they stay in `dist/` but are not precached.
   - The plugin adds `manifest.webmanifest` itself; `includeManifestIcons: false` because the glob already has the icons (otherwise each one is listed twice).
+- **The privacy page** (#36): `public/privacidad.html`, a static page outside the React app, Spanish first and English at `#en`, for the brand (it covers MTF and Zynis Cal, because the Google consent screen of the shared `Zynis` project links to it; [KB/backend/api.md](../backend/api.md#creating-mtfs-oauth-client)). Its own inline Paper styles, dark by `prefers-color-scheme` only (no script: the CSP allows none inline), system fonts. Being precached, the precache route answers it before the `NavigationRoute` fallback, so it opens offline as itself, not as `index.html` (Playwright checks it). The Account sheet links it under the sign-in and register forms. **Keep it true**: when either app starts keeping new data, or changes provider, update the page and its date.
 - `cleanupOutdatedCaches: true`, `skipWaiting: true`, `clientsClaim: true`. The last two matter: the plugin only turns them on by default when `injectRegister` is `'auto'`, and without `clientsClaim` the first visit is never controlled by the worker, so a reload with no connection fails.
-- No runtime caching: MTF makes no network requests in the MVP.
+- No runtime caching. Until #36 MTF made no network requests at all. Since #36 it calls its own API (`api.mtf.zynis.com.ar`), only from the Account sheet ([architecture.md](architecture.md)), and those answers must **never** be cached: a stale sign-in or renewal answer would be wrong, and an Account request with no connection must fail and say so. The worker only routes navigations and precached files, so cross-origin API requests go straight to the network. The Desk still needs no request.
+- **Content Security Policy** (#36, in `vercel.json`, [stack.md](stack.md#deployment)): `worker-src 'self'` and `manifest-src 'self'` cover the worker and the manifest, `font-src 'self'` the bundled fonts, `connect-src` allows only MTF's origin and its API. A new outside resource would be refused by the browser, which is the point.
 
 ### Update flow (decided in change 1): silent, no toast
 

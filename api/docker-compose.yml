@@ -1,0 +1,45 @@
+# Local development only: Postgres 17 and the API, as on Render + Neon.
+# `docker compose up` runs both; `docker compose up db` + `dotnet run` runs the API from source.
+services:
+  api:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=mtf;Username=mtf;Password=mtf"
+      Jwt__Key: "dev-only-signing-key-at-least-32-chars"
+      App__FrontendUrl: "${APP_FRONTEND_URL:-http://localhost:5173}"
+      App__ApiUrl: "${APP_API_URL:-http://localhost:5000}"
+      Cors__AllowedOrigins__0: "${APP_FRONTEND_URL:-http://localhost:5173}"
+      Google__ClientId: "${GOOGLE_CLIENT_ID:-}"
+      Google__ClientSecret: "${GOOGLE_CLIENT_SECRET:-}"
+      RESEND_API_KEY: "${RESEND_API_KEY:-}"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: mtf
+      POSTGRES_PASSWORD: mtf
+      POSTGRES_DB: mtf
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mtf -d mtf"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

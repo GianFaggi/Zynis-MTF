@@ -13,6 +13,12 @@ export const WAIT_STEPS: readonly { stage: WaitStage; at: number }[] = [
   { stage: 'failed', at: 90_000 },
 ]
 
+/**
+ * How long a request may wait before it gives up (ms): when the timeline reaches `failed`.
+ * Read from `WAIT_STEPS`, so the plane's message and the request's limit cannot drift apart.
+ */
+export const WAIT_LIMIT = WAIT_STEPS.find((step) => step.stage === 'failed')!.at
+
 /** The sync indicator shows only once a wait has lasted this long (ms). */
 export const INDICATOR_DELAY = 2_000
 

@@ -2,9 +2,10 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { initialAccountState, useAccountStore } from './account/accountStore'
 import { makeBackup } from './backup/backup'
 import { useDeskStore } from './desk/deskStore'
-import { LANGUAGE_KEY, THEME_KEY } from './lib/storage'
+import { LANGUAGE_KEY, THEME_KEY, saveSession } from './lib/storage'
 import { useAppStore } from './store/appStore'
 import { USER_AGENTS, restoreDevice, stubDevice } from './test/device'
 import { makeArea, makeCard, makeData, rowOfAreas } from './test/fixtures'
@@ -144,15 +145,44 @@ describe('App', () => {
     expect(useDeskStore.getState()).toMatchObject({ editingId: card.id, newCardId: card.id })
   })
 
-  it('Settings shows the language, the theme, the Areas, the Backup, the install and the introduction sections, in that order', async () => {
+  it('Settings shows the account, the language, the theme, the Areas, the Backup, the install and the introduction sections, in that order', async () => {
     render(<App />)
     await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
     const settings = screen.getByRole('dialog', { name: 'Ajustes' })
 
     const labels = [...settings.querySelectorAll('span.uppercase')].map((label) => label.textContent)
-    expect(labels).toEqual(['Idioma', 'Tema', 'Áreas', 'Copia de seguridad', 'Instalar la app', 'Introducción'])
+    expect(labels).toEqual(['Cuenta', 'Idioma', 'Tema', 'Áreas', 'Copia de seguridad', 'Instalar la app', 'Introducción'])
     expect(within(settings).getByRole('button', { name: 'Exportar copia' })).toBeInTheDocument()
     expect(within(settings).getByRole('button', { name: 'Importar copia' })).toBeInTheDocument()
+  })
+
+  it.each([
+    ['with no account', null],
+    ['signed in', 'gian@example.com'],
+  ])('opening Settings %s makes no network request', async (_, email) => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    if (email) saveSession({ refreshToken: 'rt-1', email })
+    useAccountStore.setState(initialAccountState(), true)
+    render(<App />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+
+    const settings = screen.getByRole('dialog', { name: 'Ajustes' })
+    expect(within(settings).getByRole('button', { name: email ? new RegExp(email) : /Entrar o crear una cuenta/ })).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  it('the Account row closes Settings and opens the Account sheet', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Ajustes' })).getByRole('button', { name: /Entrar o crear una cuenta/ }))
+
+    expect(screen.queryByRole('dialog', { name: 'Ajustes' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Cuenta' })).toBeInTheDocument()
+    vi.unstubAllGlobals()
   })
 
   it('the Areas section lists every Area in Desk order, with "Nueva área"', async () => {

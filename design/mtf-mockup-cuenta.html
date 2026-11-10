@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MTF · Cuenta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,500;1,7..72,600&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* A focused mockup for #36: Ajustes → Cuenta and the Account sheet, every step of design
+   decision 8, at phone width. Tokens are the app's Paper tokens. No accent anywhere:
+   an account is not a Win. */
+:root {
+  --paper: #F5F1EA; --sheet: #FCFAF6; --ink: #2A2724; --ink-2: #4A4540; --pencil: #766E66; --rule: #E3DCD1;
+  --hover: rgba(70, 50, 30, .07);
+  --scrim: rgba(40, 30, 20, .32);
+  --shadow: 0 1px 2px rgba(70, 50, 30, .07), 0 8px 20px rgba(70, 50, 30, .07);
+  --font-display: "Literata", Georgia, serif;
+  --font-ui: "Figtree", system-ui, sans-serif;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #1C1A18; --sheet: #272421; --ink: #ECE6DE; --ink-2: #CFC7BD; --pencil: #A39A90; --rule: #3A3530;
+  --hover: rgba(255, 255, 255, .07);
+  --scrim: rgba(0, 0, 0, .5);
+  --shadow: 0 1px 0 rgba(255,255,255,.03), 0 10px 24px rgba(0,0,0,.35);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink); font: 400 15px/1.5 var(--font-ui); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+button { background: none; border: 0; cursor: pointer; }
+
+.page { max-width: 1240px; margin: 0 auto; padding: 28px 16px 60px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 20px; margin-bottom: 8px; }
+h1 { margin: 0; font: italic 600 28px/1 var(--font-display); }
+header p { margin: 0; color: var(--pencil); font-size: 14px; flex: 1 1 320px; }
+.tool { height: 34px; padding-inline: 12px; border-radius: 10px; background: var(--hover); font-weight: 600; font-size: 13px; }
+
+h2 { margin: 34px 0 10px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--pencil); font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 24px; align-items: start; }
+.caption { margin: 0 0 8px; font-size: 12.5px; color: var(--pencil); font-weight: 600; }
+.caption code { font-weight: 500; }
+
+/* ---- Settings: the sheet with the Cuenta row ---- */
+.settings { padding: 18px 20px 20px; border-radius: 22px; background: var(--sheet); box-shadow: var(--shadow); }
+.settings h3 { margin: 0 0 12px; font: 600 20px/1.3 var(--font-display); }
+.section-title { margin: 0 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--pencil); font-weight: 600; }
+.account-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--hover); text-align: left; }
+.account-row .text { flex: 1; min-width: 0; }
+.account-row strong { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-row span { display: block; font-size: 13.5px; color: var(--pencil); }
+.chev { width: 18px; height: 18px; color: var(--pencil); flex: none; }
+.dim { margin-top: 14px; height: 10px; border-radius: 6px; background: var(--hover); }
+.dim + .dim { width: 70%; }
+
+/* ---- the Account sheet ---- */
+.sheet { position: relative; padding: 10px 22px 22px; border-radius: 22px 22px 22px 22px; background: var(--sheet); box-shadow: var(--shadow); }
+.grabber { width: 38px; height: 4px; margin: 0 auto 12px; border-radius: 4px; background: var(--rule); }
+.sheet-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.sheet-head h3 { flex: 1; margin: 0; font: 600 21px/1.3 var(--font-display); }
+.close { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+.close svg, .eye svg, .g svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sub { margin: 0 0 16px; font-size: 14px; color: var(--pencil); }
+
+form { display: flex; flex-direction: column; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.input { position: relative; display: flex; align-items: center; }
+.input input { width: 100%; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--rule); background: var(--paper); outline: none; }
+.input input:focus { border-color: var(--ink); box-shadow: 0 0 0 2px color-mix(in oklab, var(--ink) 18%, transparent); }
+.input input.has-eye { padding-right: 82px; }
+.eye { position: absolute; right: 6px; height: 32px; padding: 0 10px; border-radius: 9px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.eye:hover { background: var(--hover); }
+.hint { font-size: 12.5px; color: var(--pencil); }
+
+.btn { height: 46px; padding: 0 18px; border-radius: 999px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.btn.primary { background: var(--ink); color: var(--sheet); }
+.btn.secondary { background: var(--hover); color: var(--ink); }
+.btn.outline { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); }
+.btn[disabled] { opacity: .55; cursor: default; }
+.links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin-top: 2px; }
+.link { padding: 6px 0; font-size: 14px; font-weight: 600; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule); }
+.divider { display: flex; align-items: center; gap: 10px; margin: 4px 0; font-size: 12.5px; color: var(--pencil); }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+.g { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid currentColor; display: grid; place-items: center; font: 700 12px/1 var(--font-ui); }
+
+.alert { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--hover); color: var(--ink); font-size: 14px; }
+.alert .link { padding: 0; margin-left: 4px; font-size: 14px; }
+.calm { margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; background: var(--hover); font-size: 14.5px; }
+.big-email { margin: 6px 0 4px; font: 600 19px/1.35 var(--font-display); overflow-wrap: anywhere; }
+.note-line { margin: 0 0 16px; font-size: 14px; color: var(--pencil); }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---- PlaneWait (#35), as it replaces the form ---- */
+.wait { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 0 6px; }
+.scene { position: relative; width: min(100%, 320px); aspect-ratio: 320 / 72;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.scene svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+.trail-path { fill: none; stroke: var(--pencil); stroke-width: 1.6; stroke-dasharray: 0 6; stroke-linecap: round; }
+.plane .wing { fill: var(--sheet); }
+.plane .keel { fill: var(--paper); }
+.plane path { stroke: var(--ink); stroke-width: 1.4; stroke-linejoin: round; }
+.message { margin: 0; min-height: 3em; max-width: 34ch; text-align: center; font-size: 15px; color: var(--ink-2); }
+.flying .plane { animation: fly 3.2s linear infinite; }
+@keyframes fly {
+  0%    { transform: translate(-20px, 58px) rotate(-30deg); }
+  17.6% { transform: translate(48.6px, 31px) rotate(-14.5deg); }
+  35.2% { transform: translate(121.4px, 19px) rotate(-4.9deg); }
+  52.8% { transform: translate(195.2px, 17.7px) rotate(2.7deg); }
+  70.4% { transform: translate(268.6px, 25.8px) rotate(10deg); }
+  88%, 100% { transform: translate(340px, 44px) rotate(19.1deg); }
+}
+.flying .trail { animation: trail 3.2s linear infinite; }
+@keyframes trail {
+  0%, 8.8% { clip-path: inset(0 100% 0 0); opacity: 1; }
+  88%   { clip-path: inset(0 0 0 0); opacity: 1; }
+  96%   { clip-path: inset(0 0 0 0); opacity: 0; }
+  100%  { clip-path: inset(0 100% 0 0); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+
+.note { margin-top: 36px; padding: 16px 18px; border-radius: 14px; background: var(--hover); font-size: 14px; color: var(--ink-2); }
+.note b { color: var(--ink); }
+.note p { margin: 0 0 8px; }
+.note p:last-child { margin: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Cuenta</h1>
+    <p>Ajustes → Cuenta y la hoja de cuenta, paso por paso, al ancho de un celular. La cuenta es opcional: MTF funciona igual sin ella. Probá el ojo de la contraseña, el botón de reenviar y "Ver la espera".</p>
+    <button class="tool" id="theme">Modo oscuro</button>
+  </header>
+
+  <h2>En Ajustes</h2>
+  <div class="grid">
+    <div>
+      <p class="caption">Sin cuenta · abrir Ajustes no hace ningún pedido</p>
+      <section class="settings">
+        <h3>Ajustes</h3>
+        <p class="section-title">Cuenta</p>
+        <button class="account-row">
+          <div class="text"><strong>Entrar o crear una cuenta</strong><span>Tu escritorio vive en este dispositivo.</span></div>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
+        <div class="dim"></div><div class="dim"></div>
+      </section>
+    </div>
+    <div>
+      <p class="caption">Con cuenta · también sin conexión</p>
+      <section class="settings">
+        <h3>Ajustes</h3>
+        <p class="section-title">Cuenta</p>
+        <button class="account-row">
+          <div class="text"><strong>gian@example.com</strong><span>Entraste con esta cuenta.</span></div>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
+        <div class="dim"></div><div class="dim"></div>
+      </section>
+    </div>
+  </div>
+
+  <h2>Entrar</h2>
+  <div class="grid">
+    <div>
+      <p class="caption"><code>signIn</code> · la espera de la API arranca de fondo, sin avión</p>
+      <section class="sheet" data-step="signIn">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Cuenta</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Con una cuenta, más adelante tu escritorio va a viajar entre el celu y la compu.</p>
+        <div class="form-slot">
+          <form onsubmit="return false">
+            <button type="button" class="btn outline"><span class="g">G</span>Continuar con Google</button>
+            <div class="divider">o con tu email</div>
+            <div class="field"><label>Email</label><div class="input"><input type="email" autocomplete="email" value="gian@example.com"></div></div>
+            <div class="field"><label>Contraseña</label><div class="input"><input type="password" autocomplete="current-password" class="has-eye" value="secreto123"><button type="button" class="eye">Mostrar</button></div></div>
+            <button class="btn primary" data-wait>Entrar</button>
+            <div class="links"><button type="button" class="link">¿Olvidaste tu contraseña?</button><button type="button" class="link">Crear una cuenta</button></div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>signIn</code> · mensajes en línea (<code>role="alert"</code>), lo escrito queda</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Cuenta</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <form onsubmit="return false">
+          <div class="field"><label>Email</label><div class="input"><input type="email" value="gian@example.com"></div></div>
+          <div class="field"><label>Contraseña</label><div class="input"><input type="password" class="has-eye" value="secreto"><button type="button" class="eye">Mostrar</button></div></div>
+          <p class="alert">El email o la contraseña no coinciden.</p>
+          <p class="alert">Confirmá tu email para entrar.<button type="button" class="link">Mandar el mail de nuevo</button></p>
+          <p class="alert">Hiciste muchos intentos. Probá de nuevo en un minuto.</p>
+          <p class="alert">No pudimos conectar ahora. Tu escritorio sigue funcionando; probá en un rato.</p>
+          <p class="alert">No pudimos entrar con Google. Probá de nuevo.</p>
+          <button class="btn primary">Entrar</button>
+        </form>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption">Después de que el servidor terminó la sesión · y sin conexión</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Cuenta</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="calm">Tu sesión terminó. Entrá de nuevo cuando quieras: tu escritorio sigue acá.</p>
+        <p class="calm">Para entrar necesitás conexión. Tu escritorio sigue funcionando sin ella.</p>
+        <form onsubmit="return false">
+          <div class="field"><label>Email</label><div class="input"><input type="email" value="gian@example.com"></div></div>
+          <button class="btn primary" disabled>Entrar</button>
+        </form>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>google</code> · la ventana de Google está abierta</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Cuenta</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="calm">Seguí en la ventana de Google. Cuando termines, volvé a MTF.</p>
+        <div class="stack"><button class="btn secondary">Cancelar</button></div>
+      </section>
+    </div>
+  </div>
+
+  <h2>Crear cuenta y confirmar el email</h2>
+  <div class="grid">
+    <div>
+      <p class="caption"><code>register</code></p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Crear cuenta</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Te mandamos un mail para confirmar que el email es tuyo.</p>
+        <div class="form-slot">
+          <form onsubmit="return false">
+            <div class="field"><label>Email</label><div class="input"><input type="email" autocomplete="email"></div></div>
+            <div class="field"><label>Contraseña</label><div class="input"><input type="password" autocomplete="new-password" class="has-eye"><button type="button" class="eye">Mostrar</button></div><span class="hint">Al menos 8 caracteres.</span></div>
+            <button class="btn primary" data-wait>Crear cuenta</button>
+            <div class="links"><button type="button" class="link">Ya tengo cuenta</button></div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>checkMail</code> · reenviar espera 60 s</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Revisá tu mail</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Te mandamos un enlace a <b>gian@example.com</b> para confirmar tu email. Si no llega, mirá en spam.</p>
+        <div class="stack">
+          <button class="btn secondary" id="resend" disabled>Reenviar en 60 s</button>
+          <button class="link">Volver a entrar</button>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>verifying</code> · el enlace se confirma apenas abre la página</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Confirmando tu email</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <div class="plane-slot" data-message="El servidor se está despertando. La primera vez del día puede tardar hasta un minuto."></div>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>verified</code> · confirmar no inicia sesión</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Email confirmado</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Listo. Ya podés entrar con tu email y tu contraseña, también desde la app instalada.</p>
+        <div class="stack"><button class="btn primary">Entrar</button></div>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>linkExpired</code> · enlace de confirmación usado o vencido</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Este enlace ya no funciona</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Si ya confirmaste tu email, entrá directamente. Si no, te mandamos uno nuevo.</p>
+        <form onsubmit="return false">
+          <div class="field"><label>Email</label><div class="input"><input type="email" autocomplete="email"></div></div>
+          <button class="btn secondary">Mandar uno nuevo</button>
+          <button type="button" class="btn primary">Entrar</button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <h2>Recuperar la contraseña</h2>
+  <div class="grid">
+    <div>
+      <p class="caption"><code>forgot</code></p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Recuperar contraseña</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Te mandamos un enlace para elegir una contraseña nueva.</p>
+        <form onsubmit="return false">
+          <div class="field"><label>Email</label><div class="input"><input type="email" autocomplete="email" value="gian@example.com"></div></div>
+          <button class="btn primary">Mandar enlace</button>
+          <div class="links"><button type="button" class="link">Volver a entrar</button></div>
+        </form>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>forgotSent</code> · igual exista o no la cuenta</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Revisá tu mail</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Si hay una cuenta con <b>gian@example.com</b>, te llega un enlace para elegir una contraseña nueva. Vence en 1 hora.</p>
+        <div class="stack"><button class="link">Volver a entrar</button></div>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>reset</code> · desde el enlace del mail</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Elegí una contraseña nueva</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Al guardarla se cierra la sesión en tus otros dispositivos.</p>
+        <div class="form-slot">
+          <form onsubmit="return false">
+            <div class="field"><label>Contraseña nueva</label><div class="input"><input type="password" autocomplete="new-password" class="has-eye"><button type="button" class="eye">Mostrar</button></div><span class="hint">Al menos 8 caracteres.</span></div>
+            <button class="btn primary" data-wait>Guardar contraseña</button>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <p class="caption"><code>reset</code> listo · y enlace de recuperación vencido</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Contraseña guardada</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub">Ya podés entrar con tu contraseña nueva.</p>
+        <div class="stack"><button class="btn primary">Entrar</button></div>
+        <p class="calm" style="margin-top:16px">Este enlace ya no funciona: venció o ya se usó. Tu contraseña no cambió.</p>
+        <div class="stack"><button class="btn secondary">Pedir otro enlace</button></div>
+      </section>
+    </div>
+  </div>
+
+  <h2>Con cuenta</h2>
+  <div class="grid">
+    <div>
+      <p class="caption"><code>signedIn</code> · salir funciona sin conexión</p>
+      <section class="sheet">
+        <div class="grabber"></div>
+        <div class="sheet-head"><h3>Cuenta</h3><button class="close" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <p class="sub" style="margin:0">Entraste como</p>
+        <p class="big-email">gian@example.com</p>
+        <p class="note-line">Si salís, tus notas se quedan en este dispositivo.</p>
+        <div class="stack"><button class="btn secondary">Salir</button></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><b>Sin acento</b>: ningún botón ni mensaje usa el color de los logros. El botón principal es tinta; los mensajes son una línea tranquila, no una alerta roja ni un toast que se va antes de leerlo.</p>
+    <p><b>Abrir Ajustes no hace pedidos.</b> Recién al abrir esta hoja, sin sesión y con conexión, MTF le pide <code>/health</code> a la API para despertarla mientras escribís, sin mostrar nada.</p>
+    <p><b>El avión aparece al enviar</b>, no al abrir: reemplaza el formulario mientras hay un pedido, y lo escrito queda guardado. Si la API contesta en menos de 1,5 s, solo se ve "Entrando…".</p>
+    <p><b>Google</b> abre una ventana propia; la hoja espera con "Seguí en la ventana de Google" y Cancelar, sin los mensajes del servidor. A los 5 minutos deja de esperar.</p>
+    <p><b>Confirmar el email no inicia sesión</b>: el enlace puede abrirse en Safari mientras tus notas viven en la app instalada.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  document.getElementById('theme').onclick = (event) => {
+    const dark = document.documentElement.dataset.theme !== 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    event.target.textContent = dark ? 'Modo claro' : 'Modo oscuro';
+  };
+
+  // Show / hide the password, as the real field will.
+  for (const eye of document.querySelectorAll('.eye')) {
+    eye.onclick = () => {
+      const input = eye.previousElementSibling;
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      eye.textContent = show ? 'Ocultar' : 'Mostrar';
+    };
+  }
+
+  // The resend button waits 60 s after each send.
+  const resend = document.getElementById('resend');
+  let left = 60;
+  const tick = () => {
+    resend.disabled = left > 0;
+    resend.textContent = left > 0 ? `Reenviar en ${left} s` : 'Reenviar el mail';
+    if (left-- > 0) setTimeout(tick, 1000);
+  };
+  resend.onclick = () => { left = 60; tick(); };
+  tick();
+
+  const TRAIL = '<svg class="trail" viewBox="0 0 320 72" aria-hidden="true"><path class="trail-path" d="M-20 58C70 6 230 6 340 44"/></svg>';
+  const PLANE = '<svg viewBox="0 0 320 72" aria-hidden="true"><g class="plane" transform="translate(158.4 17.1) rotate(-0.9)">'
+    + '<path class="keel" d="M13 0L-5 2L-8.5 8.5Z"/><path class="wing" d="M13 0L-11.5 -9L-5 2Z"/></g></svg>';
+  const planeWait = (message) =>
+    `<div class="wait flying"><div class="scene">${TRAIL}${PLANE}</div><p class="message" role="status">${message}</p></div>`;
+
+  for (const slot of document.querySelectorAll('.plane-slot')) slot.innerHTML = planeWait(slot.dataset.message);
+
+  // "Ver la espera": the form gives way to the plane, then comes back with what was typed.
+  for (const button of document.querySelectorAll('[data-wait]')) {
+    button.onclick = () => {
+      const slot = button.closest('.form-slot');
+      const form = slot.querySelector('form');
+      form.hidden = true;
+      slot.insertAdjacentHTML('beforeend', planeWait('Conectando…'));
+      const wait = slot.querySelector('.wait');
+      setTimeout(() => { wait.querySelector('.message').textContent = 'El servidor se está despertando. La primera vez del día puede tardar hasta un minuto.'; }, 1600);
+      setTimeout(() => { wait.remove(); form.hidden = false; }, 4200);
+    };
+  }
+  for (const btn of document.querySelectorAll('[data-wait]')) btn.title = 'Ver la espera';
+})();
+</script>
+</body>
+</html>

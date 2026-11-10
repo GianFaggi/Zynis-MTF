@@ -8,14 +8,17 @@ import {
   LANGUAGE_KEY,
   RECOVERY_KEY_PREFIX,
   SCHEMA_VERSION,
+  SESSION_KEY,
   THEME_KEY,
   WELCOME_PLACED_KEY,
   emptyData,
   loadAreaJars,
   loadArrangement,
   loadData,
+  clearSession,
   loadInstallNudgeSeen,
   loadLanguage,
+  loadSession,
   loadTheme,
   loadWelcomePlaced,
   migrate,
@@ -25,6 +28,7 @@ import {
   saveData,
   saveInstallNudgeSeen,
   saveLanguage,
+  saveSession,
   saveTheme,
   saveWelcomePlaced,
   upgradeDocument,
@@ -368,5 +372,64 @@ describe('Area Jars setting', () => {
       throw new DOMException('blocked', 'SecurityError')
     })
     expect(loadAreaJars()).toBe(false)
+  })
+})
+
+describe('session', () => {
+  const session = { refreshToken: 'rt-abc_123', email: 'gian@example.com' }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('reads back what it saved, under its own device key', () => {
+    expect(loadSession()).toBeNull()
+    saveSession(session)
+    expect(JSON.parse(localStorage.getItem(SESSION_KEY)!)).toEqual(session)
+    expect(loadSession()).toEqual(session)
+  })
+
+  it('forgets the session when cleared', () => {
+    saveSession(session)
+    clearSession()
+    expect(localStorage.getItem(SESSION_KEY)).toBeNull()
+    expect(loadSession()).toBeNull()
+  })
+
+  it('is never part of the data document', () => {
+    saveData(sample)
+    saveSession(session)
+    expect(localStorage.getItem(DATA_KEY)).not.toContain(session.refreshToken)
+    expect(loadData()).toEqual(sample)
+  })
+
+  it.each([
+    ['invalid JSON', '{not json'],
+    ['an array', '[]'],
+    ['null', 'null'],
+    ['no refresh token', JSON.stringify({ email: 'gian@example.com' })],
+    ['an empty refresh token', JSON.stringify({ refreshToken: '', email: 'gian@example.com' })],
+    ['no email', JSON.stringify({ refreshToken: 'rt' })],
+    ['a number for the email', JSON.stringify({ refreshToken: 'rt', email: 7 })],
+  ])('reads no session from a damaged value (%s), without throwing', (_, raw) => {
+    localStorage.setItem(SESSION_KEY, raw)
+    expect(loadSession()).toBeNull()
+  })
+
+  it('reads no session, and does not throw, when storage refuses', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    saveSession(session)
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    expect(loadSession()).toBeNull()
+    expect(() => saveSession(session)).not.toThrow()
+    expect(() => clearSession()).not.toThrow()
   })
 })
