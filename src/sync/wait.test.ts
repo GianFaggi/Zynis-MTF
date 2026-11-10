@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nextStepAt, waitStage } from './wait'
+import { WAIT_LIMIT, WAIT_STEPS, nextStepAt, waitStage } from './wait'
 
 describe('waitStage', () => {
   it.each([
@@ -28,5 +28,18 @@ describe('nextStepAt', () => {
     [60 * 60 * 1000, null],
   ])('after %d ms → %s', (elapsed, next) => {
     expect(nextStepAt(elapsed)).toBe(next)
+  })
+})
+
+describe('WAIT_LIMIT', () => {
+  it('is when the timeline gives up: 90 seconds', () => {
+    expect(WAIT_LIMIT).toBe(90_000)
+    expect(waitStage(WAIT_LIMIT)).toBe('failed')
+    expect(waitStage(WAIT_LIMIT - 1)).not.toBe('failed')
+  })
+
+  it('is the last step, so nothing is shown after a request gave up', () => {
+    expect(WAIT_STEPS.at(-1)!.at).toBe(WAIT_LIMIT)
+    expect(nextStepAt(WAIT_LIMIT)).toBeNull()
   })
 })

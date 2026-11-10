@@ -84,8 +84,25 @@ Node: 24 locally, 22 in CI.
 ## Deployment
 - **MVP: Vercel** — static hosting, zero-config deploy for Vite (Vercel project `zynis-mtf`, production branch `main`, a preview per PR)
 - **Production address: `https://mtf.zynis.com.ar`** (#28) — a production domain of the Vercel project, pointed at it by a `CNAME mtf` record in the Don Web DNS of `zynis.com.ar` (like `cal.zynis.com.ar`); Vercel issues the HTTPS certificate. The address is chosen once, because the notes live on it ([ADR 0008](../../docs/adr/0008-own-address.md), [pwa.md](pwa.md#address))
-- **`vercel.json`** holds only two redirects, both from the old alias `zynis-mtf.vercel.app` to `https://mtf.zynis.com.ar` (308) and conditioned on that host so preview deployments and the new domain are untouched: the root `/` → `/` (#31), and every other path (`/:path*`) → the same path (#28). The root needs its own rule because Vercel does not match `/:path*` against the bare `/`; the query string is kept by Vercel on both. Vite detection, `dist/` and the default headers (`sw.js` with `max-age=0, must-revalidate`) stay as Vercel sets them
-- **V2: .NET backend** — accounts, phone ↔ PC sync. The API runs on **Render Free** (a Docker web service) and Postgres on **Neon Free**, both in US East with no card on file, behind the own address `api.mtf.zynis.com.ar`; the backend follows portability rules so it can move to a VM without code changes ([ADR 0009](../../docs/adr/0009-v2-backend-hosting.md)). Nothing runs yet: #36 creates the backend and both services
+- **`vercel.json`** holds two redirects and one header. The redirects both go from the old alias `zynis-mtf.vercel.app` to `https://mtf.zynis.com.ar` (308) and conditioned on that host so preview deployments and the new domain are untouched: the root `/` → `/` (#31), and every other path (`/:path*`) → the same path (#28). The root needs its own rule because Vercel does not match `/:path*` against the bare `/`; the query string is kept by Vercel on both. Vite detection, `dist/` and the default headers (`sw.js` with `max-age=0, must-revalidate`) stay as Vercel sets them
+- **Content Security Policy** (#36), a `headers` entry on every path: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.mtf.zynis.com.ar; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'`. It is the counterweight to keeping the renewal token in localStorage ([ADR 0010](../../docs/adr/0010-account-sessions.md)): an injected script could not run, and could not send a token anywhere but MTF's own API. It holds because `index.html` has no inline script (`registerSW.js` is a file), fonts are bundled, and nothing loads from a third party. Playwright runs on `vite preview`, which does not read `vercel.json`, so the policy is checked by hand on a preview deployment with the console open. Adding any outside resource, or another API address, means editing this policy
+- **`.vercelignore`** lists `api/` (#36): Vercel treats a root `api/` folder as serverless functions, and the .NET backend deploys to Render
+- **V2: .NET backend** — accounts, phone ↔ PC sync. The API runs on **Render Free** (a Docker web service) and Postgres on **Neon Free**, both in US East with no card on file, behind the own address `api.mtf.zynis.com.ar`; the backend follows portability rules so it can move to a VM without code changes ([ADR 0009](../../docs/adr/0009-v2-backend-hosting.md)). Running since #36, which created the API, both services and the record; the [Backend](#backend-v2-36) section lists what it is built with
+
+## Backend (V2, #36)
+
+The API in `api/`, documented in [KB/backend/api.md](../backend/api.md). The front end added **no** dependency for it: `fetch`, `crypto.subtle` and the existing UI kit cover the Account sheet. The backend starts with the set Zynis Cal already runs, minus OpenAPI and Scalar (the API has one client), on the patch versions current at #36 (the ones Cal pins carried known vulnerabilities in transitive packages):
+
+| Package | Why, and why not less |
+|---|---|
+| .NET 10, ASP.NET Core Web API (controllers) | The stack the user knows from Zynis Cal; low CPU need on Render's 0.1 CPU |
+| `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Design` (+ `.Relational` pinned to the same patch) | Postgres 17 and migrations applied at start-up (ADR 0009, rule 3) |
+| `Microsoft.AspNetCore.Authentication.JwtBearer` | The framework's own access-token check |
+| `BCrypt.Net-Next` | The ticket names bcrypt; .NET has none built in |
+| `Google.Apis.Auth` | Validating Google's ID token (keys, signature, audience) must not be hand-written |
+| `Resend` | Mail over HTTPS: Render blocks SMTP |
+| `xunit`, `Microsoft.AspNetCore.Mvc.Testing`, `Testcontainers.PostgreSql`, `Microsoft.Extensions.TimeProvider.Testing` | Dev only: integration tests against Postgres 17 in a container, moving the clock |
+| Docker (`sdk:10.0-alpine` → `aspnet:10.0-alpine`) | One image for Render and any VM (ADR 0009, rule 1) |
 
 ## Rules
 - Do not add libraries outside this stack without explicit justification

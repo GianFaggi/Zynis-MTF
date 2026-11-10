@@ -1,0 +1,101 @@
+# Tasks
+
+Group 1–5 build the backend, 6–8 the front end. Groups 10 and 11 need the user: they create the services and check on real phones. Read the KB of each area first ([CLAUDE.md](../../../CLAUDE.md#collaboration-rules)). `command npm test` stays green throughout.
+
+## 1. Backend foundation
+
+- [x] 1.1 Scaffold `api/` with .NET 10: `Mtf.slnx`, `Mtf.Api` (Web API, controllers), `Mtf.Api.Tests` (xUnit), the packages in design decision 15, and `bin/` + `obj/` in `.gitignore`; add `api/` to `.vercelignore` (new) and to ESLint's ignores; verify `dotnet build api/Mtf.slnx` passes, `git status` shows no build output and `command npm run lint` still passes
+- [x] 1.2 Write `api/Dockerfile`, `.dockerignore` and `docker-compose.yml` (`postgres:17-alpine` + the API, design decision 1); verify `docker compose up` answers `/health` on port 5000, and `docker build` + `docker run -e PORT=8123` answers on 8123
+- [x] 1.3 Write `Program.cs` with the `RequiredSettings` guard (design decision 1), no `DATABASE_URL` fallback, `MapInboundClaims = false`, CORS from `Cors:AllowedOrigins`, the exception handler answering `ProblemDetails` with no internal detail, and `/health` with no database check
+- [x] 1.4 Write the models and `AppDbContext` for `users`, `sessions`, `email_tokens`, `google_handoffs` (design decision 2), the first migration, and `MigrateAsync()` at start-up; verify `dotnet ef migrations list` shows it and the tables exist in a fresh Postgres 17
+- [x] 1.5 Write the test base: `ApiFactory` with Testcontainers `postgres:17-alpine`, a fake `IEmailSender`, a fake `IGoogleClient`, `FakeTimeProvider` and relaxed rate limits, following Cal's `ApiFactory`
+- [x] 1.6 Write `HealthEndpointTests`, `CorsTests` and `StartupTests`; verify `/health` answers with the database container stopped and issues no query; an allowed origin gets its header and any other does not, also on `/health`; a missing setting and a key under 32 characters stop the start and the log names the setting but never a value; an unexpected exception answers with no internal detail
+- [x] 1.7 Create `KB/backend/api.md` (layout, settings table, how to run locally, data model, what is not copied from Cal) and the `aprendizaje/` notes for the first new tools: `dotnet-webapi.md`, `ef-core-postgres.md`, `docker.md`, in Spanish and plain words, linked from `aprendizaje/index.md`; verify every command in the KB runs as written
+
+## 2. Email and password
+
+- [x] 2.1 Write the token helper (256-bit random, base64url, SHA-256), `IEmailSender` with `ResendEmailSender` and `LogEmailSender`, and the three mails in Spanish and English: verification, account exists, recovery; verify a unit test renders each in both languages and that the "you can ignore this" line is in every one
+- [x] 2.2 Implement `register`, `verify-email`, `resend-verification` (design decisions 2 and 3) with `email_tokens`, normalization and the 60-second wait; write `RegisterTests` and `VerifyEmailTests`; verify every scenario of the `accounts` requirements "Register with email and password", "Registering does not reveal who has an account", "Verify the email by mail", "Resend the verification" and "Emails are compared without case", moving the clock with `FakeTimeProvider` for 60 s and 24 h
+- [x] 2.3 Implement `login` (the dummy-hash check of decision 3; only tokens are stubbed until group 3) and write `LoginTests`; verify the scenarios of "Sign in only with a verified email", including a test that an unknown email does run a bcrypt verification
+- [x] 2.4 Implement `forgot-password` and `reset-password`; write `PasswordRecoveryTests`; verify the scenarios of "Recover the password by mail" and "Recovery proves the email"
+- [x] 2.5 Write `SecretsAtRestTests`; verify, by reading the rows directly, that no table holds a password, a mail token or a renewal token in readable form
+- [x] 2.6 Add the rate limiter (design decision 7) and `RateLimitingTests` with low limits; verify the `auth` policy answers 429 with `Retry-After` and code `too_many_requests`, that a blocked sign-in does not check the password, and that `/health` is never limited
+
+## 3. Sessions on the server
+
+- [x] 3.1 Implement token issuing (15-minute JWT, opaque refresh, design decision 4), real `login` tokens, `refresh` with rotation and the 2-minute window, `logout`, `GET me`, and deleting expired sessions at sign-in
+- [x] 3.2 Write `SessionTests`; verify every server-side scenario of `account-session`: an access token refused after 15 minutes; rotation; the same retired token accepted within 2 minutes and the session ended past it; two near-simultaneous renewals both working; 179 days accepted and 181 refused; an unknown token refused with no change; logout ending only that session; a password reset ending all of them
+- [x] 3.3 Add a "Sessions" section, linking ADR 0010, to `KB/backend/api.md`, and the note `aprendizaje/auth-jwt-refresh.md`; verify `openspec validate 36-cuentas-login-email-google` still passes
+
+## 4. Google on the server
+
+- [x] 4.1 Implement `IGoogleClient` (code → ID token → `GoogleJsonWebSignature.ValidateAsync` with the audience) and `google/login` with `state` = the hand-off hash, `scope=openid email`, `prompt=select_account`
+- [x] 4.2 Implement `google/callback` (lookup by Google id, then email, then create; removing the password of an unverified account; refusing an unverified Google email), the small page in both languages that tries `window.close()`, and `google/exchange`
+- [x] 4.3 Write `GoogleTests` with the fake client; verify every server-side scenario of "Sign in with Google", "The Google session stays secret" and "Google links an existing account": first time, returning with another email, unverified Google email, cancelled, failed token; handed over once; 5-minute expiry; the callback's page and redirects never carrying a token; the pre-hijack case, where the old password stops working
+- [x] 4.4 Write a test against the real `GoogleJsonWebSignature` refusing a token signed by another key, or for another audience, so the seam does not hide the check that matters
+- [x] 4.5 Add "Google" to `KB/backend/api.md` and the note `aprendizaje/oauth-google.md`, including how to create the OAuth client; verify the page's steps match Google Cloud Console's current labels when group 10 follows them
+
+## 5. Backend CI
+
+- [x] 5.1 Write `.github/workflows/ci-backend.yml`, job `check-api` with no `paths:` filter (design decision 11): restore, build, pre-pull Postgres 17 with retries, `dotnet test`
+- [x] 5.2 Add the image smoke test to that job: `docker build`, run on a custom `PORT` against `postgres:17`, `curl /health`, check `__EFMigrationsHistory` has rows, stop the database, `curl /health` again; verify the same script passes locally
+- [x] 5.3 Update `KB/frontend/testing.md` (the CI and Merge gate sections) and write the note `aprendizaje/testcontainers-xunit.md`; verify the KB names both required checks
+
+## 6. Front-end foundation
+
+- [x] 6.1 Add `loadSession`, `saveSession`, `clearSession` for `mtf_session` to `src/lib/storage.ts`, with tests in `storage.test.ts`; verify damaged JSON or refused storage reads as no session, never a crash, and that Backup tests still show no session in the file. Update [KB/frontend/storage.md](../../../KB/frontend/storage.md) (Keys, API, no schema bump)
+- [x] 6.2 Add `WAIT_LIMIT` to `src/sync/wait.ts`, read from `WAIT_STEPS`, with a test; verify `wait.test.ts` passes
+- [x] 6.3 Write `src/account/api.ts` with `wakeApi()`, and `api.test.ts` stubbing `fetch`; verify the base URL, the `offline` / `timeout` / `network` codes, that a code from the server is passed through, that `wakeApi()` retries on failure and skips within 10 minutes of a success, that a `POST` waits for the wake and is sent exactly once, and that a 401 on `withSession()` refreshes once
+- [x] 6.4 Write `src/account/accountStore.ts` and tests; verify only a `session_ended` answer clears the session, that a network failure, 429 and 500 keep it, that the refresh token is read from storage at each use and saved before use, and that refused storage still signs in for the launch
+- [x] 6.5 Write `src/account/links.ts` and tests; call `readAccountLink()` from `src/main.tsx` before mounting; verify `#verify=` and `#reset=` are stored and removed from the address, and that a normal launch or an unknown fragment does nothing
+- [x] 6.6 Write `src/account/google.ts` and tests with fake timers; verify the secret never leaves except in the `POST`, only the hash is in the address, the window opens synchronously in the click, polling is every 3 s, immediate on `visibilitychange`, and stops at 5 minutes, on cancel, on unmount and on a final answer
+- [x] 6.7 Add the `headers` CSP to `vercel.json` (design decision 13), and document it in [KB/frontend/stack.md](../../../KB/frontend/stack.md#deployment) and [KB/frontend/pwa.md](../../../KB/frontend/pwa.md); verify the JSON is valid and the `redirects` are unchanged
+
+## 7. Account sheet mockup (gate: approved before any Account UI)
+
+- [x] 7.1 Write `design/mtf-mockup-cuenta.html` in the shape of `design/mtf-mockup-avion.html` (Paper tokens, light/dark toggle, Spanish copy, phone width): the Settings row in its states; the sheet's steps from design decision 8, with their messages; the Google button and its waiting step; `PlaneWait` replacing a form. Verify no accent anywhere, and that it reads in both themes
+- [x] 7.2 Ask the user to open the mockup and approve it, or adjust until they do; verify the user said it is approved before group 8 starts
+
+## 8. Account UI
+
+- [x] 8.1 Add `TextField` to `src/components/ui/` with its test; add every message key to `es.ts` and `en.ts`; verify `command npm run build` typechecks `en` against `es`
+- [x] 8.2 Write `AccountSection.tsx` and wire it and `AccountSheet` into `App.tsx`, Settings closing first; verify with a test that opening Settings calls no `fetch`, in both session states
+- [x] 8.3 Write the sign-in, register, check-mail and forgot steps in `AccountSheet.tsx`, with `{pending && <PlaneWait />}`, `autocomplete` on each field and a show/hide toggle; write `AccountSheet.test.tsx`; verify the Settings and Sign-in scenarios of `accounts`, every server code shown translated, typed values surviving a timeout, the 60-second resend button, the wake on opening with no plane while typing, and no accent class in any step
+- [x] 8.4 Write the link steps (`verifying`, `verified`, `reset`, `linkExpired`) with tests; verify a link opens the sheet on the right step, verify posts once as the page opens, and that neither signs the user in
+- [x] 8.5 Write the `google` and `signedIn` steps with tests; verify cancel, the 5-minute message, sign-out with no connection, the "notes stay" line, and the quiet "sign in again" message after `session_ended`, with no dialog on the Desk
+- [x] 8.6 Write `e2e/account.spec.ts`, mocking the API with `page.route`, on both Playwright projects: sign in and see the email; reload and still see it; go offline and relaunch with the session, the Desk works and Settings shows the email; opening Settings makes no API request; a signed-in launch makes none; `#reset=` opens the right step and clears the address; Google with a stubbed `window.open` and poll. Verify `command npm run test:e2e` passes, and that `e2e/offline.spec.ts` passes unchanged
+- [x] 8.7 Verify in a real browser, with `command npm run dev` and the local API: register, read the link from the log, verify, sign in, sign out, recover; at phone width in both themes
+- [x] 8.8 Update [KB/frontend/architecture.md](../../../KB/frontend/architecture.md) (source layout, `accountStore`, the first network requests), [KB/frontend/pwa.md](../../../KB/frontend/pwa.md) ("No runtime caching" still holds, and why) and [KB/frontend/testing.md](../../../KB/frontend/testing.md) (`e2e/account.spec.ts`)
+
+## 9. Project docs
+
+- [x] 9.1 Update `CLAUDE.md`: the MVP is finished and V2 has started; the "MVP = no backend" rule rewritten (accounts exist, the Desk still needs no server); the Stack Summary and Quick Reference with `KB/backend/api.md`. Update the `context` in `openspec/config.yaml` the same way. Verify no line still says MTF has no backend
+- [x] 9.2 Update [KB/frontend/stack.md](../../../KB/frontend/stack.md) (backend section; "Nothing runs yet" removed), [KB/roadmap.md](../../../KB/roadmap.md) (#36 ticked, the portability rules ticked except the backup; the backup, deleting an account and changing the email on the V2 backlog) and `README.md`; verify every link in them resolves
+- [x] 9.3 Write the brand's privacy page `public/privacidad.html` (Spanish + English, MTF and Cal, contact `contacto@zynis.com.ar`), which Google requires to publish the shared `Zynis` consent screen (found in 10.2); link it from the Account sheet; verify it is precached and opens offline (Playwright) and that every claim matches the code
+
+## 10. Infrastructure (the user creates these; Claude guides each step and verifies)
+
+- [x] 10.1 (user) Create the Neon project `mtf-prod`: Postgres 17, AWS US East, autoscaling max. 0.25 CU; keep the direct connection string in Npgsql format with `SSL Mode=Require;Connection Idle Lifetime=60`. Verify it connects with `psql` and is not a project shared with Cal
+- [x] 10.2 (user) Create the Google OAuth client for MTF in the brand's Google Cloud project `Zynis`, next to Cal's (its shared consent screen named `Zynis`, non-sensitive scopes only): web application named `MTF API`, redirect URIs `https://api.mtf.zynis.com.ar/api/auth/google/callback` and `http://localhost:5000/api/auth/google/callback`, scopes `openid` and `email`. Until the privacy page (9.3) is live on production, the consent screen stays in Testing with the user's Google account as a test user (enough for group 11); it is published after the merge (follow-up below). Verify the client belongs to MTF and that Cal's is untouched
+- [ ] 10.3 (user) Create a Resend API key for MTF, sending only, on the account where `zynis.com.ar` is verified. Verify a test send arrives from `no-reply@zynis.com.ar`
+- [ ] 10.4 (user) Create the Render Free web service `mtf-api`: Docker, Root Directory `api`, Virginia, health check `/health`, **from this branch for now** (design decision 12), every setting of decision 1 with a new random `Jwt__Key`, and the branch's Vercel preview address in `App__FrontendUrl` and as a second allowed origin. Verify the first deploy runs its migration in Neon and that `https://mtf-api.onrender.com/health` answers, and that a push touching only files outside `api/` does not start a deploy
+- [ ] 10.5 (user) Add the `api.mtf` record at Don Web (TTL 300 s) and the custom domain at Render. Verify `curl https://api.mtf.zynis.com.ar/health` answers over HTTPS with a valid certificate
+- [ ] 10.6 (user) Add `check-api` as a required check in the ruleset `main: CI must pass`, once it has reported on this PR's branch. Verify the ruleset lists both `check` and `check-api`, and that on a later docs-only PR both show as skipped and the PR can still merge
+- [ ] 10.7 Verify on the running service, with `curl`: an origin that is not allowed gets no CORS header; repeated sign-ins from two networks land in separate rate-limit buckets, or record in `KB/backend/api.md` that `X-Forwarded-For` does not give the real client on Render
+- [x] 10.8 (user) Make `contacto@zynis.com.ar` receive mail (the privacy page names it for deleting an account): forwarding with ImprovMX Free to the brand's own mailbox `zynis.app@gmail.com` (never the user's personal one), which replies as `contacto@` through Gmail's "Send mail as" over Resend's SMTP and is the support email of the `Zynis` consent screen, its MX and SPF records at Don Web on the root `zynis.com.ar` (Resend only uses `send.zynis.com.ar`). Verify a mail sent to it arrives
+
+## 11. Real devices (user, on the branch's preview deployment)
+
+- [ ] 11.1 (user) On a real iPhone, in MTF installed from the preview: register, open the mail link (it opens in Safari), go back to the installed app, sign in, close and reopen it, and see the account. Verify the session lives in the installed app
+- [ ] 11.2 (user) On the same installed iPhone: sign in with Google, finish in the window it opens, go back, and see the account. If this fails, stop and report: it decides whether ADR 0011 holds
+- [ ] 11.3 (user) On a real Android phone, installed: Google, email and password, and recovery from a mail link
+- [ ] 11.4 (user) On a PC: Google in a tab, with the window closing itself; and with the API asleep (15 minutes idle): the plane's messages, then the sign-in, and Render's loading page in the Google window continuing by itself
+- [ ] 11.5 (user) Airplane mode on a signed-in phone: MTF opens, the Desk works, Settings shows the email, sign-out works. On the preview, check the browser console for CSP refusals with the whole app in use: Desk, fonts, install, Backup and Account
+- [ ] 11.6 Clean-code pass over the changed files, keeping the patterns of the existing code; fill Technical Context, Modified Files and Pending (the after-merge steps below) in `KB/developers/active.md`; verify `dotnet test api/Mtf.slnx`, `command npm test`, `command npm run lint`, `command npm run test:e2e` and `openspec validate 36-cuentas-login-email-google` all pass
+
+## Workflow follow-up
+
+- On this branch, once every task is done: `/opsx:archive` (merges the `accounts`, `account-session`, `backend-service` and `pwa-offline` deltas into `openspec/specs/`), then the user commits, pushes and opens the PR.
+- Right after the merge, before `/close-ticket`: point Render's `mtf-api` at `main`; set `App__FrontendUrl` to `https://mtf.zynis.com.ar` and remove the preview origin from `Cors__AllowedOrigins`; verify `curl -I -H "Origin: <preview address>" https://api.mtf.zynis.com.ar/health` carries no CORS header; sign in on `https://mtf.zynis.com.ar`.
+- Then publish the `Zynis` consent screen: in Google Auth Platform → Información de la marca, home page `https://mtf.zynis.com.ar` and privacy policy `https://mtf.zynis.com.ar/privacidad.html` (verify both open first); Público → Publicar app, until it reads "En producción". Verify Google sign-in on `https://mtf.zynis.com.ar` with an account that is not a test user.
+- `/close-ticket` after that, on an up-to-date `main`.

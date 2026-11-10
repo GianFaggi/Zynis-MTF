@@ -18,6 +18,15 @@ export interface SavedArrangement {
   savedAt: number
 }
 
+/**
+ * The account signed in on this device (#36, ADR 0010): its renewal token and email.
+ * A device setting (`mtf_session`), like the theme: not part of `MtfData` nor of a Backup.
+ */
+export interface StoredSession {
+  refreshToken: string
+  email: string
+}
+
 /** The 12 Paper Area colors; `AREA_COLORS` in `src/desk/areas.ts` lists them in swatch order. */
 export type AreaColor =
   | 'sage'

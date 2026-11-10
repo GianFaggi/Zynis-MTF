@@ -106,6 +106,16 @@ _Avoid_: Save, sync, download (as the name of the action)
 Loading a Backup on this device. MTF checks the file first and, after the user confirms, **replaces** everything on the device with it; it never merges. A file that is not a valid Backup changes nothing.
 _Avoid_: Restore, sync, merge, open
 
+## Accounts
+
+**Account** (ES: **cuenta**):
+Who a Desk belongs to across devices: an email, with a password, Google, or both. It has no name and no photo. It is always optional: MTF opens and works with no account and no connection, and signing in or out changes nothing on the Desk. It is reached from Settings → Cuenta.
+_Avoid_: User (in UI copy), profile, login (as a noun), member
+
+**Session** (ES: **sesión**):
+This device being signed in to an Account. It stays on the device, like the theme, and is not in a Backup. It never ends because of time spent offline, and it never blocks the Desk; only the server can end it. Signing out ends it and leaves every note on the device.
+_Avoid_: Login, connection, token (in UI copy)
+
 ## Sync
 
 **Paper plane** (ES: **avión de papel**):

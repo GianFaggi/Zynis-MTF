@@ -28,6 +28,7 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 - Arranging the Areas (#18) needs **no schema bump** either: an arrangement writes every moved Area's `rect` and its Desk Cards' positions in one replacement, like a hand move. "Mi disposición" is a device setting under its own key, `mtf_arrangement` ([Keys](#keys)), not part of `mtf_data`, so the Backup format does not change either.
 - "Frasco por área" (#19) needs **no schema bump** and **no Backup change**: it is one device key, `mtf_area_jars` ([Keys](#keys)). Area Jars are a view of `Card.jarredAt` + `Card.areaId`, and the Mis logros Area filter reads `events` through the Cards at read time (a Win counts in its Card's current Area, falling back to its `areaId` snapshot only when the Card is gone). Moving a Card to another Area as it goes into the Jar (`jarCard(id, { areaId })`) writes `areaId` and `jarredAt` in one replacement.
 - The Welcome Card (#20) needs **no schema bump** and **no Backup change**: it is an ordinary `Card` (no field marks it), added to `cards` with no event. Only one device key is new, `mtf_welcome_placed` ([Keys](#keys)). A Backup made with a Welcome Card on the Desk carries it like any Card.
+- Accounts (#36) need **no schema bump** and **no Backup change**: the session is one device key, `mtf_session` ([Keys](#keys)), never part of `mtf_data`. Signing in or out changes nothing in the data document.
 
 ## Entities (schema version 1)
 
@@ -97,6 +98,7 @@ interface MtfData {         // the whole `mtf_data` document
 | `mtf_arrangement` | `SavedArrangement` as JSON: every Area's rect when the user last chose "Guardar esta disposición", and when. One slot, replaced by each save. Anything else (invalid JSON, not an object, a rect without four finite numbers) reads as nothing saved. A device setting, not part of `mtf_data` or the Backup; an Import leaves it alone | #18 |
 | `mtf_area_jars` | `'1'` while "Frasco por área" is on, `'0'` once turned off; missing or anything else reads as off. A device setting, not part of `mtf_data` or the Backup; an Import leaves it alone | #19 |
 | `mtf_welcome_placed` | `'1'` once MTF placed this device's Welcome Card; missing or anything else reads as not placed. Written by `placeWelcomeOnce()` at start-up, never by "Ver introducción". A new key rather than `mtf_hint_seen`, so devices that dismissed the old hint still get the Welcome Card once. A device setting, not part of `mtf_data` or the Backup; an Import leaves it alone | #20 |
+| `mtf_session` | `StoredSession` as JSON: `{ refreshToken, email }` of the account signed in on this device ([ADR 0010](../../docs/adr/0010-account-sessions.md)). Missing, invalid JSON, or a missing or empty field reads as signed out. Written on sign-in and on every renewal (before the new token is used), removed on sign-out or when the server answers `session_ended`. Read at each use, never cached, so tabs share one session; renewals run one at a time across tabs (a Web Lock), each reading the token the last one saved. The access token is never stored. A device setting, not part of `mtf_data` or the Backup; an Import leaves it alone. **No schema bump** | #36 |
 
 ## Storage layer API (`src/lib/storage.ts`)
 
@@ -116,6 +118,9 @@ interface MtfData {         // the whole `mtf_data` document
 | `saveArrangement(arrangement)` | Writes the whole arrangement, replacing the previous one |
 | `loadAreaJars(): boolean` | `true` only when `mtf_area_jars` is `'1'`; `false` when unset, `'0'`, anything else, or storage refuses to read |
 | `saveAreaJars(on)` | Writes `'1'` or `'0'` |
+| `loadSession(): StoredSession \| null` | `null` when unset, damaged or storage refuses to read: signed out, never a crash |
+| `saveSession(session)` | Writes `{ refreshToken, email }`, replacing the previous session |
+| `clearSession()` | Removes `mtf_session`; never throws |
 | `upgradeDocument(doc): UpgradeResult` | The one migration path, used by `loadData()` and by Import. `{ ok: true, data }`, or `{ ok: false, reason }` with `'shape'` (outer shape wrong), `'newer'` (`schemaVersion` above `SCHEMA_VERSION`) or `'migration'` (a step missing, throwing, or breaking the shape). Checks the outer shape only, not the entities |
 | `migrate(doc, steps, target)` | Runs `steps[v]` (v → v + 1) up to `target`; throws if a step is missing. The `migrations` map is private and empty at v1. |
 | `emptyData()` | `{ schemaVersion: SCHEMA_VERSION, areas: [], cards: [], events: [] }` |

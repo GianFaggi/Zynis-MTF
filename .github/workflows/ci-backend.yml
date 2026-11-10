@@ -1,0 +1,67 @@
+name: CI backend
+
+# No `paths:` filter, unlike Zynis Cal: check-api is a required check, and a workflow skipped by
+# `paths:` never reports, so the PR would wait for it forever. The workflow always runs; `changes`
+# decides, and a job skipped by its `if:` reports as passed (design decision 11).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # A PR is checked out as its merge commit, so its first parent is main: the diff is what the
+      # PR would change. A push to main runs everything.
+      - id: diff
+        run: |
+          run=true
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            files=$(git diff --name-only HEAD^1 HEAD)
+            printf '%s\n' "$files" | grep -qE '^(api/|\.github/workflows/ci-backend\.yml$)' || run=false
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+  check-api:
+    needs: changes
+    # Skipped only on an explicit "false": if `changes` itself fails, the tests still run.
+    if: ${{ !cancelled() && needs.changes.outputs.run != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # The runner is thrown away after the job: skip Testcontainers' resource reaper,
+      # whose Docker Hub pull is the flaky step (Zynis Cal).
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore api/Mtf.slnx
+      - run: dotnet build api/Mtf.slnx --no-restore --configuration Release
+
+      - name: Pre-pull Postgres 17 (retry flaky Docker Hub)
+        run: |
+          for image in postgres:17-alpine postgres:17; do
+            for i in 1 2 3 4 5; do
+              docker pull "$image" && break
+              [ "$i" -eq 5 ] && { echo "Could not pull $image" >&2; exit 1; }
+              echo "Pull attempt $i of $image failed; retrying in 15 s"
+              sleep 15
+            done
+          done
+
+      - run: dotnet test api/Mtf.slnx --no-build --configuration Release --logger "console;verbosity=minimal"
+
+      - name: Smoke test of the image
+        run: sh api/smoke-test.sh

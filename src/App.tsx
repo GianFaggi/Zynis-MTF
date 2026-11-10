@@ -1,5 +1,8 @@
 import { Ellipsis, Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { AccountSection } from './account/AccountSection'
+import { AccountSheet } from './account/AccountSheet'
+import { openAccount } from './account/accountStore'
 import { BackupSection } from './backup/BackupSection'
 import { IconButton } from './components/ui/IconButton'
 import { Segmented } from './components/ui/Segmented'
@@ -128,6 +131,13 @@ export default function App() {
       <MisLogros />
 
       <Sheet open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('settings')} closeLabel={t('close')}>
+        {/* Settings closes first: two sheets are never open at once. */}
+        <AccountSection
+          onOpen={() => {
+            setSettingsOpen(false)
+            openAccount()
+          }}
+        />
         <div className="flex flex-col gap-2 py-2">
           <span className="text-xs font-semibold tracking-[0.08em] text-pencil uppercase">{t('language')}</span>
           <Segmented label={t('language')} options={languageOptions} value={language} onChange={setLanguage} />
@@ -165,6 +175,7 @@ export default function App() {
           }}
         />
       </Sheet>
+      <AccountSheet />
 
       <Toast message={toast} />
     </main>

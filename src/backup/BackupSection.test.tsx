@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDeskStore } from '../desk/deskStore'
+import { loadSession, saveSession } from '../lib/storage'
 import { useAppStore } from '../store/appStore'
 import { makeCard, makeData, makeItem, rowOfAreas } from '../test/fixtures'
 import { resetStores } from '../test/stores'
@@ -72,6 +73,16 @@ describe('BackupSection', () => {
     expect(text).not.toMatch(/theme|"dark"|language/)
   })
 
+  it('Export leaves out the account: no renewal token and no email in the file', async () => {
+    saveSession({ refreshToken: 'rt-secret-123', email: 'gian@example.com' })
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar copia' }))
+
+    const text = await vi.mocked(deliverFile).mock.calls[0][0].text()
+    expect(text).not.toContain('rt-secret-123')
+    expect(text).not.toContain('gian@example.com')
+  })
+
   it('no toast when the share sheet was closed', async () => {
     vi.mocked(deliverFile).mockResolvedValueOnce('cancelled')
     setup()
@@ -127,6 +138,16 @@ describe('BackupSection', () => {
 
     expect(useAppStore.getState().data).toEqual(theirs)
     expect(onImported).toHaveBeenCalledWith(theirs)
+  })
+
+  it('an Import leaves the signed-in account as it was', async () => {
+    const session = { refreshToken: 'rt-secret-123', email: 'gian@example.com' }
+    saveSession(session)
+    const { pick } = setup()
+    await pick(jsonFile(makeBackup(theirs, new Date())))
+    await userEvent.click(await screen.findByRole('button', { name: 'Reemplazar mis datos' }))
+
+    expect(loadSession()).toEqual(session)
   })
 
   it('picking the same file again, after cancelling, reads it again', async () => {

@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/*.user
+**/.vs
+**/.vscode
+**/.idea
+**/.DS_Store
+**/Thumbs.db
+**/.env
+**/.env.*
+Mtf.Api.Tests/

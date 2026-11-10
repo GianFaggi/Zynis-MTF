@@ -1,6 +1,6 @@
 ---
 area: testing
-description: Frontend test stack, what goes in Vitest vs Playwright, conventions and CI for Zynis MTF
+description: Frontend test stack, what goes in Vitest vs Playwright, conventions, and both CI jobs (front end and backend) with the merge gate for Zynis MTF
 ---
 
 # Testing
@@ -96,6 +96,16 @@ Shared helpers live in `e2e/helpers.ts`:
 
 The Backup unit tests: `backup.test.ts` (file name at 23:30 in `America/Argentina/Buenos_Aires`, round trip, every refusal, migration), `validate.test.ts` (one test per entity rule), `deliver.test.ts`, `BackupSection.test.tsx`, plus `upgradeDocument`, `requestPersistentStorage` and the nudge flag in `storage.test.ts`.
 
+### Account (`e2e/account.spec.ts`, #36)
+
+- **Both projects.** The API is never reached: `mockApi(page, answers)` routes `https://api.mtf.zynis.com.ar/**` (the address the production build calls) with `page.route`, answers preflights and adds CORS headers, answers `/health` itself, and records every request so a test can assert that **none** was made.
+- Covered: sign in and see the email, still there after a reload; relaunch offline with a session (the Desk works, Settings shows the email); opening Settings makes no request; a signed-in launch makes none; opening the Account sheet wakes only `/health`; `#reset=` opens its step, leaves the address at once and posts the token; Google with `window.open` stubbed by `addInitScript`, the exchange answering 202 then tokens, checking the window got only the hash and the secret travelled only in the POST.
+- A session is seeded with `addInitScript` writing `mtf_session` before the app loads.
+
+The Account unit tests stub the network one layer down: `api.test.ts` stubs `fetch` with fake timers (wake retries, the 10-minute skip, 90 s timeout, sent exactly once); `accountStore.test.ts`, `google.test.ts` and `AccountSheet.test.tsx` mock `apiRequest` by path. `AccountSheet.test.tsx` renders inside `StrictMode`, so the verify-once guard is tested the way development runs it. `google.test.ts` and the backend's `SecretTokenTests` both assert the same SHA-256 vector, so the app and the API hash a hand-off secret identically.
+
+The real flow against the real local API (register, verification link from the API log, sign in, sign out, recovery) is checked by hand, or scripted, with `command npm run dev` and `dotnet run --project api/Mtf.Api`; in Development the API logs each mail's link instead of sending it ([KB/backend/api.md](../backend/api.md#running-it-locally)).
+
 ## Setup
 
 **Vitest** — `test` block in `vite.config.ts` (one config for app and tests; `/// <reference types="vitest/config" />` types it):
@@ -130,7 +140,24 @@ command npx playwright install chromium # once per machine, after installing dep
 
 ## CI
 
-`.github/workflows/ci-frontend.yml` (created in change 1). Triggers on push and PR to `main`; one job on `ubuntu-latest`, 15-minute timeout:
+Two workflows, two jobs, both required by the merge gate. They run in parallel, so a front-end failure and a back-end failure read apart.
+
+**Each job runs only when its side changed** (#36, the same split as Zynis Cal, built differently). Cal filters with `paths:` on the trigger, but there a whole workflow is skipped, and a required check whose workflow is skipped never reports: the PR would wait for it forever. So each workflow always starts, a small `changes` job lists the files the PR changes (`git diff` of the PR's merge commit against its first parent, `main`), and the test job carries an `if:`. A job skipped by its `if:` reports as passed, so the gate stays satisfied:
+
+| The PR changes | `check` | `check-api` |
+|---|---|---|
+| `src/`, `e2e/`, `public/`, a root config (`package.json`, `vercel.json`, …), `ci-frontend.yml` | runs | skipped |
+| `api/`, `ci-backend.yml` | skipped | runs |
+| only docs: `KB/`, `docs/`, `openspec/`, `design/`, `.claude/`, a root `*.md` | skipped | skipped |
+
+- The front-end side is "everything that is not on the list", so a new file at the root is never missed; the backend side is just `api/` and its workflow.
+- It fails toward running: the test job is skipped only on an explicit `false`, so if `changes` itself breaks, the tests run anyway.
+- A **push to `main`** (the merge) always runs both: nobody waits on it, and it catches two green PRs that break together.
+- Render deploys only when `api/` changes (its Root Directory); Vercel still builds a preview for an API-only PR, which costs nothing.
+
+### `check` (front end)
+
+`.github/workflows/ci-frontend.yml` (created in change 1). Triggers on push and PR to `main`; after `changes`, one job on `ubuntu-latest`, 15-minute timeout:
 
 1. `actions/checkout@v4`
 2. `actions/setup-node@v4` — Node 22, `cache: npm`
@@ -142,15 +169,27 @@ command npx playwright install chromium # once per machine, after installing dep
 8. `npm run test:e2e` (its `webServer` builds again and serves on 4173; `CI` is set, so no server reuse, 1 retry, HTML report)
 9. On failure: upload `playwright-report/` as the `playwright-report` artifact (7 days)
 
+### `check-api` (backend, #36)
+
+`.github/workflows/ci-backend.yml`. Same triggers, `ubuntu-latest`, 20-minute timeout, `TESTCONTAINERS_RYUK_DISABLED=true` (the runner is thrown away anyway, and the reaper's Docker Hub pull is the flaky step, as in Zynis Cal):
+
+1. `actions/checkout@v4`, `actions/setup-dotnet@v4` (.NET 10)
+2. `dotnet restore api/Mtf.slnx`, then `dotnet build … --configuration Release`
+3. Pre-pull `postgres:17-alpine` and `postgres:17`, 5 attempts 15 s apart
+4. `dotnet test api/Mtf.slnx` — xUnit integration tests against Postgres 17 in Testcontainers, plus unit tests ([KB/backend/api.md](../backend/api.md))
+5. `sh api/smoke-test.sh` — builds the image, runs it in Production on `PORT=8123` against a plain `postgres:17`, curls `/health`, checks `__EFMigrationsHistory` has rows, stops the database and curls `/health` again. The same script runs locally, from the repo root, with Docker Desktop running.
+
+It runs only when the PR changes `api/` or this workflow (see the table above).
+
 ### Merge gate
 
 A GitHub ruleset, **`main: CI must pass`** (Settings → Rules → Rulesets, active since 2026-10-11), protects the default branch:
 
-- **Required status check `check`** (the job above, source GitHub Actions). A PR cannot be merged until it is green, and a commit cannot reach `main` unless it already passed on another ref, so direct pushes to `main` are rejected.
+- **Required status checks `check` and `check-api`** (the two jobs above, source GitHub Actions; `check-api` added by hand once it first reported on #36's PR). A PR cannot be merged until both are green, and a commit cannot reach `main` unless it already passed on another ref, so direct pushes to `main` are rejected.
 - Branches do **not** have to be up to date with `main` before merging (one developer; re-running CI on every `main` move buys nothing).
 - **Block force pushes** and **restrict deletions** on `main`.
 - **No bypass list**: nobody, the repo admin included, pushes straight to `main`. The OpenSpec archive (archived change + synced specs) is done on the ticket branch before the PR, so it reaches `main` with the code (decided 2026-10-12, after a direct archive push for change 4 was rejected). Change 4's archive went through its own PR as a one-off.
 
-If the job is renamed in `ci-frontend.yml`, update the required check in the ruleset too, or every PR stays blocked waiting for a check that never reports.
+If a job is renamed in `ci-frontend.yml` or `ci-backend.yml`, update the required check in the ruleset too, or every PR stays blocked waiting for a check that never reports. For the same reason, never add a `paths:` filter to their triggers; skip with the `changes` job instead.
 
-To reproduce CI locally: `CI=1` and the same commands, starting from `command npm ci` (`--with-deps` is Linux-only; locally `command npx playwright install chromium`).
+To reproduce CI locally: `CI=1` and the same commands, starting from `command npm ci` (`--with-deps` is Linux-only; locally `command npx playwright install chromium`). For `check-api`: `dotnet test api/Mtf.slnx` and `sh api/smoke-test.sh`, with Docker Desktop running.

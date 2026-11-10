@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacidad · Zynis</title>
+    <meta name="description" content="Qué datos guardan las apps de Zynis (MTF y Cal), dónde y para qué." />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <!-- A static page: the Google consent screen of the Zynis project links here. Paper tokens from src/index.css. -->
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f5f1ea;
+        --sheet: #fcfaf6;
+        --ink: #2a2724;
+        --ink-2: #4a4540;
+        --pencil: #766e66;
+        --rule: #e3dcd1;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --paper: #1c1a18;
+          --sheet: #272421;
+          --ink: #ece6de;
+          --ink-2: #cfc7bd;
+          --pencil: #a39a90;
+          --rule: #3a3530;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      main {
+        max-width: 68ch;
+        margin: 0 auto;
+        padding: 40px 20px 64px;
+      }
+      article {
+        background: var(--sheet);
+        border: 1px solid var(--rule);
+        border-radius: 18px;
+        padding: 8px 24px 24px;
+        margin-bottom: 28px;
+      }
+      h1, h2, h3 {
+        font-family: Literata, Georgia, 'Times New Roman', serif;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      h1 { font-size: 1.75rem; margin: 20px 0 4px; }
+      h2 { font-size: 1.25rem; margin: 28px 0 8px; }
+      h3 { font-size: 1.05rem; margin: 20px 0 6px; }
+      p, li { color: var(--ink-2); }
+      ul { padding-left: 1.2em; }
+      li { margin: 4px 0; }
+      strong { color: var(--ink); }
+      a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--pencil); }
+      .meta { color: var(--pencil); font-size: 0.9rem; margin: 0; }
+      .langs { color: var(--pencil); font-size: 0.9rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="langs"><a href="#es">Español</a> · <a href="#en">English</a></p>
+
+      <article id="es" lang="es">
+        <h1>Privacidad</h1>
+        <p class="meta">Zynis · Última actualización: 4 de noviembre de 2026</p>
+
+        <p>
+          Zynis hace dos apps: <strong>MTF</strong> (<a href="https://mtf.zynis.com.ar">mtf.zynis.com.ar</a>), un anotador con
+          forma de escritorio, y <strong>Cal</strong> (<a href="https://cal.zynis.com.ar">cal.zynis.com.ar</a>), para tus gastos e
+          ingresos. Esta página dice qué datos guarda cada una, dónde y para qué. Nada se vende ni se comparte con nadie para
+          publicidad.
+        </p>
+
+        <h2>MTF</h2>
+        <h3>Tus notas se quedan en tu dispositivo</h3>
+        <p>
+          Las tarjetas, las áreas, el frasco y tus logros se guardan solo en el almacenamiento de tu navegador. No viajan a
+          ningún servidor. La copia de seguridad (Exportar) es un archivo que se crea en tu dispositivo y vos decidís dónde
+          guardarlo.
+        </p>
+
+        <h3>La cuenta es opcional</h3>
+        <p>MTF funciona entero sin cuenta. Si creás una, el servidor de MTF guarda:</p>
+        <ul>
+          <li>Tu <strong>email</strong>, y si ya lo confirmaste.</li>
+          <li>Tu <strong>contraseña</strong>, nunca como texto: solo una huella (bcrypt) que no se puede revertir.</li>
+          <li>
+            Si entrás con <strong>Google</strong>: el identificador de tu cuenta de Google y tu email. MTF le pide a Google solo
+            eso; ni tu nombre, ni tu foto, ni nada más de tu cuenta.
+          </li>
+          <li>
+            Tus <strong>sesiones</strong>: una huella del token que mantiene tu sesión abierta en cada dispositivo, y sus
+            fechas.
+          </li>
+          <li>
+            Los <strong>enlaces</strong> de confirmar el email o recuperar la contraseña, también como huella, hasta que vencen
+            (24 horas y 1 hora).
+          </li>
+        </ul>
+        <p>
+          Tu <strong>dirección IP</strong> se usa en el momento para frenar abusos (un límite de intentos por minuto) y no se
+          guarda en la base de datos; los proveedores de hosting pueden conservarla un tiempo en sus registros técnicos.
+        </p>
+        <p>
+          MTF te manda mails solo para tu cuenta: confirmar el email, recuperar la contraseña o avisarte que ya tenías una
+          cuenta. Nunca publicidad.
+        </p>
+
+        <h3>En tu dispositivo</h3>
+        <p>
+          MTF no usa cookies, ni analíticas, ni publicidad, ni rastreadores. En el almacenamiento del navegador guarda tus
+          notas, tus preferencias (idioma, tema) y, si iniciaste sesión, el token de tu sesión.
+        </p>
+
+        <h2>Cal</h2>
+        <p>Cal necesita una cuenta, porque tus datos se guardan en su servidor para verlos desde cualquier dispositivo:</p>
+        <ul>
+          <li>Tu <strong>nombre</strong> y tu <strong>email</strong>; si entrás con Google, también lo que Google comparte de tu perfil básico.</li>
+          <li>Tu <strong>contraseña</strong>, solo como huella (bcrypt), y el identificador de tu cuenta de Google si la usás.</li>
+          <li>
+            Lo que cargás: <strong>gastos, ingresos, presupuestos y tarjetas</strong> (nombre, banco y, si los ponés, los
+            últimos dígitos), y tu moneda principal.
+          </li>
+        </ul>
+        <p>Cal también te manda mails solo para tu cuenta.</p>
+
+        <h2>Proveedores</h2>
+        <p>Los datos de las cuentas se guardan en servidores de los Estados Unidos, a través de:</p>
+        <ul>
+          <li><strong>Vercel</strong>: sirve las páginas de MTF y de Cal.</li>
+          <li><strong>Render</strong> y <strong>Neon</strong>: los servidores y las bases de datos de MTF y de Cal.</li>
+          <li><strong>Resend</strong>: envía los mails.</li>
+          <li><strong>Google</strong>: solo si elegís entrar con Google.</li>
+        </ul>
+
+        <h2>Cuánto tiempo, y cómo borrar tu cuenta</h2>
+        <p>
+          Una cuenta se guarda hasta que pidas borrarla. Una sesión que no se usa durante 180 días vence sola. Para borrar tu
+          cuenta de MTF o de Cal, con todo lo que tiene en el servidor, escribí a
+          <a href="mailto:contacto@zynis.com.ar">contacto@zynis.com.ar</a> desde el email de esa cuenta; se borra dentro de los
+          30 días. Las notas de MTF están en tu dispositivo: las borrás vos, borrando los datos del sitio en tu navegador.
+        </p>
+
+        <h2>Cambios</h2>
+        <p>Si esto cambia, se actualiza esta página y su fecha.</p>
+      </article>
+
+      <article id="en" lang="en">
+        <h1>Privacy</h1>
+        <p class="meta">Zynis · Last updated: November 4, 2026</p>
+
+        <p>
+          Zynis makes two apps: <strong>MTF</strong> (<a href="https://mtf.zynis.com.ar">mtf.zynis.com.ar</a>), a notepad shaped
+          like a desk, and <strong>Cal</strong> (<a href="https://cal.zynis.com.ar">cal.zynis.com.ar</a>), for your expenses and
+          income. This page says what data each one keeps, where, and why. Nothing is sold or shared with anyone for
+          advertising.
+        </p>
+
+        <h2>MTF</h2>
+        <h3>Your notes stay on your device</h3>
+        <p>
+          Cards, Areas, the Jar and your wins are stored only in your browser's storage. They never travel to a server. The
+          backup (Export) is a file created on your device, and you decide where it goes.
+        </p>
+
+        <h3>An account is optional</h3>
+        <p>MTF works fully without an account. If you create one, MTF's server keeps:</p>
+        <ul>
+          <li>Your <strong>email</strong>, and whether you confirmed it.</li>
+          <li>Your <strong>password</strong>, never as text: only a one-way fingerprint (bcrypt).</li>
+          <li>
+            If you sign in with <strong>Google</strong>: your Google account's identifier and your email. MTF asks Google for
+            only that; not your name, your photo or anything else in your account.
+          </li>
+          <li>
+            Your <strong>sessions</strong>: a fingerprint of the token that keeps you signed in on each device, and its dates.
+          </li>
+          <li>
+            The <strong>links</strong> to confirm your email or recover your password, also as a fingerprint, until they
+            expire (24 hours and 1 hour).
+          </li>
+        </ul>
+        <p>
+          Your <strong>IP address</strong> is used on the spot to stop abuse (a limit of attempts per minute) and is not stored
+          in the database; hosting providers may keep it for a while in their technical logs.
+        </p>
+        <p>
+          MTF only sends you mail about your account: confirming your email, recovering your password, or telling you that you
+          already had an account. Never advertising.
+        </p>
+
+        <h3>On your device</h3>
+        <p>
+          MTF uses no cookies, analytics, ads or trackers. In the browser's storage it keeps your notes, your preferences
+          (language, theme) and, if you signed in, your session token.
+        </p>
+
+        <h2>Cal</h2>
+        <p>Cal needs an account, because your data is kept on its server so you can see it from any device:</p>
+        <ul>
+          <li>Your <strong>name</strong> and <strong>email</strong>; if you sign in with Google, also what Google shares of your basic profile.</li>
+          <li>Your <strong>password</strong>, only as a fingerprint (bcrypt), and your Google account's identifier if you use it.</li>
+          <li>
+            What you enter: <strong>expenses, income, budgets and cards</strong> (name, bank and, if you add them, the last
+            digits), and your main currency.
+          </li>
+        </ul>
+        <p>Cal also only sends you mail about your account.</p>
+
+        <h2>Providers</h2>
+        <p>Account data is kept on servers in the United States, through:</p>
+        <ul>
+          <li><strong>Vercel</strong>: serves MTF's and Cal's pages.</li>
+          <li><strong>Render</strong> and <strong>Neon</strong>: MTF's and Cal's servers and databases.</li>
+          <li><strong>Resend</strong>: sends the mail.</li>
+          <li><strong>Google</strong>: only if you choose to sign in with Google.</li>
+        </ul>
+
+        <h2>How long, and deleting your account</h2>
+        <p>
+          An account is kept until you ask to delete it. A session unused for 180 days expires by itself. To delete your MTF
+          or Cal account, with everything it has on the server, write to
+          <a href="mailto:contacto@zynis.com.ar">contacto@zynis.com.ar</a> from that account's email; it is deleted within 30
+          days. MTF's notes are on your device: you delete them yourself, by clearing the site's data in your browser.
+        </p>
+
+        <h2>Changes</h2>
+        <p>If this changes, this page and its date are updated.</p>
+      </article>
+    </main>
+  </body>
+</html>

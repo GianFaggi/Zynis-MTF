@@ -9,15 +9,19 @@ context: |
   Users write Cards (title, text, optional checklist), place them freely on one Desk grouped
   in soft Areas, and drop finished Cards into the Jar, which feeds "Mis logros".
   The approved direction is design/mtf-mockup-desk.html.
-  100% offline, no backend in the MVP; a .NET backend (accounts + sync) comes in V2.
+  The MVP is finished and V2 has started: the Desk works 100% offline and never needs a server;
+  optional accounts live on a .NET 10 API in api/ (Render + Neon, see KB/backend/api.md and
+  docs/adr/0009-v2-backend-hosting.md), and sync (#37) will build on them.
   Stack: React + TypeScript + Vite, Tailwind CSS v4, @use-gesture/react, Zustand,
   vite-plugin-pwa (full offline precache), localStorage behind src/lib/storage,
   lucide-react, @fontsource. Tests: Vitest + Testing Library + jsdom (`npm test`),
   Playwright for gesture flows (`npm run test:e2e`). Hosting: Vercel, at https://mtf.zynis.com.ar
   (the address is chosen once: the notes live on its origin, see docs/adr/0008-own-address.md).
+  Backend: .NET 10 Web API, Controllers -> Services -> DAOs behind interfaces, EF Core on Postgres 17,
+  xUnit + Testcontainers (`dotnet test api/Mtf.slnx`), at https://api.mtf.zynis.com.ar.
 
   Before writing any artifact, read CLAUDE.md and the KB for the area the change
-  touches (KB/frontend/*.md, KB/roadmap.md). The active ticket, its GitHub issue and
+  touches (KB/frontend/*.md, KB/backend/*.md, KB/roadmap.md). The active ticket, its GitHub issue and
   acceptance criteria are in KB/developers/active.md.
   Use the domain terms defined in GLOSSARY.md (Desk, Area, Card, Item, Jar, Win, ...).
 
@@ -27,7 +31,7 @@ context: |
 rules:
   proposal:
     - Map every acceptance criterion of the GitHub issue to the proposal scope, and state what is out of scope.
-    - Anything that needs a server (accounts, sync, sharing) goes to the V2 backlog, never into the MVP scope.
+    - The Desk must keep working with no server and no account; a server feature (accounts, sync) is optional and never blocks or waits in front of the Desk.
     - Keep the desk free; never introduce tabs, columns or grids that decide where Cards go.
   design:
     - When a domain term is introduced or sharpened, add or update it in GLOSSARY.md as part of the change.
@@ -46,4 +50,4 @@ operations:
   apply:
     guidance:
       - Never commit, push or open PRs; the user does that.
-      - Run `npm test` (and `npm run test:e2e` when gestures changed) before marking the last task done.
+      - Run `npm test` (and `npm run test:e2e` when gestures changed, `dotnet test api/Mtf.slnx` when api/ changed) before marking the last task done.

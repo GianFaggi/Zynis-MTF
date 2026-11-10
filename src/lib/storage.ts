@@ -1,4 +1,4 @@
-import type { Language, MtfData, SavedArrangement, Theme } from '../types'
+import type { Language, MtfData, SavedArrangement, StoredSession, Theme } from '../types'
 
 // The only module that touches localStorage (KB/frontend/storage.md, ADR 0004).
 // Every access is wrapped: if the browser refuses storage (blocked, private mode,
@@ -13,6 +13,7 @@ export const WELCOME_PLACED_KEY = 'mtf_welcome_placed'
 export const INSTALL_NUDGE_SEEN_KEY = 'mtf_install_nudge_seen'
 export const ARRANGEMENT_KEY = 'mtf_arrangement'
 export const AREA_JARS_KEY = 'mtf_area_jars'
+export const SESSION_KEY = 'mtf_session'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
 
 type Migration = (doc: Record<string, unknown>) => Record<string, unknown>
@@ -139,6 +140,33 @@ export function saveInstallNudgeSeen(): void {
 }
 
 /**
+ * The account signed in on this device (#36); `null` when signed out, or when the stored value
+ * is damaged or storage refuses to read. Read at each use, never cached, so tabs share one session.
+ */
+export function loadSession(): StoredSession | null {
+  const raw = read(SESSION_KEY)
+  if (raw === null) return null
+  try {
+    const value: unknown = JSON.parse(raw)
+    return isSession(value) ? { refreshToken: value.refreshToken, email: value.email } : null
+  } catch {
+    return null
+  }
+}
+
+export function saveSession(session: StoredSession): void {
+  write(SESSION_KEY, JSON.stringify({ refreshToken: session.refreshToken, email: session.email }))
+}
+
+export function clearSession(): void {
+  try {
+    localStorage.removeItem(SESSION_KEY)
+  } catch (error) {
+    console.warn(`[storage] could not remove "${SESSION_KEY}":`, error)
+  }
+}
+
+/**
  * Asks the browser not to evict MTF's storage under pressure. Silent: does nothing
  * without the API or when already persistent, and only logs a refusal or a failure.
  */
@@ -184,6 +212,16 @@ function isArrangement(value: unknown): value is SavedArrangement {
   if (!isRecord(value) || !isRecord(value.rects) || !Number.isFinite(value.savedAt)) return false
   return Object.values(value.rects).every(
     (rect) => isRecord(rect) && (['x', 'y', 'w', 'h'] as const).every((side) => Number.isFinite(rect[side])),
+  )
+}
+
+function isSession(value: unknown): value is StoredSession {
+  return (
+    isRecord(value) &&
+    typeof value.refreshToken === 'string' &&
+    value.refreshToken !== '' &&
+    typeof value.email === 'string' &&
+    value.email !== ''
   )
 }
 

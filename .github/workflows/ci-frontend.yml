@@ -6,8 +6,31 @@ on:
   pull_request:
     branches: [main]
 
+# Like ci-backend.yml: the workflow always runs, so the required check always reports, and `check`
+# is skipped when a PR touches only the API or the docs.
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # Any file outside this list counts as front end, so a new config file at the root is never missed.
+      - id: diff
+        run: |
+          run=true
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            files=$(git diff --name-only HEAD^1 HEAD)
+            printf '%s\n' "$files" | grep -qvE '^(api/|KB/|docs/|openspec/|design/|\.claude/|\.github/workflows/ci-backend\.yml$|[^/]+\.md$)' || run=false
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
   check:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.run != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -18,6 +18,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# .NET build output (api/)
+bin/
+obj/
 # npm is the package manager (package-lock.json); a pnpm install leaves this behind
 pnpm-lock.yaml
 dist

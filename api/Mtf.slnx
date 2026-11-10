@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Mtf.Api.Tests/Mtf.Api.Tests.csproj" />
+  <Project Path="Mtf.Api/Mtf.Api.csproj" />
+</Solution>
