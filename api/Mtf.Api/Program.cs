@@ -95,10 +95,15 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader()));
 
-// Render runs the API behind its proxy: read X-Forwarded-For so per-IP limits see the real client.
+// Render runs the API behind Cloudflare and its own load balancer, so per-IP limits need the client
+// from a header. Not X-Forwarded-For: Render keeps the caller's copy and appends a proxy that changes
+// per request, which gave every request a bucket of its own (found on production in #36, 10.7).
+// Cloudflare writes CF-Connecting-IP on every request and overwrites the caller's copy. Moving off
+// Render (ADR 0009) means going back to X-Forwarded-For behind Caddy: see KB/backend/api.md.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardedForHeaderName = "CF-Connecting-IP";
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });

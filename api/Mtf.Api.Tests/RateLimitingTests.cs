@@ -6,7 +6,7 @@ namespace Mtf.Api.Tests;
 
 /// <summary>
 /// accounts spec: "Abuse is rate limited". Low limits, and each test sends from an address of its own
-/// (X-Forwarded-For, as behind Render's proxy), so tests never share a bucket.
+/// (CF-Connecting-IP, as behind Render's Cloudflare), so tests never share a bucket.
 /// </summary>
 public class RateLimitingTests(RateLimitingTests.LowLimitsFactory factory) : IClassFixture<RateLimitingTests.LowLimitsFactory>
 {
@@ -27,7 +27,7 @@ public class RateLimitingTests(RateLimitingTests.LowLimitsFactory factory) : ICl
     private HttpClient ClientFrom(string ip)
     {
         var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Forwarded-For", ip);
+        client.DefaultRequestHeaders.Add("CF-Connecting-IP", ip);
         return client;
     }
 
@@ -97,6 +97,28 @@ public class RateLimitingTests(RateLimitingTests.LowLimitsFactory factory) : ICl
         var second = ClientFrom("203.0.113.6");
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await second.Login(Accounts.NewEmail())).StatusCode);
+    }
+
+    [Fact]
+    public async Task Behind_Render_the_client_is_CF_Connecting_IP_not_X_Forwarded_For()
+    {
+        // What production receives (#36, 10.7): Render keeps the caller's X-Forwarded-For and appends a
+        // proxy that changes per request, while Cloudflare writes CF-Connecting-IP. Partitioning by the
+        // rightmost X-Forwarded-For gave every request a new bucket, so nothing was ever limited.
+        HttpRequestMessage SignIn(int i) => new(HttpMethod.Post, "/api/auth/login")
+        {
+            Headers =
+            {
+                { "CF-Connecting-IP", "203.0.113.8" },
+                { "X-Forwarded-For", $"198.51.100.{i}, 172.68.0.{i}" },
+            },
+            Content = JsonContent.Create(new { email = Accounts.NewEmail(), password = "not-the-password" }),
+        };
+        var client = factory.CreateClient();
+        for (var i = 0; i < AuthLimit; i++)
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(SignIn(i))).StatusCode);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await client.SendAsync(SignIn(AuthLimit))).StatusCode);
     }
 
     [Fact]
