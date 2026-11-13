@@ -106,7 +106,10 @@ The full reasoning is [ADR 0011](../../../docs/adr/0011-google-sign-in-handoff.m
   MTF (Account sheet)                 API                              Google
   1. secret = random 256 bits
      hash = SHA-256(secret)
-  2. window.open(api/google/login?handoff=hash&lang=es)   ---------->  row in google_handoffs
+  2. window.open(mtf/#google=hash&lang=es)
+     that window: GoogleWait, the plane
+     until /health answers, then
+     location.replace(api/google/login?handoff=hash&lang=es)  ------>  row in google_handoffs
                                         302 ------------------------>  consent screen
   3. POST google/exchange { secret }
      every 3 s + on returning           <--- 202 pending
@@ -122,7 +125,12 @@ The full reasoning is [ADR 0011](../../../docs/adr/0011-google-sign-in-handoff.m
 - **Google's side** is the code flow on the back, so the client secret and the ID-token check live on the server: `scope=openid email` (no `profile`, since MTF stores no name), `prompt=select_account`, `state` = the hash. `GoogleJsonWebSignature.ValidateAsync` checks the audience; `email_verified` must be true. An `IGoogleClient` seam lets tests skip the real exchange.
 - **Lookup and linking** (`accounts` spec): by `google_id`, else by email, else create. Linking to an unverified account clears its `password_hash`, which closes the pre-hijack attack: register the victim's address with a known password, wait for them to arrive by Google, then sign in with that password.
 - **Login CSRF goes away**: the browser running the callback receives nothing, so nobody can be silently signed in to someone else's account. No state cookie is needed.
-- **The window** opens synchronously in the click, because iOS and popup blockers require a user gesture; `/health` has been waking the API since the sheet opened. If it is still asleep, Render's own loading page shows in that window; the sheet's wait is about Google, so it does not show the plane's server messages: it shows "Seguí en la ventana de Google" and a Cancel button. A failure at Google marks the row `failed`, and exchange answers `410` with a code.
+- **The window** opens synchronously in the click, because iOS and popup blockers require a user gesture, so it cannot wait for the API. It opens **MTF's own page**, `https://mtf.zynis.com.ar/#google=<hash>&lang=<es|en>`, not the API. The plan was to open the API directly and let Render's loading page show when it was asleep; on Android (11.3) that page did show, in the one wait #35's paper plane was made for, so the window now waits in MTF (changed on 2026-11-13, at the user's request).
+  - `main.tsx` reads `#google=` before anything else, like the dev-only `?avion` branch, and renders only `GoogleWait` (a dynamic import, its own chunk): no Desk, no welcome Card, no mail-link listener. The page is precached, so it shows at once even while Render sleeps.
+  - `GoogleWait` mounts `PlaneWait` and calls `wakeApi()`. When `/health` answers it calls `location.replace(googleLoginUrl(hash, lang))`, so Back never returns to the wait. Awake, that is within the plane's quiet 1.5 s and no plane shows. At `WAIT_LIMIT` it stays on the plane's calm message and does not go on; the sheet keeps waiting until its 5 minutes or Cancel.
+  - The language comes from the address and is not saved: on an installed iPhone the window has storage of its own. The theme is whatever that window's storage holds, or the system's.
+  - Only the hash travels, as before, and in the fragment, so it never reaches Vercel's logs. The secret stays in the sheet.
+  - The sheet's own wait is about Google, so it does not show the plane: it shows "Seguí en la ventana de Google" and a Cancel button. A failure at Google marks the row `failed`, and exchange answers `410` with a code.
 - **Polling** stops at 5 minutes, on Cancel, on any final answer, and when the sheet closes. `visibilitychange` polls at once when the user comes back.
 - **The known cost**: whoever holds a hand-off link could send it to someone, and if that person finishes the Google screen within 5 minutes, the sender gets the session. It takes a victim who follows a stranger's link and picks their account on a screen naming MTF. Accepted while MTF is built for its author; ADR 0011 records it and what to add before opening MTF to other people.
 
@@ -140,7 +148,7 @@ ASP.NET's built-in limiter, partitioned by client IP, overridable by configurati
 | `auth` | 10 / min | register, verify, resend, login, forgot, reset, `google/login`, `google/callback` |
 | `session` | 30 / min | `refresh`, `google/exchange` (a poll every 3 s is 20 / min), `logout` |
 
-Cal uses 5 / min on auth and its hosting notes warn that this will refuse real users behind Argentine mobile CGNAT, which is why this is 10. `UseForwardedHeaders` runs first, trusting `X-Forwarded-For` as in Cal; only Render's proxy can reach the container. A rejection answers 429 with `Retry-After` and code `too_many_requests`. The request body limit is Kestrel's `MaxRequestBodySize`, 64 KB until #37 needs more.
+Cal uses 5 / min on auth and its hosting notes warn that this will refuse real users behind Argentine mobile CGNAT, which is why this is 10. `UseForwardedHeaders` runs first and reads the client from `CF-Connecting-IP`, which Cloudflare writes in front of Render and the caller cannot forge. The plan was `X-Forwarded-For` as in Cal, but task 10.7 found that on Render its rightmost entry is a proxy that changes per request, so no request was ever limited (KB/backend/api.md, "Rate limits"). A rejection answers 429 with `Retry-After` and code `too_many_requests`. The request body limit is Kestrel's `MaxRequestBodySize`, 64 KB until #37 needs more.
 
 ### 8. The Account sheet
 
@@ -151,7 +159,8 @@ Cal uses 5 / min on auth and its hosting notes warn that this will refuse real u
 | `accountStore.ts` | Zustand: `email`, `accessToken` (memory), `sheetOpen`, `link`, `sessionEnded`; `signedIn(tokens)`, `signOut()`, `openAccount()` |
 | `api.ts` | `fetch` wrapper: base URL, the wait's time limit (decision 9), JSON, maps answers to `{ ok, data } \| { ok: false, code }`, with `offline`, `timeout` and `network` codes of its own; `wakeApi()`; `withSession()` refreshes once on a 401 |
 | `links.ts` | `readAccountLink()` (decision 3) |
-| `google.ts` | Secret + hash (`crypto.subtle`), `window.open`, the polling loop as a pure step function plus a hook |
+| `google.ts` | Secret + hash (`crypto.subtle`), `window.open` of MTF's own wait address, the polling loop as a pure step function plus a hook |
+| `GoogleWait.tsx` | The Google window's first page (decision 5): `PlaneWait` until `/health` answers, then on to the API's `google/login` |
 | `AccountSection.tsx` | The row in Settings. No request |
 | `AccountSheet.tsx` | The sheet and its steps: `signIn`, `register`, `checkMail`, `forgot`, `forgotSent`, `reset`, `verifying`, `verified`, `linkExpired`, `google`, `signedIn` |
 
@@ -255,9 +264,10 @@ MTF's stack rule asks to justify each addition ([stack.md](../../../KB/frontend/
 - **A refresh token in localStorage is readable by any script on the page** → no third-party scripts, a strict CSP, React's escaping, rotation with reuse detection, and revocation on password reset. ADR 0010.
 - **Hand-off phishing** (decision 5) → 5-minute life, one use, a screen naming MTF. ADR 0011 says what to add before MTF opens to other people.
 - **Not verified on a real iPhone yet**: that `window.open` from an installed app reaches Google, that returning fires `visibilitychange`, and that Google accepts that window. The research behind decisions 4 and 5 is mostly from developer reports and secondary sources, not Apple's documentation → the manual checks in group 11 come before the archive. The design relies on the secret, not on which context Google runs in, and if the window itself fails, email and password still work on the iPhone.
-- **Render's loading page may show in the Google window** when the API is asleep. Render documents the page for browsers, not whether it continues on its own → checked in group 11. The wake from opening the sheet makes it rare.
+- **Render's loading page showed in the Google window** when the API was asleep (Android, 11.3) → the window now opens MTF's own page and goes to the API only once `/health` answers (decision 5).
+- **A window on MTF's own address may open inside an installed app** instead of in a browser window: an in-scope address is handled differently from another origin, and if it replaced the app's own page, the secret would be lost with it → checked in 11.2 and 11.3. If a device does that, `openGoogleWindow` goes back to opening the API directly there, and Render's page is accepted again.
 - **`/health` while spinning up** may answer 503 with no CORS header, which `fetch` reports as a network failure → `wakeApi()` treats any failure as "not yet" and retries within the limit (decision 9).
-- **`X-Forwarded-For` behind Render's proxies** may not give the real client in the rightmost position, which would put everyone in one bucket → for one user this changes nothing; checked once on Render in group 10, and noted in the KB before MTF opens up.
+- **`X-Forwarded-For` behind Render's proxies** may not give the real client in the rightmost position → it did not, and the other way round: the rightmost entry was a proxy that changes per request, so every request had a bucket of its own and the limits never refused anything. Found in 10.7 and fixed by reading `CF-Connecting-IP` (decision 7); moving off Render goes back to `X-Forwarded-For` behind Caddy.
 - **bcrypt at 0.1 CPU** could be slow under an attack → the `auth` limit caps it per IP; the plane covers the normal wait.
 - **Render's 750 hours are shared with Cal** → only opening the Account sheet wakes the API; nothing does at launch.
 - **Migrations at start-up and Neon's limits**: if Neon's compute is suspended, the API does not boot → Account shows the calm wait message and the Desk is untouched (ADR 0009's accepted consequence).
