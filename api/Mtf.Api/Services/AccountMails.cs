@@ -20,7 +20,8 @@ public static class AccountMails
 
     public static OutgoingMail Compose(AccountMail kind, string language, string to, string link)
     {
-        var text = (kind, Language(language)) switch
+        language = Language(language);
+        var text = (kind, language) switch
         {
             (AccountMail.Verification, "en") => new Text(
                 "Confirm your email — MTF",
@@ -60,14 +61,15 @@ public static class AccountMails
                 "Si no lo pediste, podés ignorar este mail: tu contraseña no cambia."),
         };
 
-        return new OutgoingMail(to, text.Subject, Html(text, link), link);
+        return new OutgoingMail(to, text.Subject, Html(text, language, link), link);
     }
 
-    private static string Html(Text text, string link)
+    /// <summary>The wrapper carries <c>lang</c>: with no language declared, Gmail guessed the Spanish mail was English.</summary>
+    private static string Html(Text text, string language, string link)
     {
         var href = WebUtility.HtmlEncode(link);
         return $"""
-            <div style="font-family:Georgia,serif;color:#2A2724;background:#F5F1EA;padding:24px;">
+            <div lang="{language}" style="font-family:Georgia,serif;color:#2A2724;background:#F5F1EA;padding:24px;">
               <div style="max-width:480px;margin:0 auto;background:#FCFAF6;border:1px solid #E3DCD1;border-radius:12px;padding:24px;">
                 <p style="font-size:20px;margin:0 0 16px;">MTF</p>
                 <p style="font-size:16px;line-height:1.5;margin:0 0 20px;">{text.Lead}</p>
