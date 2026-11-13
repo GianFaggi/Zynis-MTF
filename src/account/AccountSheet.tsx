@@ -8,6 +8,7 @@ import { PlaneWait } from '../sync/PlaneWait'
 import { apiRequest, wakeApi, type ApiResult } from './api'
 import { clearLink, closeAccount, loadMe, signedIn, signOut, useAccountStore, type Tokens } from './accountStore'
 import { newHandoff, openGoogleWindow, useGoogleWatch, type Handoff } from './google'
+import { GoogleMark } from './GoogleMark'
 import { useCountdown, useOnline } from './hooks'
 import { errorMessageKey, type TextKey } from './messages'
 
@@ -272,6 +273,7 @@ function AccountFlow() {
               {!online && <Note>{t('offlineNote')}</Note>}
               <div>
                 <Button onClick={startGoogle} disabled={!canSend || !handoff}>
+                  <GoogleMark />
                   {t('continueWithGoogle')}
                 </Button>
               </div>
