@@ -134,7 +134,9 @@ Why a window of its own with a hand-off by secret, and not Cal's redirect or Goo
 ```
 App (Account sheet)                          API                                   Google
 secret = 256 random bits; hash = SHA-256(secret)
-window.open(GET google/login?handoff=hash&lang=es) → google_handoffs row (5 min) → 302 → consent screen
+window.open(mtf/#google=hash&lang=es)
+  that window: GoogleWait, the plane until /health answers, then
+  location.replace(GET google/login?handoff=hash&lang=es) → google_handoffs row (5 min) → 302 → consent screen
 POST google/exchange {secret} every 3 s → 202 pending
                                              GET google/callback?code&state=hash ← user finishes
                                              code → ID token → validate → link/create user
@@ -142,7 +144,8 @@ POST google/exchange {secret} every 3 s → 202 pending
 POST google/exchange {secret}              → 200 tokens; row deleted (once)
 ```
 
-- **The hash** the app sends is `SecretToken.Hash(secret)`: SHA-256 of the secret's UTF-8 text, base64url with no padding (43 characters). `google/login` refuses anything else with 400 `invalid_request`. Only the hash ever appears in an address; the secret travels only in the `POST` body.
+- **The window opens on MTF, not on the API.** It must open synchronously in the click (iOS and popup blockers), so it cannot wait for Render to wake. It opens MTF's own precached page, `https://mtf.zynis.com.ar/#google=<hash>&lang=<es|en>`, where `GoogleWait` shows the paper plane until `/health` answers and then goes on to `google/login` with `location.replace` (Back never returns to the wait). The first plan opened `google/login` directly, and on 2026-11-13 Render's own loading page showed in that window on Android while the API slept. If the wait gives up (90 s), the window stays on the plane's calm message and does not go on. The front-end side is in [architecture.md](../frontend/architecture.md#network-requests-36).
+- **The hash** the app sends is `SecretToken.Hash(secret)`: SHA-256 of the secret's UTF-8 text, base64url with no padding (43 characters). `google/login` refuses anything else with 400 `invalid_request`. Only the hash ever appears in an address (in MTF's fragment, then in `google/login`'s query); the secret travels only in the `POST` body.
 - **`GoogleController`** maps the three endpoints; **`GoogleAuthService`** holds the rules; **`GoogleHandoffDao`** is the only code touching `google_handoffs`; **`GoogleClient`** (`IGoogleClient`) does Google's side.
 - **`GoogleClient`**: `scope=openid email` (no `profile`: MTF stores no name or photo), `prompt=select_account`, `state` = the hash, redirect `{App__ApiUrl}/api/auth/google/callback`. The code is traded for an ID token on the server, and `GoogleJsonWebSignature.ValidateAsync` checks Google's signature, issuer, expiry and that the audience is MTF's client. With no `Google__ClientId` (Development only), `google/login` answers the "could not sign in" page instead of redirecting.
 - **Callback rules**: the email must be `email_verified` at Google. Lookup by `google_id`, so a changed email at Google still reaches the same account; else by email, which links the account; else a new verified account with no password. **Linking an unverified account removes its password** (pre-hijacking: someone registered the victim's address first). A failure, a cancel at Google or an unverified email marks the row `failed`.
@@ -156,7 +159,11 @@ MTF has a client of its own, never Cal's: revoking one never touches the other. 
 
 ## Rate limits
 
-ASP.NET's built-in limiter, fixed one-minute windows, partitioned by client IP (`Infrastructure/RateLimiting.cs`, design decision 7). `UseForwardedHeaders` runs first and trusts `X-Forwarded-For`, so on Render the partition is the real client, not the proxy.
+ASP.NET's built-in limiter, fixed one-minute windows, partitioned by client IP (`Infrastructure/RateLimiting.cs`, design decision 7). `UseForwardedHeaders` runs first and reads the client from **`CF-Connecting-IP`** (`ForwardedForHeaderName` in `Program.cs`), not from `X-Forwarded-For`.
+
+**Why not `X-Forwarded-For`** (found on production in #36, task 10.7). Render sits behind Cloudflare and its own load balancer, and its `X-Forwarded-For` arrives as `client, proxy`: Render keeps whatever the caller sent and appends a proxy address that changes from request to request. Taking the rightmost entry (ASP.NET's default, `ForwardLimit` 1) gave every request a bucket of its own: 12 sign-ins in a row from one PC all answered 401 and none 429, with or without a forged header. Cloudflare writes `CF-Connecting-IP` on every request that reaches a public Render service and overwrites the caller's copy, so it is the real client and cannot be forged (Render's own advice). `RateLimitingTests` sends that shape: a fixed `CF-Connecting-IP` with a different `X-Forwarded-For` each time still reaches 429.
+
+**Moving off Render** (ADR 0009's VM with Caddy): nothing in front writes `CF-Connecting-IP`, so a caller could forge it. Remove `ForwardedForHeaderName` and go back to `X-Forwarded-For`, which Caddy sets and the caller cannot reach (only Caddy is published). Then repeat the check: more than 10 sign-ins in a minute from one network answer 429, while another network still signs in.
 
 | Policy | Default | Applies to |
 |---|---|---|

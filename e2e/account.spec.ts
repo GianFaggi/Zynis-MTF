@@ -178,9 +178,40 @@ test('Google: opens its window with only the hash, and shows the account once ha
   await expect(sheet.getByText('Entraste como')).toBeVisible({ timeout: 15_000 })
   const opened = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)
   expect(opened).toHaveLength(1)
-  const handoff = new URL(opened[0]).searchParams.get('handoff')!
+  // MTF's own address, which waits for the API before going on to Google.
+  const waitAddress = new URL(opened[0])
+  expect(waitAddress.origin).toBe(new URL(page.url()).origin)
+  const fragment = new URLSearchParams(waitAddress.hash.slice(1))
+  const handoff = fragment.get('google')!
   expect(handoff).toMatch(/^[A-Za-z0-9_-]{43}$/)
+  expect(fragment.get('lang')).toBe('es')
   const secret = (requests.find((r) => r.path === '/api/auth/google/exchange')?.body as { secret: string }).secret
   expect(secret).not.toBe(handoff)
   expect(opened[0]).not.toContain(secret)
+})
+
+test("Google's window: the plane in MTF while the API wakes, then Google by itself, with no Desk behind it", async ({ page }) => {
+  const hash = 'h4sh_of-the-secret'.padEnd(43, 'x')
+  await page.route(`${API}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname === '/health') {
+      // Asleep for a while: long enough for the plane to take off (1.5 s).
+      await new Promise((resolve) => setTimeout(resolve, 4_000))
+      return route.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Healthy' })
+    }
+    return route.fulfill({ status: 200, contentType: 'text/html', body: '<p>Google</p>' })
+  })
+  const login = page.waitForRequest((request) => request.url().startsWith(`${API}/api/auth/google/login`))
+
+  // The browser's language is Spanish (es-AR); the address says English.
+  await page.goto(`/#google=${hash}&lang=en`)
+
+  await expect(page.getByRole('status')).toHaveText('Connecting…')
+  await expect(page.locator('main svg').first()).toBeVisible()
+  await expect(page.getByRole('button')).toHaveCount(0)
+  expect(await page.evaluate(() => localStorage.getItem('mtf_language'))).toBeNull()
+
+  const url = new URL((await login).url())
+  expect(url.searchParams.get('handoff')).toBe(hash)
+  expect(url.searchParams.get('lang')).toBe('en')
+  await expect(page.getByText('Google')).toBeVisible()
 })

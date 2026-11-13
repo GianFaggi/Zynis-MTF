@@ -43,6 +43,16 @@ function open(link?: Parameters<typeof openWithLink>[0]) {
 
 const sheet = () => screen.getByRole('dialog')
 
+/**
+ * The Google button once it can be pressed: it is disabled until `newHandoff()` has hashed its
+ * secret (`crypto.subtle`, asynchronous), and on a slow CI runner that ends after the button appears.
+ */
+async function readyGoogleButton() {
+  const button = await screen.findByRole('button', { name: 'Continuar con Google' })
+  await waitFor(() => expect(button).toBeEnabled())
+  return button
+}
+
 async function signInWith(email: string, password: string) {
   await userEvent.type(screen.getByLabelText('Email'), email)
   await userEvent.type(screen.getByLabelText('Contraseña'), password)
@@ -66,7 +76,8 @@ describe('AccountSheet', () => {
       open()
 
       expect(screen.getByRole('dialog', { name: 'Cuenta' })).toBeInTheDocument()
-      expect(await screen.findByRole('button', { name: 'Continuar con Google' })).toBeEnabled()
+      const google = await readyGoogleButton()
+      expect(google.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
       expect(screen.getByLabelText('Email')).toHaveAttribute('autocomplete', 'email')
       expect(screen.getByLabelText('Contraseña')).toHaveAttribute('autocomplete', 'current-password')
       expect(screen.getByRole('button', { name: 'Mostrar' })).toBeInTheDocument()
@@ -310,9 +321,13 @@ describe('AccountSheet', () => {
       const windowOpen = vi.spyOn(window, 'open').mockReturnValue(null)
       open()
 
-      await userEvent.click(await screen.findByRole('button', { name: 'Continuar con Google' }))
+      await userEvent.click(await readyGoogleButton())
 
-      expect(windowOpen).toHaveBeenCalledWith(expect.stringMatching(/\/api\/auth\/google\/login\?handoff=[A-Za-z0-9_-]{43}&lang=es$/), '_blank')
+      // MTF's own wait, which goes on to the API's Google login once it answers.
+      const [address, target] = windowOpen.mock.calls[0]
+      expect(target).toBe('_blank')
+      expect(String(address)).toMatch(/\/#google=[A-Za-z0-9_-]{43}&lang=es$/)
+      expect(new URL(String(address)).origin).toBe(location.origin)
       expect(sheet()).toHaveTextContent('Seguí en la ventana de Google.')
       expect(screen.queryByRole('status')).not.toBeInTheDocument()
 
@@ -327,7 +342,7 @@ describe('AccountSheet', () => {
       answer({ '/api/auth/google/exchange': { ok: true, data: tokens } })
       open()
 
-      await user.click(await screen.findByRole('button', { name: 'Continuar con Google' }))
+      await user.click(await readyGoogleButton())
       await act(async () => vi.advanceTimersByTime(POLL_EVERY))
 
       expect(await screen.findByText('gian@example.com')).toBeInTheDocument()
@@ -341,7 +356,7 @@ describe('AccountSheet', () => {
       answer({ '/api/auth/google/exchange': { ok: true, data: undefined } })
       open()
 
-      await user.click(await screen.findByRole('button', { name: 'Continuar con Google' }))
+      await user.click(await readyGoogleButton())
       await act(async () => vi.advanceTimersByTime(GOOGLE_LIMIT + POLL_EVERY))
 
       expect(await screen.findByRole('alert')).toHaveTextContent('pasaron 5 minutos sin respuesta')

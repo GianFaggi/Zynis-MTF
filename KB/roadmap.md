@@ -81,7 +81,7 @@ Portability rules, worded and explained in ADR 0009, each checked by a test or i
 - Deleting an account
 - Changing the email of an account
 - Changing the password while signed in (recovery by mail covers a forgotten one)
-- Before opening MTF to other people: the hand-off phishing guard of ADR 0011, and checking that `X-Forwarded-For` gives the real client on Render ([KB/backend/api.md](backend/api.md#rate-limits))
+- Before opening MTF to other people: the hand-off phishing guard of ADR 0011. The per-IP limits read `CF-Connecting-IP` on Render since #36 (10.7), because `X-Forwarded-For` never gave the real client there ([KB/backend/api.md](backend/api.md#rate-limits))
 - A list of a user's devices or sessions, two-factor sign-in, other sign-in providers
 - Sharing a Card or an Area with someone
 - Reminders on a Card

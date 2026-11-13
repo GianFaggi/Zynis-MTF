@@ -137,6 +137,7 @@ Feature pieces that use the accent live outside the kit, which never does: `Item
 
 - **Color is information.** Area colors identify Areas; the accent means "you did something". Never use the accent for decoration or navigation — not even the focus ring (the mockup used accent there; the app uses ink).
 - **The paper plane is the sign of sync: ink and paper, never the accent.** Waiting for the server shows the plane and calm messages, never a spinner, a progress bar or a countdown ([Where the accent is allowed](#tokens)).
+- **Third-party marks keep their own colors, and only there.** The one today is Google's "G" (`GoogleMark` in `src/account/`, #36) on the quiet "Continuar con Google" button: 18 px, decorative (`aria-hidden`), in Google's four colors as its sign-in branding asks, inline in the SVG (they are not MTF tokens, so they do not go in `src/index.css`). The button around it stays MTF's own `Button`, never Google's white or blue one, and it uses no logo upload on the consent screen (that would require Google's verification).
 - **No chrome bars.** Controls float on the paper (pill groups, dock, FAB); there is no header bar and no tab bar.
 - **Positive copy only.** Celebrate, never scold ("Los días tranquilos también cuentan").
 - Light and dark themes both designed; dark is warm charcoal, not pure black. The user can follow the system or pick one in Settings.

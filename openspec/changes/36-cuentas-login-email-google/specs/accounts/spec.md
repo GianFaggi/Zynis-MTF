@@ -172,7 +172,20 @@ Setting a new password through a recovery link SHALL mark the email as verified,
 - **THEN** it can sign in with Google and with the password
 
 ### Requirement: Sign in with Google
-The user SHALL be able to sign in with Google in a window of its own, while Account waits with a message and a cancel button. The server SHALL validate Google's ID token, and SHALL accept only an email Google marks as verified. An email with no account SHALL get a new verified account.
+The user SHALL be able to sign in with Google in a window of its own, while Account waits with a message and a cancel button. The window SHALL open on MTF's own page, which shows the paper-plane wait until the server answers `/health` and then goes on to Google by itself, so the hosting's loading page never shows. The server SHALL validate Google's ID token, and SHALL accept only an email Google marks as verified. An email with no account SHALL get a new verified account.
+
+#### Scenario: Google while the server sleeps
+- **WHEN** the user starts signing in with Google and the server is asleep
+- **THEN** the window shows the paper plane with its messages, in the current language
+- **AND** it goes on to Google by itself once the server answers, with no loading page from the hosting
+
+#### Scenario: Google while the server is awake
+- **WHEN** the user starts signing in with Google and the server answers within 1.5 seconds
+- **THEN** the window goes on to Google and no plane appears
+
+#### Scenario: The server does not answer the window
+- **WHEN** the window has waited 90 seconds with no answer from the server
+- **THEN** it shows the calm message of the wait timeline and does not go on to Google
 
 #### Scenario: First time with Google
 - **WHEN** a user with no account signs in with Google

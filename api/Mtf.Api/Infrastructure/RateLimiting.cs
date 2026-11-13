@@ -49,7 +49,7 @@ public static class RateLimiting
         Window = TimeSpan.FromSeconds(config.GetValue($"RateLimiting:{name}:WindowSeconds", 60)),
     };
 
-    // After UseForwardedHeaders, this is the client from X-Forwarded-For, not Render's proxy.
+    // After UseForwardedHeaders, this is the client from CF-Connecting-IP, not Render's proxy.
     private static string ClientIp(HttpContext context) =>
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 }

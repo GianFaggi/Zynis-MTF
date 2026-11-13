@@ -27,6 +27,7 @@ public class AccountMailsTests
         Assert.StartsWith(subject, mail.Subject);
         Assert.Contains(ignoreLine, mail.Html);
         Assert.Contains($"href=\"{Link}\"", mail.Html);
+        Assert.StartsWith($"<div lang=\"{language}\"", mail.Html);
         Assert.Equal(Link, mail.Link);
     }
 
