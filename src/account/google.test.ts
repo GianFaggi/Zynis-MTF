@@ -2,7 +2,19 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { API_URL, apiRequest, type ApiResult } from './api'
 import type { Tokens } from './accountStore'
-import { GOOGLE_LIMIT, POLL_EVERY, googleLoginUrl, hashSecret, newHandoff, openGoogleWindow, pollOutcome, useGoogleWatch, watchGoogle } from './google'
+import {
+  GOOGLE_LIMIT,
+  POLL_EVERY,
+  googleLoginUrl,
+  googleWaitUrl,
+  hashSecret,
+  newHandoff,
+  openGoogleWindow,
+  pollOutcome,
+  readGoogleWait,
+  useGoogleWatch,
+  watchGoogle,
+} from './google'
 
 vi.mock('./api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./api')>()),
@@ -41,21 +53,45 @@ describe('the window', () => {
     vi.restoreAllMocks()
   })
 
-  it('carries only the hash and the language, never the secret', () => {
-    const url = googleLoginUrl('the-hash', 'en')
+  it("goes on to the API's Google login with only the hash and the language", () => {
+    expect(googleLoginUrl('the-hash', 'en')).toBe(`${API_URL}/api/auth/google/login?handoff=the-hash&lang=en`)
+  })
 
-    expect(url).toBe(`${API_URL}/api/auth/google/login?handoff=the-hash&lang=en`)
+  it("waits on MTF's own address, with the hash in the fragment and never the secret", () => {
+    const url = googleWaitUrl('the-hash', 'en')
+
+    expect(url).toBe(`${location.origin}/#google=the-hash&lang=en`)
+    expect(url).not.toContain(API_URL)
     expect(url).not.toContain('the-secret')
   })
 
-  it('opens synchronously, inside the click', () => {
+  it("opens synchronously, inside the click, on MTF's wait", () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null)
 
     openGoogleWindow(handoff, 'es')
 
     // No await before this line: the window was opened in the same task as the click.
-    expect(open).toHaveBeenCalledWith(`${API_URL}/api/auth/google/login?handoff=the-hash&lang=es`, '_blank')
+    expect(open).toHaveBeenCalledWith(`${location.origin}/#google=the-hash&lang=es`, '_blank')
+    expect(String(open.mock.calls[0][0])).not.toContain('the-secret')
   })
+})
+
+describe('readGoogleWait', () => {
+  it('reads the hash and the language that googleWaitUrl wrote', () => {
+    expect(readGoogleWait(new URL(googleWaitUrl('a-B_9', 'en')).hash)).toEqual({ hash: 'a-B_9', language: 'en' })
+  })
+
+  it('keeps the window’s own language when the address carries none it knows', () => {
+    expect(readGoogleWait('#google=the-hash')).toEqual({ hash: 'the-hash' })
+    expect(readGoogleWait('#google=the-hash&lang=fr')).toEqual({ hash: 'the-hash' })
+  })
+
+  it.each(['', '#', '#verify=token', '#google=', '#google=no spaces&lang=es'])(
+    'is not a Google wait: %j',
+    (fragment) => {
+      expect(readGoogleWait(fragment)).toBeNull()
+    },
+  )
 })
 
 describe('pollOutcome', () => {

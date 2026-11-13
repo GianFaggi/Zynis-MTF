@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { Language } from '../types'
 import { API_URL, apiRequest, type ApiResult } from './api'
 import type { Tokens } from './accountStore'
 
@@ -36,11 +37,37 @@ export function googleLoginUrl(hash: string, language: string): string {
 }
 
 /**
- * Opens Google's window. Call it straight from the click handler, with no `await` before it:
- * iOS and popup blockers allow a window only from a user gesture.
+ * The Google window's first page: MTF's own address, where `GoogleWait` shows the paper plane
+ * until the API answers and then goes on to `googleLoginUrl`, so Render's loading page never
+ * shows. The hash travels in the fragment, which never reaches Vercel's logs.
+ */
+export function googleWaitUrl(hash: string, language: string): string {
+  return `${location.origin}/#google=${encodeURIComponent(hash)}&lang=${encodeURIComponent(language)}`
+}
+
+/** What `googleWaitUrl` carries. */
+export interface GoogleWaitAddress {
+  hash: string
+  /** Absent or unknown: the window keeps the language it already has. */
+  language?: Language
+}
+
+/** Reads `#google=<hash>&lang=<es|en>`, or `null` when the address is anything else. */
+export function readGoogleWait(fragment: string): GoogleWaitAddress | null {
+  if (!fragment.startsWith('#google=')) return null
+  const params = new URLSearchParams(fragment.slice(1))
+  const hash = params.get('google') ?? ''
+  if (!/^[A-Za-z0-9_-]+$/.test(hash)) return null
+  const language = params.get('lang')
+  return language === 'es' || language === 'en' ? { hash, language } : { hash }
+}
+
+/**
+ * Opens Google's window, on MTF's own wait. Call it straight from the click handler, with no
+ * `await` before it: iOS and popup blockers allow a window only from a user gesture.
  */
 export function openGoogleWindow(handoff: Handoff, language: string): void {
-  window.open(googleLoginUrl(handoff.hash, language), '_blank')
+  window.open(googleWaitUrl(handoff.hash, language), '_blank')
 }
 
 export type PollOutcome = { kind: 'wait' } | { kind: 'done'; tokens: Tokens } | { kind: 'failed'; code: string }
