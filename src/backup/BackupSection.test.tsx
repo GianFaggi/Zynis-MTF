@@ -2,7 +2,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useDeskStore } from '../desk/deskStore'
-import { loadSession, saveSession } from '../lib/storage'
+import { loadSession, loadSync, saveSession } from '../lib/storage'
+import { useAccountStore } from '../account/accountStore'
+import { resetSyncEngine } from '../sync/engine'
+import { pullRecords } from '../sync/syncApi'
 import { useAppStore } from '../store/appStore'
 import { makeCard, makeData, makeItem, rowOfAreas } from '../test/fixtures'
 import { resetStores } from '../test/stores'
@@ -12,6 +15,7 @@ import { BackupSection } from './BackupSection'
 import { deliverFile } from './deliver'
 
 vi.mock('./deliver', () => ({ deliverFile: vi.fn(async () => 'downloaded') }))
+vi.mock('../sync/syncApi', () => ({ pullRecords: vi.fn(), pushRecords: vi.fn(), leaveSend: vi.fn() }))
 
 const theirs: MtfData = makeData({
   areas: rowOfAreas(),
@@ -159,5 +163,47 @@ describe('BackupSection', () => {
 
     await pick(file)
     expect(await screen.findByRole('button', { name: 'Reemplazar mis datos' })).toBeInTheDocument()
+  })
+})
+
+describe('BackupSection while signed in (#37)', () => {
+  beforeEach(() => {
+    resetStores({ cards: [makeCard({ id: 'mine', title: 'Solo acá' })] })
+    resetSyncEngine()
+    vi.mocked(pullRecords).mockReset()
+    vi.mocked(pullRecords).mockResolvedValue({ ok: false, code: 'offline' })
+  })
+
+  it('the confirmation says the Account’s other devices will follow', async () => {
+    useAccountStore.setState({ email: 'ana@example.com' })
+    const { pick } = setup()
+    await pick(jsonFile(makeBackup(theirs, new Date())))
+    expect(await screen.findByText('Como entraste con tu cuenta, tus otros dispositivos también van a pasar a tener este escritorio.')).toBeInTheDocument()
+  })
+
+  it('confirming makes the imported Desk the Account’s on the next sync', async () => {
+    useAccountStore.setState({ email: 'ana@example.com' })
+    const { pick } = setup()
+    await pick(jsonFile(makeBackup(theirs, new Date())))
+    await userEvent.click(await screen.findByRole('button', { name: 'Reemplazar mis datos' }))
+
+    expect(useAppStore.getState().data).toEqual(theirs)
+    expect(loadSync().claim).not.toBeNull()
+  })
+
+  it('with no session the Import behaves as before and sends nothing', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const { pick } = setup()
+    await pick(jsonFile(makeBackup(theirs, new Date())))
+    expect(await screen.findByRole('button', { name: 'Reemplazar mis datos' })).toBeInTheDocument()
+    expect(screen.queryByText(/tus otros dispositivos/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reemplazar mis datos' }))
+
+    expect(loadSync().claim).toBeNull()
+    expect(pullRecords).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
   })
 })

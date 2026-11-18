@@ -10,7 +10,7 @@
 It is a personal notepad shaped like a **desk**: the user writes Cards (text and/or a checklist) and places them freely on one big surface, grouped in soft Areas (Trabajo, Vida, Recordar). Finished Cards go into the **Jar**, which fills up and shows the user how much they got done.
 
 It is built for its author first; other people may use it later.
-**The MVP is finished and V2 has started**: #36 added optional accounts on a .NET backend in `api/`; #37 will sync the Desk between devices.
+**The MVP is finished and V2 has started**: #36 added optional accounts on a .NET backend in `api/`; #37 syncs the Desk between an account's devices, per session.
 It is **not a calendar and not a to-do app**. It is a notepad that celebrates what you finish.
 
 The approved direction is the clickable mockup [design/mtf-mockup-desk.html](design/mtf-mockup-desk.html). The rejected tabs + grid version, [design/mtf-mockup.html](design/mtf-mockup.html), is kept for reference ([ADR 0001](docs/adr/0001-desk-instead-of-tabs.md)).
@@ -19,7 +19,7 @@ The approved direction is the clickable mockup [design/mtf-mockup-desk.html](des
 
 ## Core Rules
 
-- **The Desk never needs a server.** Notes live in the browser (localStorage) behind a storage layer. The **.NET backend** in `api/` (Render + Neon, [ADR 0009](docs/adr/0009-v2-backend-hosting.md)) holds accounts, and will hold sync (#37), but an account is always **optional**: MTF opens and works fully with no account and no connection, makes no request at launch, and only the Account sheet calls the API ([KB/backend/api.md](KB/backend/api.md)).
+- **The Desk never needs a server.** Notes live in the browser (localStorage) behind a storage layer. The **.NET backend** in `api/` (Render + Neon, [ADR 0009](docs/adr/0009-v2-backend-hosting.md)) holds accounts and the synced Desk (#37, [ADR 0012](docs/adr/0012-session-sync-of-opaque-records.md)), but an account is always **optional**: MTF opens and works fully with no account and no connection. With no account MTF makes no request at all except from the Account sheet; with one, sync runs in the background (on arrival, on leaving, never by polling) and never blocks or waits in front of the Desk ([KB/backend/api.md](KB/backend/api.md), [KB/frontend/architecture.md](KB/frontend/architecture.md#sync-37)).
 - **Offline first.** Unlike Zynis Pulse, the service worker precaches the whole app: MTF must open with no signal. Fonts are bundled, never loaded from Google Fonts.
 - **Sync-ready data.** Every entity has a `uuid` id and `createdAt` / `updatedAt` timestamps from day one, so V2 sync is an addition, not a rewrite.
 - **The desk is free.** No tabs, columns or grids that decide where Cards go. Areas are regions of one surface, not containers ([ADR 0001](docs/adr/0001-desk-instead-of-tabs.md)).
@@ -96,7 +96,7 @@ The user can:
 ## V2
 
 - **#36 Accounts** (optional): email + password with verification and recovery by mail, and Google; sessions that never expire offline and never block the Desk ([ADR 0010](docs/adr/0010-account-sessions.md), [ADR 0011](docs/adr/0011-google-sign-in-handoff.md))
-- **#37 Sync**: the Desk between phone and PC, on top of the account
+- **#37 Sync**: the Desk between phone and PC, on top of the account, per session: fetched on arrival, sent on leaving, never by polling ([ADR 0012](docs/adr/0012-session-sync-of-opaque-records.md))
 
 ---
 

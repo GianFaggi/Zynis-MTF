@@ -13,11 +13,17 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
         var traceId = Activity.Current?.Id ?? context.TraceIdentifier;
-        var (status, code) = exception is ApiException api
-            ? (api.Status, api.Code)
-            : (StatusCodes.Status500InternalServerError, ErrorCodes.ServerError);
+        var (status, code) = exception switch
+        {
+            ApiException api => (api.Status, api.Code),
+            // A body over the endpoint's limit (64 KB, or 1 MB for a sync push): refused while reading,
+            // before anything is written.
+            BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge } =>
+                (StatusCodes.Status413PayloadTooLarge, ErrorCodes.RequestTooLarge),
+            _ => (StatusCodes.Status500InternalServerError, ErrorCodes.ServerError),
+        };
 
-        if (exception is not ApiException)
+        if (status == StatusCodes.Status500InternalServerError)
             logger.LogError(exception, "Unhandled exception. TraceId: {TraceId}", traceId);
 
         context.Response.StatusCode = status;

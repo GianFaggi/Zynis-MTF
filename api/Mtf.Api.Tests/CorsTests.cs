@@ -30,6 +30,15 @@ public class CorsTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task A_preflight_is_cached_for_2_hours_so_the_leave_send_reuses_it()
+    {
+        var response = await Preflight("/api/sync/push", ApiFactory.AllowedOrigin);
+
+        Assert.True(response.Headers.TryGetValues("Access-Control-Max-Age", out var values));
+        Assert.Equal("7200", Assert.Single(values));
+    }
+
+    [Fact]
     public async Task A_simple_request_from_another_origin_is_not_allowed()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, "/health");

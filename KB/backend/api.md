@@ -5,9 +5,9 @@ description: The .NET 10 API in api/ — layout, layers, settings, running it lo
 
 # Backend API
 
-MTF's first server, created by #36 for accounts. It lives in `api/` in this repo, runs on Render Free with Postgres 17 on Neon Free ([ADR 0009](../../docs/adr/0009-v2-backend-hosting.md)), and is reached at `https://api.mtf.zynis.com.ar`. The Desk never needs it: the app only calls it from the Account sheet ([architecture.md](../frontend/architecture.md)).
+MTF's first server, created by #36 for accounts. It lives in `api/` in this repo, runs on Render Free with Postgres 17 on Neon Free ([ADR 0009](../../docs/adr/0009-v2-backend-hosting.md)), and is reached at `https://api.mtf.zynis.com.ar`. The Desk never needs it: with no session the app only calls it from the Account sheet, and with one it also syncs in the background (#37, [architecture.md](../frontend/architecture.md)).
 
-The behavior is specified in [openspec/specs/backend-service](../../openspec/specs/backend-service/spec.md), [accounts](../../openspec/specs/accounts/spec.md) and [account-session](../../openspec/specs/account-session/spec.md).
+The behavior is specified in [openspec/specs/backend-service](../../openspec/specs/backend-service/spec.md), [accounts](../../openspec/specs/accounts/spec.md), [account-session](../../openspec/specs/account-session/spec.md) and [sync](../../openspec/specs/sync/spec.md).
 
 ## Layout
 
@@ -21,7 +21,7 @@ api/
     Services/  Services/Interfaces/   the rules (accounts, sessions, Google, mail, tokens)
     DAOs/      DAOs/Interfaces/       the only code that touches AppDbContext
     DTOs/                       request and answer shapes
-    Models/                     EF entities (Entity base: uuid id, created_at, updated_at)
+    Models/                     EF entities (Entity base: uuid id, created_at, updated_at; the sync records do not use it)
     Data/                       AppDbContext, design-time factory
     Migrations/                 EF migrations, applied at start-up
     Infrastructure/             RequiredSettings, ApiException + handler, token defaults
@@ -31,7 +31,7 @@ api/
 
 **Layers: controller → service → DAO → `AppDbContext`, each behind an interface**, as in Zynis Cal. Controllers hold no rules, services never touch `AppDbContext`, DAOs hold no rules. Every dependency is injected through its interface, registered in `Program.cs`.
 
-**Errors**: a service throws `ApiException(status, code)` for an expected refusal; `ApiExceptionHandler` answers `ProblemDetails` with a `code` extension (`invalid_credentials`, `session_ended`, …) that the app translates. Anything else answers 500 `server_error` with no detail; the exception and a trace id go to the log. A malformed body answers 400 `invalid_request`.
+**Errors**: a service throws `ApiException(status, code)` for an expected refusal; `ApiExceptionHandler` answers `ProblemDetails` with a `code` extension (`invalid_credentials`, `session_ended`, `cursor_expired`, …) that the app translates. Anything else answers 500 `server_error` with no detail; the exception and a trace id go to the log. A malformed body answers 400 `invalid_request`; a body over its endpoint's limit answers 413 `request_too_large`.
 
 **Time** comes from an injected `TimeProvider`, never `DateTime.UtcNow`, so tests move the clock with `FakeTimeProvider`. That includes the access token's lifetime check (no clock skew).
 
@@ -50,8 +50,8 @@ All environment variables. `RequiredSettings` checks them before anything starts
 | `RESEND_API_KEY` | outside Development | MTF's own Resend key, sending only |
 | `Email__From` | outside Development | `MTF By Zynis <no-reply@zynis.com.ar>` |
 | `PORT` | no | Injected by Render; default 5000 |
-| `RateLimiting__{Global,Auth,Session}__PermitLimit` | no | Override the limits (tests lower or raise them) |
-| `RequestLimits__MaxBodyBytes` | no | Default 64 KB |
+| `RateLimiting__{Global,Auth,Session,Sync}__PermitLimit` | no | Override the limits (tests lower or raise them) |
+| `RequestLimits__MaxBodyBytes` | no | Default 64 KB (a sync push allows 1 MB, set on its endpoint) |
 
 `appsettings.json` holds no secret. `appsettings.Development.json` holds only local values (the compose database, a dev-only signing key, `localhost` addresses). Real local secrets (a Google client, a Resend key) go in user secrets:
 
@@ -90,7 +90,7 @@ dotnet ef migrations list --project api/Mtf.Api
 
 ## Data model
 
-Four tables, snake_case names, `timestamptz` times, `uuid` ids from `Guid.NewGuid()` (v4, like the front end). Every row has `created_at` / `updated_at`, stamped by `AppDbContext.SaveChangesAsync` from the injected clock.
+Six tables, snake_case names, `timestamptz` times, `uuid` ids from `Guid.NewGuid()` (v4, like the front end). The four account tables inherit `Entity`: their `created_at` / `updated_at` are stamped by `AppDbContext.SaveChangesAsync` from the injected clock. The two sync tables (#37) do not; see [Sync](#sync).
 
 ```
 users            id · email (unique, normalized) · password_hash? · google_id? (unique)
@@ -101,13 +101,37 @@ email_tokens     id · user_id → users (cascade) · purpose (Verify | Reset) �
                  expires_at · created_at · updated_at · unique (user_id, purpose)
 google_handoffs  id · secret_hash (unique) · language · user_id? → users (cascade)
                  failed · expires_at · created_at · updated_at
+records          user_id → users (cascade) · kind ('area' | 'card' | 'win') · id (uuid)
+                 data? (jsonb) · updated_at · deleted_at? · seq (records_seq)
+                 PK (user_id, kind, id) · unique (user_id, seq)
+sync_accounts    user_id (PK) → users (cascade) · purged_seq · created_at · updated_at
 ```
 
 - **`users` is the minimal record** the ticket asks for: no name, no photo, no tokens. Mail tokens get rows of their own.
 - **Emails are normalized** (`Trim().ToLowerInvariant()`) on the way in and stored that way, so a plain unique index is enough, with no `citext`.
 - **No secret is stored readable.** Passwords are bcrypt hashes; mail tokens, renewal tokens and Google hand-off secrets are 256-bit random values stored as SHA-256 (right for random input: there is nothing to guess).
 - **`email_tokens` holds one live token per purpose**, replaced on every send: its `created_at` is the 60-second wait, and a new mail kills the old link.
-- **Clean-up with no background job** (a job would wake Neon on a schedule): expired sessions of a user are deleted when that user signs in, expired mail tokens are replaced by the next send, expired hand-offs are deleted when the next one starts.
+- **Clean-up with no background job** (a job would wake Neon on a schedule): expired sessions of a user are deleted when that user signs in, expired mail tokens are replaced by the next send, expired hand-offs are deleted when the next one starts, and deleted records older than 30 days are purged by their Account's next push.
+
+## Sync
+
+#37: the Desk travels between an Account's devices per session ([ADR 0012](../../docs/adr/0012-session-sync-of-opaque-records.md), [sync spec](../../openspec/specs/sync/spec.md)). The server is a relay that never reads a Card: every Area, Card (with its Items) and Win is an **opaque record**, and the app owns the shape. The front-end side (outbox, merge, triggers) is in [architecture.md](../frontend/architecture.md).
+
+| Endpoint | Body / query | Answer |
+|---|---|---|
+| `POST /api/sync/push` | `{ records: [{ kind, id, updatedAt, deleted, data? }] }` | `200 {}` |
+| `GET /api/sync/pull` | `?after=<seq>&limit=500` | `200 { records: [...], next, more }` |
+
+Both are `[Authorize]`; the Account is always `User.GetUserId()`, never a parameter. `SyncController` → `SyncService` → `RecordDao` (the only code touching `records` and `sync_accounts`).
+
+- **The envelope is all the server checks**: `kind` is `area`, `card` or `win` (Win events travel as `win`, the glossary's word); `id` is a uuid; `updatedAt` is a positive epoch-ms number; `data` is a JSON object unless `deleted`. Anything else answers 400 `invalid_request` and writes nothing. A new front-end field needs no server change.
+- **`updated_at` is the device's change time**, sent by the device. That is why `Record` does **not inherit `Entity`**: `Entity`'s `updated_at` is stamped from the server clock on save, and the entity's own `createdAt` already travels inside `data`. `SyncAccount` is keyed by the user, so it has no `id` either; `RecordDao` writes it with SQL.
+- **Push = newest change wins, idempotent.** One transaction per request, under `pg_advisory_xact_lock(hashtextextended(user_id))`, so two pushes of one Account never interleave and its seqs commit in order (a pull running between them can never skip a change). The batch goes in one statement over `unnest(...)` arrays: a stored record takes the change only when `records.updated_at < incoming.updated_at`, and only then gets `nextval('records_seq')`; an unknown record is inserted. Older or equal does nothing, so the same batch twice changes nothing. A deletion keeps the stored `data`. A record that loses comes back to the device on its next pull, so the answer carries nothing. Raw SQL through `ExecuteSqlInterpolatedAsync`, because EF's change tracker cannot express the conditional upsert.
+- **Pull by cursor.** The Account's records with `seq > after`, ordered by `seq`, up to 500 a page; `next` is the last `seq` returned (or `after` when none), `more` says another page waits. A deleted record comes as `deleted: true` with no `data`.
+- **Purge, with no background job.** Every push first writes, then deletes the Account's records whose `deleted_at` is older than 30 days (`SyncService.DeletionLifetime`, from the injected clock) and raises `sync_accounts.purged_seq` to the highest `seq` removed.
+- **Expired cursor → 410 `cursor_expired`.** When `0 < after < purged_seq` (the device may have missed a purged deletion, which it would bring back), or when `after` is above the highest `seq` the Account ever held (`max(records.seq, purged_seq)`: the database was lost, restored older, or its records deleted by hand). The device then runs the first sign-in rule, finds the Account empty and refills it: this is what stands in for a database backup ([ADR 0009](../../docs/adr/0009-v2-backend-hosting.md), rule 8 dropped by #37). `after = 0` is always allowed.
+- **Limits.** The push accepts up to 1 MB (`[RequestSizeLimit]`, `SyncService.MaxPushBytes`), above the 64 KB everywhere else; the app sends at most 512 KB per request. `RequestSizeGuard` refuses an over-limit `Content-Length` with 413 `request_too_large` before anything reads the body (Kestrel's own limit stays for bodies with no length, and maps to the same code). Both endpoints use the `sync` rate-limit policy. CORS caches preflights for 2 hours (`SetPreflightMaxAge`), so the leave send, a `keepalive` fetch while the page closes, reuses the arrival push's preflight.
+- **Tests**: `SyncTests` (every server scenario of the sync spec, including the purge with `FakeTimeProvider`, two concurrent pushes against a pull loop, and the server that forgot), `SyncRateLimitTests`, and the preflight age in `CorsTests`.
 
 ## Sessions
 
@@ -170,6 +194,7 @@ ASP.NET's built-in limiter, fixed one-minute windows, partitioned by client IP (
 | global | 60 / min | everything except `/health` |
 | `auth` | 10 / min | register, verify-email, resend-verification, login, forgot-password, reset-password, `google/login`, `google/callback` |
 | `session` | 30 / min | refresh, logout, `google/exchange` (a poll every 3 s is 20 / min) |
+| `sync` | 30 / min | `sync/push`, `sync/pull` (a session pulls once and pushes a few times) |
 
 A refused request answers 429 with `Retry-After` and code `too_many_requests` before any controller runs, so a blocked sign-in never checks a password. Overridable with `RateLimiting__<Policy>__PermitLimit` (tests do).
 

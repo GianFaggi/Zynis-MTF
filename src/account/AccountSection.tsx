@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react'
 import { useT } from '../i18n'
+import { SyncStatus } from '../sync/SyncStatus'
 import { useAccountStore } from './accountStore'
 
 type AccountSectionProps = {
@@ -8,7 +9,7 @@ type AccountSectionProps = {
 }
 
 /**
- * The Account group of the Settings sheet: who is signed in, read from the device, so it
+ * The Account group of the Settings sheet: who is signed in and, then, the sync status (#37), read from the device, so it
  * shows with no connection. Opening Settings makes no request; only the Account sheet does.
  */
 export function AccountSection({ onOpen }: AccountSectionProps) {
@@ -29,6 +30,7 @@ export function AccountSection({ onOpen }: AccountSectionProps) {
         </span>
         <ChevronRight size={18} aria-hidden="true" className="flex-none text-pencil" />
       </button>
+      {email && <SyncStatus />}
     </div>
   )
 }

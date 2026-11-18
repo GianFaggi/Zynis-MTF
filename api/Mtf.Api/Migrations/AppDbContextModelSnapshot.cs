@@ -22,6 +22,8 @@ namespace Mtf.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence("records_seq");
+
             modelBuilder.Entity("Mtf.Api.Models.EmailToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -121,6 +123,49 @@ namespace Mtf.Api.Migrations
                     b.ToTable("google_handoffs");
                 });
 
+            modelBuilder.Entity("Mtf.Api.Models.Record", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("Kind")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("data");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<long>("Seq")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("seq")
+                        .HasDefaultValueSql("nextval('records_seq')");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("UserId", "Kind", "Id")
+                        .HasName("pk_records");
+
+                    b.HasIndex("UserId", "Seq")
+                        .IsUnique()
+                        .HasDatabaseName("ix_records_user_id_seq");
+
+                    b.ToTable("records");
+                });
+
             modelBuilder.Entity("Mtf.Api.Models.Session", b =>
                 {
                     b.Property<Guid>("Id")
@@ -171,6 +216,30 @@ namespace Mtf.Api.Migrations
                         .HasDatabaseName("ix_sessions_user_id");
 
                     b.ToTable("sessions");
+                });
+
+            modelBuilder.Entity("Mtf.Api.Models.SyncAccount", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long>("PurgedSeq")
+                        .HasColumnType("bigint")
+                        .HasColumnName("purged_seq");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_sync_accounts");
+
+                    b.ToTable("sync_accounts");
                 });
 
             modelBuilder.Entity("Mtf.Api.Models.User", b =>
@@ -240,6 +309,16 @@ namespace Mtf.Api.Migrations
                         .HasConstraintName("fk_google_handoffs_users_user_id");
                 });
 
+            modelBuilder.Entity("Mtf.Api.Models.Record", b =>
+                {
+                    b.HasOne("Mtf.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_records_users_user_id");
+                });
+
             modelBuilder.Entity("Mtf.Api.Models.Session", b =>
                 {
                     b.HasOne("Mtf.Api.Models.User", null)
@@ -248,6 +327,16 @@ namespace Mtf.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_sessions_users_user_id");
+                });
+
+            modelBuilder.Entity("Mtf.Api.Models.SyncAccount", b =>
+                {
+                    b.HasOne("Mtf.Api.Models.User", null)
+                        .WithOne()
+                        .HasForeignKey("Mtf.Api.Models.SyncAccount", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sync_accounts_users_user_id");
                 });
 #pragma warning restore 612, 618
         }

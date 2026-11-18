@@ -94,3 +94,46 @@ export interface MtfData {
   cards: Card[]
   events: WinEvent[]
 }
+
+/** What a sync record holds (#37): an Area, a Card with its Items, or a Win event (`win`, the glossary's word). */
+export type RecordKind = 'area' | 'card' | 'win'
+
+/** `kind:id`, the key of one record in the outbox and in a merge. */
+export type RecordKey = `${RecordKind}:${string}`
+
+/**
+ * One Area, Card or Win as it travels to and from the server (#37, ADR 0012). `updatedAt` is the
+ * moment the device made the change (epoch ms); `data` is the entity, absent on a deletion.
+ */
+export interface SyncRecord {
+  kind: RecordKind
+  id: string
+  updatedAt: number
+  deleted: boolean
+  data?: Area | Card | WinEvent
+}
+
+/** A change waiting to be sent: when it was made, and whether it is a deletion (a tombstone). */
+export interface PendingEntry {
+  at: number
+  deleted?: true
+}
+
+/**
+ * This device's sync state (`mtf_sync`, #37). A device key, like the session: never part of
+ * `MtfData` nor of a Backup, and an Import leaves it alone.
+ */
+export interface SyncState {
+  /** The email this state belongs to; `null` on a device that never synced. Nothing is recorded without one. */
+  owner: string | null
+  /** The last server position this device has merged (`seq`); 0 = never. */
+  cursor: number
+  /** What changed here and is not confirmed by the server yet, by record key. */
+  pending: Partial<Record<RecordKey, PendingEntry>>
+  /** Fetched records for the Card open in the editor, merged when it closes. */
+  held: SyncRecord[]
+  /** Set when this Desk must become the Account's (Subir este, an Import, Recuperar): the moment it was decided. */
+  claim: number | null
+  /** When the last sync finished (epoch ms). */
+  lastSyncAt: number | null
+}

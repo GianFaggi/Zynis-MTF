@@ -140,6 +140,8 @@ function findArea(id: string) {
 
 /** Picks the Card or the Area up. A Card gets the raised look; an Area only a stronger tint, and its Cards come along. */
 function lift(press: Press) {
+  // Sync holds what it fetches until the drop (#37): nothing moves under the finger.
+  useDeskStore.getState().setLifted(true)
   if (press.area) {
     const { id, wrapper } = press.area
     if (press.intent === 'drag') {
@@ -214,6 +216,8 @@ function followArea(press: Press, [mx, my]: [number, number]) {
 /** Clears everything the drag wrote to the DOM; React's styles show the stored place again. */
 function settle(press: Press) {
   highlightJar(null)
+  // Every way a lift ends comes here: a drop, a cancel, a slide back, the answer to "¿Pasarla a…?".
+  useDeskStore.getState().setLifted(false)
   if (press.area) {
     const { wrapper, cards } = press.area
     for (const element of [wrapper, ...cards]) {
@@ -476,6 +480,8 @@ export function Desk() {
           onLabel: current.labelAreaId !== null,
           onJar: current.onJar,
         })
+        // A press held long enough to lift, released as a tap: nothing is lifted any more.
+        if (outcome !== 'drop' && outcome !== 'resize') useDeskStore.getState().setLifted(false)
         if (outcome === 'drop' || outcome === 'resize') {
           if (cancelled) settle(current)
           else if (current.area) dropArea(current, () => useDeskStore.getState().showToast(t('areaInTheWay')))

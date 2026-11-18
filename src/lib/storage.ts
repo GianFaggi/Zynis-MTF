@@ -1,4 +1,4 @@
-import type { Language, MtfData, SavedArrangement, StoredSession, Theme } from '../types'
+import type { Language, MtfData, SavedArrangement, StoredSession, SyncState, Theme } from '../types'
 
 // The only module that touches localStorage (KB/frontend/storage.md, ADR 0004).
 // Every access is wrapped: if the browser refuses storage (blocked, private mode,
@@ -15,6 +15,8 @@ export const ARRANGEMENT_KEY = 'mtf_arrangement'
 export const AREA_JARS_KEY = 'mtf_area_jars'
 export const SESSION_KEY = 'mtf_session'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
+export const SYNC_KEY = 'mtf_sync'
+export const REPLACED_KEY_PREFIX = 'mtf_data_replaced_'
 
 type Migration = (doc: Record<string, unknown>) => Record<string, unknown>
 
@@ -166,6 +168,93 @@ export function clearSession(): void {
   }
 }
 
+/** A device that never synced: no owner, so nothing is recorded until a first sign-in. */
+export function emptySync(): SyncState {
+  return { owner: null, cursor: 0, pending: {}, held: [], claim: null, lastSyncAt: null }
+}
+
+/**
+ * This device's sync state (#37). Missing, damaged or unreadable reads as never synced, so the next
+ * sync runs the first sign-in rule instead of trusting a broken cursor.
+ */
+export function loadSync(): SyncState {
+  const raw = read(SYNC_KEY)
+  if (raw === null) return emptySync()
+  try {
+    const value: unknown = JSON.parse(raw)
+    return isSyncState(value) ? value : emptySync()
+  } catch {
+    return emptySync()
+  }
+}
+
+/** Never throws: a refused write is logged, and the next push still reads the current `data`. */
+export function saveSync(state: SyncState): void {
+  write(SYNC_KEY, JSON.stringify(state))
+}
+
+/**
+ * Keeps this device's Desk before the Account's replaces it (#37, "Recuperar el escritorio anterior").
+ * One copy is enough: older ones are removed. False when it does not fit, even after removing them,
+ * so the caller can ask for an Export first.
+ */
+export function saveReplaced(data: MtfData, now: number): boolean {
+  const key = `${REPLACED_KEY_PREFIX}${now}`
+  const value = JSON.stringify(data)
+  let saved = tryWrite(key, value)
+  if (!saved) {
+    // An older copy may be what fills the quota; it is replaced anyway.
+    removeReplaced((other) => other !== key)
+    saved = tryWrite(key, value)
+  }
+  if (saved) removeReplaced((other) => other !== key)
+  return saved
+}
+
+/** The newest replaced Desk and when it was kept; `null` when there is none or it cannot be read. */
+export function loadReplaced(): { at: number; data: MtfData } | null {
+  const newest = replacedKeys().sort((a, b) => b.at - a.at)[0]
+  if (!newest) return null
+  const raw = read(newest.key)
+  if (raw === null) return null
+  try {
+    const result = upgradeDocument(JSON.parse(raw))
+    return result.ok ? { at: newest.at, data: result.data } : null
+  } catch {
+    return null
+  }
+}
+
+export function clearReplaced(): void {
+  removeReplaced(() => true)
+}
+
+function replacedKeys(): { key: string; at: number }[] {
+  const found: { key: string; at: number }[] = []
+  try {
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index)
+      if (!key?.startsWith(REPLACED_KEY_PREFIX)) continue
+      const at = Number(key.slice(REPLACED_KEY_PREFIX.length))
+      if (Number.isFinite(at)) found.push({ key, at })
+    }
+  } catch (error) {
+    console.warn('[storage] could not list the replaced desks:', error)
+  }
+  return found
+}
+
+function removeReplaced(which: (key: string) => boolean): void {
+  for (const { key } of replacedKeys()) {
+    if (!which(key)) continue
+    try {
+      localStorage.removeItem(key)
+    } catch (error) {
+      console.warn(`[storage] could not remove "${key}":`, error)
+    }
+  }
+}
+
 /**
  * Asks the browser not to evict MTF's storage under pressure. Silent: does nothing
  * without the API or when already persistent, and only logs a refusal or a failure.
@@ -225,6 +314,20 @@ function isSession(value: unknown): value is StoredSession {
   )
 }
 
+function isSyncState(value: unknown): value is SyncState {
+  return (
+    isRecord(value) &&
+    (value.owner === null || (typeof value.owner === 'string' && value.owner !== '')) &&
+    Number.isInteger(value.cursor) &&
+    (value.cursor as number) >= 0 &&
+    isRecord(value.pending) &&
+    Object.values(value.pending).every((entry) => isRecord(entry) && Number.isFinite(entry.at)) &&
+    Array.isArray(value.held) &&
+    (value.claim === null || Number.isFinite(value.claim)) &&
+    (value.lastSyncAt === null || Number.isFinite(value.lastSyncAt))
+  )
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -247,9 +350,15 @@ function read(key: string): string | null {
 }
 
 function write(key: string, value: string): void {
+  tryWrite(key, value)
+}
+
+function tryWrite(key: string, value: string): boolean {
   try {
     localStorage.setItem(key, value)
+    return true
   } catch (error) {
     console.warn(`[storage] could not write "${key}":`, error)
+    return false
   }
 }

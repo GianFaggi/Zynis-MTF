@@ -112,6 +112,9 @@ describe('AccountSheet', () => {
       expect(await screen.findByText('gian@example.com')).toBeInTheDocument()
       expect(screen.getByText('Entraste como')).toBeInTheDocument()
       expect(loadSession()).toEqual({ refreshToken: 'rt-1', email: 'gian@example.com' })
+      // The sync status (#37): never synced here yet, and Sincronizar ahora.
+      expect(screen.getByText('Todavía no se sincronizó en este dispositivo.')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Sincronizar ahora' })).toBeInTheDocument()
     })
 
     it.each([

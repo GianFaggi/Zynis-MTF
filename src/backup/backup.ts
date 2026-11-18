@@ -25,6 +25,11 @@ export function makeBackup(data: MtfData, now: Date): string {
   return JSON.stringify({ format: FORMAT, exportedAt: now.toISOString(), data }, null, 2)
 }
 
+/** The Backup as a file to deliver: Settings' Export, and the first sign-in dialog when there is no room for a copy (#37). */
+export function backupFile(data: MtfData, now: Date): File {
+  return new File([makeBackup(data, now)], backupFileName(now), { type: 'application/json' })
+}
+
 /** Reads a picked file's text. Changes nothing: the caller replaces the data after the user confirms. */
 export function readBackup(text: string): BackupResult {
   if (text.length > MAX_LENGTH) return { ok: false, reason: 'notBackup' }

@@ -95,7 +95,7 @@ _Avoid_: Restore, undo, unarchive
 ## Data
 
 **Backup** (ES: **copia de seguridad**, **copia**):
-A file (`mtf-backup-YYYY-MM-DD.json`) with all of the user's Areas, Cards (on the Desk and in the Jar) and Wins, made by Export and loaded by Import. It does not carry device settings such as the language or the theme. In the MVP it is how data moves between phone and PC ([ADR 0006](docs/adr/0006-backup-file-format.md)), and the only way notes reach MTF at a new address, which the browser treats as a new app with empty storage ([ADR 0008](docs/adr/0008-own-address.md)).
+A file (`mtf-backup-YYYY-MM-DD.json`) with all of the user's Areas, Cards (on the Desk and in the Jar) and Wins, made by Export and loaded by Import. It does not carry device settings such as the language or the theme, nor any Sync state. In the MVP it was how data moved between phone and PC; with an Account, Sync does that and the Backup stays as the user's own copy ([ADR 0006](docs/adr/0006-backup-file-format.md)). It is also the only way notes reach MTF at a new address, which the browser treats as a new app with empty storage ([ADR 0008](docs/adr/0008-own-address.md)).
 _Avoid_: Sync, save file, archive
 
 **Export** (ES: **Exportar copia**):
@@ -103,13 +103,13 @@ Making a Backup of everything on this device. On a phone it opens the share menu
 _Avoid_: Save, sync, download (as the name of the action)
 
 **Import** (ES: **Importar copia**):
-Loading a Backup on this device. MTF checks the file first and, after the user confirms, **replaces** everything on the device with it; it never merges. A file that is not a valid Backup changes nothing.
+Loading a Backup on this device. MTF checks the file first and, after the user confirms, **replaces** everything on the device with it; it never merges. A file that is not a valid Backup changes nothing. With a Session, the imported Desk also becomes the Account's on the next Sync, as if the user had chosen "Subir este": the Account's other devices follow, and the confirmation says so.
 _Avoid_: Restore, sync, merge, open
 
 ## Accounts
 
 **Account** (ES: **cuenta**):
-Who a Desk belongs to across devices: an email, with a password, Google, or both. It has no name and no photo. It is always optional: MTF opens and works with no account and no connection, and signing in or out changes nothing on the Desk. It is reached from Settings → Cuenta.
+Who a Desk belongs to across devices: an email, with a password, Google, or both. It has no name and no photo. It is always optional: MTF opens and works with no account and no connection. Signing out changes nothing on the Desk; signing in changes it only through the first sign-in rule of Sync. It is reached from Settings → Cuenta.
 _Avoid_: User (in UI copy), profile, login (as a noun), member
 
 **Session** (ES: **sesión**):
@@ -117,6 +117,14 @@ This device being signed in to an Account. It stays on the device, like the them
 _Avoid_: Login, connection, token (in UI copy)
 
 ## Sync
+
+**Sync** (ES: **sincronización**; the action: **Sincronizar ahora** / **Sync now**):
+The Desk (Areas, Cards with their Items, and Wins) travelling between the devices of one Account, **per session**: fetched when MTF opens or comes back, sent when it is hidden, closed or left idle, never during use and never by polling. It runs only with a Session, in the background, and never blocks the Desk. Device settings stay on each device. The first time a device meets an Account, the **first sign-in rule** decides: an empty Account receives this Desk, a new device takes the Account's, and when both have notes MTF asks ("Usar el de la cuenta" / "Subir este"). When two devices changed the same thing, the newest change wins whole ([ADR 0012](docs/adr/0012-session-sync-of-opaque-records.md)).
+_Avoid_: Backup, upload, save, live sync, merge (in UI copy)
+
+**Previous desk** (ES: **escritorio anterior**):
+The copy of this device's Desk that MTF keeps before the Account's Desk replaces it ("Usar el de la cuenta"). Settings → Cuenta offers **Recuperar el escritorio anterior** / **Recover the previous desk** for 30 days; recovering puts it back and makes it the Account's Desk. It stays on the device and is not in a Backup.
+_Avoid_: Undo, restore point, old version
 
 **Paper plane** (ES: **avión de papel**):
 The sign that the Desk is travelling between devices, or that MTF is waiting for its server. It is drawn in ink and paper, never the accent, because travelling is not a Win. While waiting it loops along a soft arc over a dotted pencil trail, with calm messages instead of a progress bar; in the tools pill it is a small swaying icon.

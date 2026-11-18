@@ -56,6 +56,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("RateLimiting:Global:PermitLimit", "100000");
         builder.UseSetting("RateLimiting:Auth:PermitLimit", "100000");
         builder.UseSetting("RateLimiting:Session:PermitLimit", "100000");
+        builder.UseSetting("RateLimiting:Sync:PermitLimit", "100000");
 
         foreach (var (key, value) in Settings)
             builder.UseSetting(key, value);

@@ -10,6 +10,11 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options, TimePr
     public DbSet<Session> Sessions => Set<Session>();
     public DbSet<EmailToken> EmailTokens => Set<EmailToken>();
     public DbSet<GoogleHandoff> GoogleHandoffs => Set<GoogleHandoff>();
+    public DbSet<Record> Records => Set<Record>();
+    public DbSet<SyncAccount> SyncAccounts => Set<SyncAccount>();
+
+    /// <summary>One sequence for every Account's records: taken on each insert and accepted update.</summary>
+    public const string RecordsSeq = "records_seq";
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +46,26 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options, TimePr
             entity.HasIndex(h => h.SecretHash).IsUnique();
             entity.Property(h => h.Language).HasMaxLength(5);
             entity.HasOne<User>().WithMany().HasForeignKey(h => h.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Sync (design D1): opaque records keyed by Account, kind and id.
+        modelBuilder.HasSequence<long>(RecordsSeq);
+
+        modelBuilder.Entity<Record>(entity =>
+        {
+            entity.HasKey(r => new { r.UserId, r.Kind, r.Id });
+            entity.HasIndex(r => new { r.UserId, r.Seq }).IsUnique();
+            entity.Property(r => r.Kind).HasMaxLength(8);
+            entity.Property(r => r.Data).HasColumnType("jsonb");
+            entity.Property(r => r.Seq).HasDefaultValueSql($"nextval('{RecordsSeq}')");
+            entity.HasOne<User>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SyncAccount>(entity =>
+        {
+            entity.HasKey(a => a.UserId);
+            entity.HasOne<User>().WithOne().HasForeignKey<SyncAccount>(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         UseSnakeCaseNames(modelBuilder);

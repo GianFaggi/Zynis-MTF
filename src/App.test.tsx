@@ -5,11 +5,16 @@ import App from './App'
 import { initialAccountState, useAccountStore } from './account/accountStore'
 import { makeBackup } from './backup/backup'
 import { useDeskStore } from './desk/deskStore'
-import { LANGUAGE_KEY, THEME_KEY, saveSession } from './lib/storage'
+import { LANGUAGE_KEY, THEME_KEY, emptySync, saveSession, saveSync } from './lib/storage'
 import { useAppStore } from './store/appStore'
 import { USER_AGENTS, restoreDevice, stubDevice } from './test/device'
 import { makeArea, makeCard, makeData, rowOfAreas } from './test/fixtures'
 import { resetStores } from './test/stores'
+import { initSync, resetSyncEngine, syncNow } from './sync/engine'
+import { pullRecords, pushRecords } from './sync/syncApi'
+import { useSyncStore } from './sync/syncStore'
+
+vi.mock('./sync/syncApi', () => ({ pullRecords: vi.fn(), pushRecords: vi.fn(), leaveSend: vi.fn() }))
 
 function desk() {
   return screen.getByRole('region', { name: /Escritorio|Desk/ })
@@ -344,5 +349,60 @@ describe('App', () => {
     expect(areaLabels()).toContain('Work, 0 cards')
     expect(useAppStore.getState().language).toBe('en')
     expect(document.documentElement.dataset.theme).toBe('dark')
+  })
+})
+
+describe('App sync (#37)', () => {
+  beforeEach(() => {
+    resetStores()
+    resetSyncEngine()
+  })
+
+  afterEach(() => {
+    resetSyncEngine()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  const indicator = () => screen.queryByRole('img', { name: 'Sincronizando…' })
+
+  it('a sync under 2 s shows nothing in the tools pill', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    act(() => useSyncStore.setState({ syncing: true }))
+    act(() => vi.advanceTimersByTime(1900))
+    act(() => useSyncStore.setState({ syncing: false }))
+    act(() => vi.advanceTimersByTime(1000))
+    expect(indicator()).not.toBeInTheDocument()
+  })
+
+  it('a slower sync shows the paper plane in ink, and a failed one removes it with no error', () => {
+    vi.useFakeTimers()
+    render(<App />)
+    act(() => useSyncStore.setState({ syncing: true }))
+    act(() => vi.advanceTimersByTime(2100))
+    expect(indicator()).toBeInTheDocument()
+    expect(indicator()!.className).not.toMatch(/accent|danger/)
+
+    act(() => useSyncStore.setState({ syncing: false }))
+    expect(indicator()).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('shows "Tu escritorio está al día" only when a sync brought changes', async () => {
+    saveSync({ ...emptySync(), owner: 'ana@example.com', cursor: 10 })
+    useAccountStore.setState({ email: 'ana@example.com', accessToken: 'jwt' })
+    vi.mocked(pushRecords).mockImplementation(async (records) => ({ sent: [...records] }))
+    vi.mocked(pullRecords).mockResolvedValue({ ok: true, data: { records: [], next: 10 } })
+    initSync()
+    render(<App />)
+
+    await act(() => syncNow())
+    expect(screen.queryByText('Tu escritorio está al día')).not.toBeInTheDocument()
+
+    const card = makeCard({ id: 'remote', title: 'Del teléfono' })
+    vi.mocked(pullRecords).mockResolvedValue({ ok: true, data: { records: [{ kind: 'card', id: 'remote', updatedAt: 5, deleted: false, data: card }], next: 11 } })
+    await act(() => syncNow())
+    expect(screen.getByText('Tu escritorio está al día')).toBeInTheDocument()
   })
 })

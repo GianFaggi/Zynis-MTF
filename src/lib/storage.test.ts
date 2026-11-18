@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MtfData } from '../types'
+import type { MtfData, SyncState } from '../types'
 import {
   AREA_JARS_KEY,
   ARRANGEMENT_KEY,
@@ -7,6 +7,14 @@ import {
   INSTALL_NUDGE_SEEN_KEY,
   LANGUAGE_KEY,
   RECOVERY_KEY_PREFIX,
+  REPLACED_KEY_PREFIX,
+  SYNC_KEY,
+  clearReplaced,
+  emptySync,
+  loadReplaced,
+  loadSync,
+  saveReplaced,
+  saveSync,
   SCHEMA_VERSION,
   SESSION_KEY,
   THEME_KEY,
@@ -431,5 +439,114 @@ describe('session', () => {
     expect(loadSession()).toBeNull()
     expect(() => saveSession(session)).not.toThrow()
     expect(() => clearSession()).not.toThrow()
+  })
+})
+
+describe('sync state (#37)', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const state: SyncState = {
+    owner: 'ana@example.com',
+    cursor: 42,
+    pending: { 'card:c1': { at: 5 }, 'win:e1': { at: 6, deleted: true } },
+    held: [],
+    claim: null,
+    lastSyncAt: 7,
+  }
+
+  it('reads as never synced when nothing is stored', () => {
+    expect(loadSync()).toEqual(emptySync())
+  })
+
+  it('reads back what it saved, in its own key', () => {
+    saveSync(state)
+    expect(JSON.parse(localStorage.getItem(SYNC_KEY)!)).toEqual(state)
+    expect(loadSync()).toEqual(state)
+  })
+
+  it.each([
+    ['not JSON', '{oops'],
+    ['an array', '[]'],
+    ['a negative cursor', JSON.stringify({ ...state, cursor: -1 })],
+    ['a pending entry with no time', JSON.stringify({ ...state, pending: { 'card:c1': {} } })],
+    ['no held list', JSON.stringify({ ...state, held: undefined })],
+  ])('reads a damaged value (%s) as never synced', (_, raw) => {
+    localStorage.setItem(SYNC_KEY, raw)
+    expect(loadSync()).toEqual(emptySync())
+  })
+
+  it('never throws when storage refuses', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    expect(loadSync()).toEqual(emptySync())
+    expect(() => saveSync(state)).not.toThrow()
+  })
+})
+
+describe('replaced desk (#37)', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('keeps a copy under a dated key and reads it back', () => {
+    expect(saveReplaced(sample, 1000)).toBe(true)
+    expect(localStorage.getItem(`${REPLACED_KEY_PREFIX}1000`)).not.toBeNull()
+    expect(loadReplaced()).toEqual({ at: 1000, data: sample })
+  })
+
+  it('keeps only the newest copy', () => {
+    saveReplaced({ ...sample, cards: [] }, 1000)
+    saveReplaced(sample, 2000)
+    expect(localStorage.getItem(`${REPLACED_KEY_PREFIX}1000`)).toBeNull()
+    expect(loadReplaced()).toEqual({ at: 2000, data: sample })
+  })
+
+  it('reports when the copy does not fit, without throwing', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    expect(saveReplaced(sample, 1000)).toBe(false)
+    expect(loadReplaced()).toBeNull()
+  })
+
+  it('removes an older copy to make room for the new one', () => {
+    saveReplaced(sample, 1000)
+    const setItem = Storage.prototype.setItem
+    let refused = false
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (!refused && key === `${REPLACED_KEY_PREFIX}2000`) {
+        refused = true
+        throw new DOMException('full', 'QuotaExceededError')
+      }
+      setItem.call(this, key, value)
+    })
+    expect(saveReplaced(sample, 2000)).toBe(true)
+    expect(localStorage.getItem(`${REPLACED_KEY_PREFIX}1000`)).toBeNull()
+    expect(loadReplaced()?.at).toBe(2000)
+  })
+
+  it('clears every copy', () => {
+    saveReplaced(sample, 1000)
+    clearReplaced()
+    expect(loadReplaced()).toBeNull()
+  })
+
+  it('reads a damaged copy as none', () => {
+    localStorage.setItem(`${REPLACED_KEY_PREFIX}1000`, '{oops')
+    expect(loadReplaced()).toBeNull()
   })
 })

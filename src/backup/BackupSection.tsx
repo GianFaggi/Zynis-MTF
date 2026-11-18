@@ -5,7 +5,9 @@ import { useT } from '../i18n'
 import { useAppStore } from '../store/appStore'
 import type { Language, MtfData } from '../types'
 import { totalDone } from '../wins/stats'
-import { backupFileName, makeBackup, readBackup, type BackupResult } from './backup'
+import { useAccountStore } from '../account/accountStore'
+import { claimDesk } from '../sync/engine'
+import { backupFile, readBackup, type BackupResult } from './backup'
 import { deliverFile } from './deliver'
 
 type Refusal = Extract<BackupResult, { ok: false }>['reason']
@@ -40,12 +42,10 @@ export function BackupSection({ onImported }: BackupSectionProps) {
 
   const exportBackup = () => {
     // Built synchronously in the click: iOS opens the share sheet only from a user gesture.
-    const now = new Date()
-    const name = backupFileName(now)
-    const file = new File([makeBackup(useAppStore.getState().data, now)], name, { type: 'application/json' })
+    const file = backupFile(useAppStore.getState().data, new Date())
     setStep({ name: 'idle' })
     void deliverFile(file).then((delivery) => {
-      if (delivery !== 'cancelled') useDeskStore.getState().showToast(t('backupReady'), name)
+      if (delivery !== 'cancelled') useDeskStore.getState().showToast(t('backupReady'), file.name)
     })
   }
 
@@ -60,6 +60,9 @@ export function BackupSection({ onImported }: BackupSectionProps) {
 
   const confirmImport = (data: MtfData) => {
     useAppStore.getState().replaceData(data)
+    // Signed in: the imported Desk becomes the Account's on the next sync, as "Subir este" (#37).
+    // With no session this does nothing, and nothing is sent.
+    claimDesk()
     setStep({ name: 'idle' })
     onImported(data)
   }
@@ -113,6 +116,7 @@ type ImportSummaryProps = {
 
 function ImportSummary({ backup, language, cardsHere, headingRef, onConfirm, onCancel }: ImportSummaryProps) {
   const t = useT()
+  const signedIn = useAccountStore((state) => state.email !== null)
   const { cards, events } = backup.data
   const inJar = cards.filter((card) => card.jarredAt !== null).length
   const date = new Intl.DateTimeFormat(language, { dateStyle: 'long' }).format(new Date(backup.exportedAt))
@@ -128,6 +132,7 @@ function ImportSummary({ backup, language, cardsHere, headingRef, onConfirm, onC
         <li>{t('backupDone', totalDone(events))}</li>
       </ul>
       <p className="max-w-[52ch] text-sm">{t('replaceWarning', cardsHere)}</p>
+      {signedIn && <p className="max-w-[52ch] text-sm">{t('importReplacesAccount')}</p>}
       <div className="flex flex-wrap gap-2">
         <Button variant="primary" onClick={onConfirm}>
           {t('replaceData')}

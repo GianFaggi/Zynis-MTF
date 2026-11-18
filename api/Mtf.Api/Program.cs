@@ -37,10 +37,12 @@ builder.Services.AddScoped<IUserDao, UserDao>();
 builder.Services.AddScoped<IEmailTokenDao, EmailTokenDao>();
 builder.Services.AddScoped<ISessionDao, SessionDao>();
 builder.Services.AddScoped<IGoogleHandoffDao, GoogleHandoffDao>();
+builder.Services.AddScoped<IRecordDao, RecordDao>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailLinkService, EmailLinkService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+builder.Services.AddScoped<ISyncService, SyncService>();
 builder.Services.AddHttpClient<IGoogleClient, GoogleClient>();
 builder.Services.AddSingleton<ITokenService, TokenService>();
 builder.Services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
@@ -93,7 +95,10 @@ builder.Services.AddMtfRateLimiting(config);
 var allowedOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader()));
+        // The preflight is cached for 2 hours, so the leave send (a keepalive fetch while the page
+        // closes) reuses the one the arrival's push made instead of needing its own (sync design D7).
+        policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader()
+            .SetPreflightMaxAge(TimeSpan.FromHours(2))));
 
 // Render runs the API behind Cloudflare and its own load balancer, so per-IP limits need the client
 // from a header. Not X-Forwarded-For: Render keeps the caller's copy and appends a proxy that changes
@@ -108,8 +113,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-builder.WebHost.ConfigureKestrel(options =>
-    options.Limits.MaxRequestBodySize = config.GetValue("RequestLimits:MaxBodyBytes", 64L * 1024));
+var maxBodyBytes = config.GetValue("RequestLimits:MaxBodyBytes", 64L * 1024);
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = maxBodyBytes);
 
 var app = builder.Build();
 
@@ -126,6 +131,7 @@ app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRequestSizeGuard(maxBodyBytes);
 // No database check: Render calls it all the time and must never keep Neon awake (ADR 0009, rule 4).
 app.MapHealthChecks("/health").DisableRateLimiting();
 app.MapControllers();

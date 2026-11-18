@@ -11,6 +11,7 @@ import { newHandoff, openGoogleWindow, useGoogleWatch, type Handoff } from './go
 import { GoogleMark } from './GoogleMark'
 import { useCountdown, useOnline } from './hooks'
 import { errorMessageKey, type TextKey } from './messages'
+import { SyncStatus } from '../sync/SyncStatus'
 
 // The Account sheet (openspec/specs/accounts, design decision 8, design/mtf-mockup-cuenta.html).
 // Every request waits with the paper plane in place of its form, the typed values kept; errors
@@ -484,6 +485,7 @@ function AccountFlow() {
                 <p className="text-sm text-pencil">{t('signedInAs')}</p>
                 <p className="font-display text-[19px] leading-snug font-semibold [overflow-wrap:anywhere]">{account}</p>
               </div>
+              <SyncStatus />
               <Intro>{t('signOutNote')}</Intro>
               <Actions>
                 <Button

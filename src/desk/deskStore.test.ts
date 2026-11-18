@@ -100,3 +100,17 @@ describe('deskStore after an Import', () => {
     })
   })
 })
+
+describe('deskStore lifted (#37)', () => {
+  beforeEach(() => {
+    useDeskStore.setState(useDeskStore.getInitialState(), true)
+  })
+
+  it('starts with nothing lifted and follows the Desk', () => {
+    expect(useDeskStore.getState().lifted).toBe(false)
+    useDeskStore.getState().setLifted(true)
+    expect(useDeskStore.getState().lifted).toBe(true)
+    useDeskStore.getState().setLifted(false)
+    expect(useDeskStore.getState().lifted).toBe(false)
+  })
+})

@@ -10,6 +10,7 @@ import { listenForAccountLinks } from './account/links'
 import { listenForInstall } from './install/installStore'
 import { applyTheme } from './lib/theme'
 import { useAppStore } from './store/appStore'
+import { startSyncTriggers } from './sync/triggers'
 import { placeWelcomeOnce } from './welcome/welcome'
 
 // Before rendering: Chromium can offer the install before React mounts.
@@ -53,4 +54,7 @@ if (googleWait) {
       <App />
     </StrictMode>,
   )
+  // Sync (#37): with no session nothing fires; with one, the launch sync runs after this first
+  // render, in the background. Not in the Google window, nor in the plane preview.
+  startSyncTriggers()
 }
