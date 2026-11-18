@@ -115,17 +115,25 @@ test('opening Settings makes no API request', async ({ page }) => {
   expect(requests).toEqual([])
 })
 
-test('a signed-in launch makes no API request', async ({ page }) => {
+test('a signed-in launch syncs in the background, renewing as part of it, and the Desk does not wait (#37)', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('mtf_session', JSON.stringify({ refreshToken: 'rt-1', email: 'gian@example.com' }))
   })
   const requests = await mockApi(page)
+  // The renewal never answers (routes added later win): the Desk and Settings work anyway.
+  let renewing = false
+  await page.route(`${API}/api/auth/refresh`, (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fallback()
+    renewing = true
+    return new Promise(() => {})
+  })
 
   await page.goto('/')
   await expect(areaLabel(page, 'Trabajo')).toBeVisible()
   await settingsShowsEmail(page)
 
-  expect(requests).toEqual([])
+  await expect.poll(() => renewing).toBe(true)
+  expect(requests.map((r) => r.path)).toEqual(['/health'])
 })
 
 test('opening the Account sheet wakes only /health', async ({ page }) => {

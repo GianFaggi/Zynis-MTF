@@ -36,6 +36,8 @@ export interface DeskState {
   areaEditor: { id: string; isNew: boolean } | null
   /** The Card the first view shows instead of the usual one: the Welcome Card placed at this launch (#20). */
   focusCardId: string | null
+  /** A Card or an Area is lifted (being dragged, or waiting on "¿Pasarla a…?"): sync holds what it fetched until the drop (#37). */
+  lifted: boolean
 
   setView: (view: View) => void
   /** Moves the view with an animation (none with reduced motion: the global CSS drops transitions). */
@@ -56,6 +58,7 @@ export interface DeskState {
   openAreaEditor: (id: string, options?: { isNew?: boolean }) => void
   closeAreaEditor: () => void
   setFocusCard: (id: string | null) => void
+  setLifted: (lifted: boolean) => void
   /** After an Import: closes the editors, search and Mis logros, which may point at Cards or Areas that are gone. The view is not reset here. */
   resetAfterImport: () => void
 }
@@ -80,6 +83,7 @@ function createDeskStore() {
     winsBump: 0,
     areaEditor: null,
     focusCardId: null,
+    lifted: false,
 
     setView: (view) => set({ view, flying: false }),
     flyTo: (view) => {
@@ -109,6 +113,7 @@ function createDeskStore() {
     openAreaEditor: (id, { isNew = false } = {}) => set({ areaEditor: { id, isNew } }),
     closeAreaEditor: () => set({ areaEditor: null }),
     setFocusCard: (id) => set({ focusCardId: id }),
+    setLifted: (lifted) => set({ lifted }),
     resetAfterImport: () =>
       set({ editingId: null, newCardId: null, areaEditor: null, searchOpen: false, query: '', winsOpen: false }),
   }))

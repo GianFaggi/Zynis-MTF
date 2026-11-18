@@ -32,6 +32,8 @@ export interface AccountState {
   /** The signed-in account's email, shown with no connection; `null` when signed out. */
   email: string | null
   accessToken: string | null
+  /** When the access token expires (epoch ms), so sync can renew before a leave send (#37). */
+  accessTokenExpiresAt: number | null
   sheetOpen: boolean
   link: AccountLink | null
   /** Goes up with every mail link, so a link arriving while the sheet is open restarts it on its step. */
@@ -47,6 +49,7 @@ export function initialAccountState(): AccountState {
   return {
     email: stored?.email ?? null,
     accessToken: null,
+    accessTokenExpiresAt: null,
     sheetOpen: false,
     link: null,
     linkCount: 0,
@@ -79,7 +82,13 @@ export function clearLink(): void {
 export function signedIn(tokens: Tokens): void {
   const session = { refreshToken: tokens.refreshToken, email: tokens.email }
   saveSession(session)
-  useAccountStore.setState({ email: tokens.email, accessToken: tokens.accessToken, sessionEnded: false, memorySession: session })
+  useAccountStore.setState({
+    email: tokens.email,
+    accessToken: tokens.accessToken,
+    accessTokenExpiresAt: Date.parse(tokens.accessTokenExpiresAt) || null,
+    sessionEnded: false,
+    memorySession: session,
+  })
 }
 
 /**
@@ -141,5 +150,5 @@ function currentSession(): StoredSession | null {
 
 function forget({ sessionEnded }: { sessionEnded: boolean }): void {
   clearSession()
-  useAccountStore.setState({ email: null, accessToken: null, memorySession: null, sessionEnded })
+  useAccountStore.setState({ email: null, accessToken: null, accessTokenExpiresAt: null, memorySession: null, sessionEnded })
 }

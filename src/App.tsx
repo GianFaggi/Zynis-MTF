@@ -25,6 +25,9 @@ import { InstallSection } from './install/InstallSection'
 import { applyTheme } from './lib/theme'
 import { useAppStore } from './store/appStore'
 import { usePersistentStorage } from './store/usePersistentStorage'
+import { SyncChoice } from './sync/SyncChoice'
+import { SyncIndicator } from './sync/SyncIndicator'
+import { useSyncStore } from './sync/syncStore'
 import type { Theme } from './types'
 import { placeWelcome } from './welcome/welcome'
 import { WelcomeSection } from './welcome/WelcomeSection'
@@ -79,6 +82,7 @@ export default function App() {
   const searchOpen = useDeskStore((state) => state.searchOpen)
   const toggleSearch = useDeskStore((state) => state.toggleSearch)
   const toast = useDeskStore((state) => state.toast)
+  const syncing = useSyncStore((state) => state.syncing)
   // Built here, unlike `languageOptions`: the theme names are translated.
   const themeOptions: { value: Theme; label: string }[] = [
     { value: 'system', label: t('themeSystem') },
@@ -108,6 +112,8 @@ export default function App() {
       </div>
 
       <div className="fixed top-[calc(12px+env(safe-area-inset-top,0px))] right-[calc(14px+env(safe-area-inset-right,0px))] z-10 flex items-center gap-1 rounded-full bg-float p-1 shadow-paper backdrop-blur-[10px]">
+        {/* The paper plane, once a sync has lasted 2 s (#37); a quick one shows nothing. */}
+        {syncing && <SyncIndicator />}
         <IconButton label={t('search')} icon={Search} pressed={searchOpen} onClick={toggleSearch} />
         <WinsCounter />
         <IconButton label={t('settings')} icon={Ellipsis} onClick={() => setSettingsOpen(true)} />
@@ -176,6 +182,7 @@ export default function App() {
         />
       </Sheet>
       <AccountSheet />
+      <SyncChoice />
 
       <Toast message={toast} />
     </main>

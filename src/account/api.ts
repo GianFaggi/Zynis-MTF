@@ -1,7 +1,7 @@
 import { WAIT_LIMIT } from '../sync/wait'
 
-// MTF's only network requests, all to its own API and only from the Account sheet
-// (openspec/specs/accounts, design decision 9). Nothing here runs at launch.
+// MTF's only network requests, all to its own API: from the Account sheet, and sync while signed in
+// (openspec/specs/accounts, openspec/specs/sync). With no session nothing here runs at launch.
 
 /** The API's address: its own domain in production (ADR 0009, rule 6), the local API in development. */
 export function apiBaseUrl(env: { VITE_API_URL?: string; DEV: boolean }): string {
@@ -21,7 +21,9 @@ export const WAKE_RETRY = 5_000
  * limit), `network` (the request failed, for example Render answering 503 with no CORS header)
  * and `aborted` (the sheet closed).
  */
-export type ApiResult<T> = { ok: true; data: T } | { ok: false; code: string; status?: number }
+export type ApiResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; code: string; status?: number; /** Seconds, from a `Retry-After` header (a 429). */ retryAfter?: number }
 
 let awakeAt = Number.NEGATIVE_INFINITY
 let waking: Promise<boolean> | null = null
@@ -147,11 +149,18 @@ async function readAnswer<T>(response: Response): Promise<ApiResult<T>> {
   if (response.ok) return { ok: true, data: body as T }
 
   const code = typeof body === 'object' && body !== null && 'code' in body ? (body as { code: unknown }).code : null
+  const retryAfter = Number(response.headers.get('Retry-After'))
   return {
     ok: false,
     status: response.status,
     code: typeof code === 'string' ? code : response.status >= 500 ? 'server_error' : 'unknown',
+    ...(retryAfter > 0 && { retryAfter }),
   }
+}
+
+/** Reads a finished `fetch` the way `apiRequest` does, for callers that send their own (sync's leave send). */
+export function readApiAnswer<T>(response: Response): Promise<ApiResult<T>> {
+  return readAnswer<T>(response)
 }
 
 function safeJson(text: string): unknown {

@@ -20,6 +20,14 @@ describe('dictionaries', () => {
     expect(translate('es', 'settings')).toBe('Ajustes')
     expect(translate('en', 'settings')).toBe('Settings')
   })
+
+  it('says the sync toast in both languages (#37)', () => {
+    expect(translate('es', 'syncUpToDate')).toBe('Tu escritorio está al día')
+    expect(translate('en', 'syncUpToDate')).toBe('Your desk is up to date')
+    expect(translate('en', 'syncPending', 3)).toBe('3 changes go up on the next sync.')
+    expect(translate('es', 'choiceUseAccount')).toBe('Usar el de la cuenta')
+    expect(translate('en', 'choiceUpload')).toBe('Upload this one')
+  })
 })
 
 describe('detectLanguage', () => {

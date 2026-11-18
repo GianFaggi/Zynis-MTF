@@ -12,5 +12,7 @@ public static class ErrorCodes
     public const string SessionEnded = "session_ended";
     public const string GoogleFailed = "google_failed";
     public const string TooManyRequests = "too_many_requests";
+    public const string RequestTooLarge = "request_too_large";
+    public const string CursorExpired = "cursor_expired";
     public const string ServerError = "server_error";
 }

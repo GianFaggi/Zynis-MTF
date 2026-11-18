@@ -12,6 +12,7 @@ public static class RateLimiting
 {
     public const string Auth = "auth";
     public const string Session = "session";
+    public const string Sync = "sync";
 
     public static IServiceCollection AddMtfRateLimiting(this IServiceCollection services, IConfiguration config)
     {
@@ -20,6 +21,8 @@ public static class RateLimiting
         var global = Limit(config, "Global", 60);
         var auth = Limit(config, "Auth", 10);
         var session = Limit(config, "Session", 30);
+        // A session pulls once and pushes a few times; 30 leaves room for Sincronizar ahora and retries.
+        var sync = Limit(config, "Sync", 30);
 
         return services.AddRateLimiter(options =>
         {
@@ -29,6 +32,8 @@ public static class RateLimiting
                 RateLimitPartition.GetFixedWindowLimiter($"auth:{ClientIp(context)}", _ => auth));
             options.AddPolicy(Session, context =>
                 RateLimitPartition.GetFixedWindowLimiter($"session:{ClientIp(context)}", _ => session));
+            options.AddPolicy(Sync, context =>
+                RateLimitPartition.GetFixedWindowLimiter($"sync:{ClientIp(context)}", _ => sync));
 
             options.OnRejected = async (context, ct) =>
             {
