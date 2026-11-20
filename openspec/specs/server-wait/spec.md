@@ -60,15 +60,19 @@ When a wait reaches 90 seconds, MTF SHALL stop the plane and show "No pudimos co
 - **THEN** every Card, Area and Win on the Desk is still there and still works
 
 ### Requirement: Sync indicator
-MTF SHALL offer a small sync indicator for the floating tools pill: a paper-plane icon with a gentle sway, in ink, never the accent. It SHALL appear only once a wait has lasted about 2 seconds, and SHALL go away when the wait ends.
+MTF SHALL show a small sync indicator in the floating tools pill while a sync runs: a paper-plane icon with a gentle sway, in ink, never the accent. It SHALL appear only once a sync has lasted about 2 seconds, and SHALL go away when the sync ends, whether it succeeded or not.
 
 #### Scenario: A quick sync shows nothing
-- **WHEN** a wait starts and ends within 2 seconds
+- **WHEN** a sync starts and ends within 2 seconds
 - **THEN** the indicator never appears
 
 #### Scenario: A slow sync
-- **WHEN** a wait lasts longer than 2 seconds
-- **THEN** the indicator appears and sways gently until the wait ends
+- **WHEN** a sync lasts longer than 2 seconds, for example while the server wakes up
+- **THEN** the indicator appears in the tools pill and sways gently until the sync ends
+
+#### Scenario: A failed sync
+- **WHEN** a sync that showed the indicator gives up
+- **THEN** the indicator goes away, and no error is shown
 
 #### Scenario: The indicator has a name
 - **WHEN** the indicator is shown
