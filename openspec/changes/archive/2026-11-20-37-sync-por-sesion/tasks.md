@@ -56,10 +56,10 @@ Group 1 builds the backend, group 2 records that the database backup is dropped,
 
 ## 8. On real devices (user)
 
-- [ ] 8.1 After the deploy, check that a leave send with `keepalive` reaches the API on tab close and on switching apps, on an Android phone, an iPhone (installed) and a PC (Chrome and Firefox), by watching the record's `seq` move in Neon; if one browser drops it, switch the push to the text/plain form of design D7 and repeat
-- [ ] 8.2 First real use: sign in on the device with the most complete Desk (empty Account → upload), then on another device with notes (the dialog, both sides' numbers correct) and on a fresh browser (takes the Account's Desk without asking)
-- [ ] 8.3 Hand-off on an Android phone, an iPhone and a PC: edit, leave, open the other device and see the changes, including a deleted Card, an unchecked Item and a Card put in the Jar; Mis logros counts the same on all three
-- [ ] 8.4 Record the keepalive and hand-off checks in `KB/developers/active.md`
+- [ ] 8.1 After the deploy, check that a leave send with `keepalive` reaches the API on tab close and on switching apps, on an Android phone, an iPhone (installed) and a PC (Chrome and Firefox), by watching the record's `seq` move in Neon; if one browser drops it, switch the push to the text/plain form of design D7 and repeat — **2026-11-20, partly checked:** closing the tab and switching apps on the PC and on Android sent the change, which reached the other device without Sincronizar ahora. Not checked yet: the installed iPhone, and the second PC browser (Chrome and Firefox were both asked); the `seq` was not read in Neon, the arrival on the other device stood in for it
+- [ ] 8.2 First real use: sign in on the device with the most complete Desk (empty Account → upload), then on another device with notes (the dialog, both sides' numbers correct) and on a fresh browser (takes the Account's Desk without asking) — **2026-11-20, partly checked:** the PC Desk went to the Account and the first sign-in dialog showed on a device with notes. Not checked yet: a fresh browser taking the Account Desk without asking
+- [ ] 8.3 Hand-off on an Android phone, an iPhone and a PC: edit, leave, open the other device and see the changes, including a deleted Card, an unchecked Item and a Card put in the Jar; Mis logros counts the same on all three — **2026-11-20, partly checked:** PC → Android hand-off works. Not checked yet: the installed iPhone
+- [x] 8.4 Record the keepalive and hand-off checks in `KB/developers/active.md`
 
 ## Workflow follow-up
 
