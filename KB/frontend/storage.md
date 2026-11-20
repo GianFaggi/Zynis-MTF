@@ -7,7 +7,7 @@ description: localStorage schema, entity shapes, sync-ready conventions and Expo
 
 All persistence goes through `src/lib/storage.ts`. No other module reads or writes `localStorage`. Why local-first → [ADR 0002](../../docs/adr/0002-local-first-storage.md); why one versioned document with recovery → [ADR 0004](../../docs/adr/0004-versioned-storage-document.md).
 
-The shapes below are **final for schema version 1** and mirror `src/types/index.ts`. Change them only together with a `SCHEMA_VERSION` bump and a migration.
+The shapes below are **final for schema version 1** and mirror `src/types/index.ts`. Change them only together with a `SCHEMA_VERSION` bump and a migration. Adding an **optional** field that an older version carries along untouched is the exception every change since #7 has used (the bullets below say why each one needs no bump).
 
 ## Conventions
 
@@ -30,6 +30,7 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 - The Welcome Card (#20) needs **no schema bump** and **no Backup change**: it is an ordinary `Card` (no field marks it), added to `cards` with no event. Only one device key is new, `mtf_welcome_placed` ([Keys](#keys)). A Backup made with a Welcome Card on the Desk carries it like any Card.
 - Accounts (#36) need **no schema bump** and **no Backup change**: the session is one device key, `mtf_session` ([Keys](#keys)), never part of `mtf_data`. Signing in or out changes nothing in the data document.
 - Sync (#37) needs **no schema bump** and **no Backup change**: its state is one device key, `mtf_sync` (the cursor, the pending changes and their tombstones), plus at most one replaced Desk, `mtf_data_replaced_<epochMs>` ([Keys](#keys), [ADR 0012](../../docs/adr/0012-session-sync-of-opaque-records.md)). Neither is part of `mtf_data` or a Backup, and an Import leaves both alone. Sync reads and writes `data` only through `appStore`: a change it fetched is applied with `replaceData`, flagged so the outbox does not count it as a local change. Every entity already has the `uuid` id and `updatedAt` it needs.
+- Handwriting (#47) needs **no schema bump**: it is one optional field, `Card.ink` ([Entities](#entities-schema-version-1), [ADR 0013](../../docs/adr/0013-handwriting-as-optional-ink.md)). A missing `ink` means no handwriting, so every document, Backup and sync record from before it reads as is; sync records carry no schema version anyway, so the reading side must accept a Card without `ink` whatever the version. `setInk` writes it in one replacement per committed stroke, erase, clear or undo (never per pointer move); `closeCard` removes an `ink` with no strokes, like a blank Item. A Card holds at most `INK_MAX_POINTS` (12 000) points, so one Card cannot fill the shared quota. The Backup check accepts a Card with no `ink` and refuses one whose `ink` is not well formed (`height` an integer 1–2500, `strokes` a list of number lists whose length is a non-zero multiple of 3, finite numbers only; points outside the box are accepted, the renderer clamps them). The device setting that offers the handwriting box is one key, `mtf_handwriting` ([Keys](#keys)). An older deploy keeps `ink` (`{ ...card }` copies it) but deletes a handwriting-only Card when its editor closes (ADR 0013).
 
 ## Entities (schema version 1)
 
@@ -65,7 +66,13 @@ interface Card {
   pinned: boolean;
   position: { x: number; y: number; tilt: number; z: number }; // Desk coordinates
   jarredAt: number | null; // in the Jar since; null = on the Desk
+  ink?: Ink;               // handwriting (#47); missing = none, never kept with no strokes
   createdAt: number; updatedAt: number;
+}
+
+interface Ink {            // #47, ADR 0013: box coordinates, the box is always INK_WIDTH (1000) wide
+  height: number;          // box height in ink units: 400 new, +250 per growth, at most 2500
+  strokes: number[][];     // each stroke flat [x, y, p, x, y, p, …], integers; x 0–1000, y 0–height, p pressure 0–100 (50 = none reported)
 }
 
 interface WinEvent {
@@ -102,6 +109,7 @@ interface MtfData {         // the whole `mtf_data` document
 | `mtf_session` | `StoredSession` as JSON: `{ refreshToken, email }` of the account signed in on this device ([ADR 0010](../../docs/adr/0010-account-sessions.md)). Missing, invalid JSON, or a missing or empty field reads as signed out. Written on sign-in and on every renewal (before the new token is used), removed on sign-out or when the server answers `session_ended`. Read at each use, never cached, so tabs share one session; renewals run one at a time across tabs (a Web Lock), each reading the token the last one saved. The access token is never stored. A device setting, not part of `mtf_data` or the Backup; an Import leaves it alone. **No schema bump** | #36 |
 | `mtf_sync` | `SyncState` as JSON: `{ owner, cursor, pending, held, claim, lastSyncAt }` (#37, [architecture.md](architecture.md#sync-37)). `owner` is the email the state belongs to (`null`: never synced, and nothing is recorded); `cursor` the last server `seq` merged; `pending` maps `kind:id` to `{ at, deleted? }` (a change, or a tombstone, not yet confirmed); `held` the fetched records for the Card open in the editor; `claim` the moment this Desk was set to become the Account's (Subir este, an Import while signed in, Recuperar); `lastSyncAt` when the last sync finished. Missing, invalid JSON or a wrong shape reads as never synced (`emptySync()`), so the next sync runs the first sign-in rule. A device key, not part of `mtf_data` or the Backup; an Import leaves it alone. **No schema bump** | #37 |
 | `mtf_data_replaced_<epochMs>` | `MtfData` as JSON: this device's Desk, kept just before "Usar el de la cuenta" replaced it, for "Recuperar el escritorio anterior". At most one: writing a new copy removes the older ones. Removed by a recovery, and at launch once older than 30 days. Restored through `upgradeDocument()`, so a copy made by an older version still opens. Not part of `mtf_data` or the Backup | #37 |
+| `mtf_handwriting` | `'1'` while "Escritura a mano" is on, `'0'` once turned off; missing or anything else reads as off. It only offers the handwriting box: handwriting a Card already has always shows. A device setting, not part of `mtf_data` or the Backup, not synced; an Import leaves it alone. **No schema bump** | #47 |
 
 ## Storage layer API (`src/lib/storage.ts`)
 
@@ -121,6 +129,8 @@ interface MtfData {         // the whole `mtf_data` document
 | `saveArrangement(arrangement)` | Writes the whole arrangement, replacing the previous one |
 | `loadAreaJars(): boolean` | `true` only when `mtf_area_jars` is `'1'`; `false` when unset, `'0'`, anything else, or storage refuses to read |
 | `saveAreaJars(on)` | Writes `'1'` or `'0'` |
+| `loadHandwriting(): boolean` | `true` only when `mtf_handwriting` is `'1'`; `false` when unset, `'0'`, anything else, or storage refuses to read |
+| `saveHandwriting(on)` | Writes `'1'` or `'0'` |
 | `loadSession(): StoredSession \| null` | `null` when unset, damaged or storage refuses to read: signed out, never a crash |
 | `saveSession(session)` | Writes `{ refreshToken, email }`, replacing the previous session |
 | `clearSession()` | Removes `mtf_session`; never throws |

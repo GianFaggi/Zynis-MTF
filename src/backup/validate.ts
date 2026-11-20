@@ -1,4 +1,5 @@
 import { AREA_COLORS } from '../desk/areas'
+import { INK_MAX_HEIGHT } from '../ink/constants'
 import type { MtfData } from '../types'
 
 // The strict entity check for a Backup (ADR 0006). `loadData()` trusts the entities
@@ -51,9 +52,26 @@ function isItem(item: Entity): boolean {
   return isStamped(item) && isString(item.text) && typeof item.done === 'boolean'
 }
 
+/** One stroke: whole `[x, y, p]` triples of finite numbers. Points outside the box are not refused: the renderer clamps them. */
+const isStroke = (stroke: unknown) =>
+  Array.isArray(stroke) && stroke.length >= 3 && stroke.length % 3 === 0 && stroke.every(isNumber)
+
+/** A Card's handwriting (#47, ADR 0013): a whole `height` within the box limit and a list of strokes. */
+function isInk(ink: unknown): boolean {
+  return (
+    isEntity(ink) &&
+    Number.isInteger(ink.height) &&
+    (ink.height as number) >= 1 &&
+    (ink.height as number) <= INK_MAX_HEIGHT &&
+    Array.isArray(ink.strokes) &&
+    ink.strokes.every(isStroke)
+  )
+}
+
 function isCard(card: Entity, areaIds: Set<string>, itemIds: Set<string>): boolean {
   return (
     isStamped(card) &&
+    isOptional(card.ink, isInk) &&
     areaIds.has(card.areaId as string) &&
     isString(card.title) &&
     isString(card.body) &&

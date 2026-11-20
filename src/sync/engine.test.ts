@@ -256,6 +256,21 @@ describe('sync engine', () => {
       expect(leaving).toHaveBeenLastCalledWith(expect.any(Array), { renew: false })
     })
 
+    it('records handwriting as a change of its Card and sends it whole (#47)', async () => {
+      resetStores({ cards: [makeCard({ id: 'h', title: 'Viaje' })] })
+      syncedBefore()
+      signedIn()
+      initSync()
+      acceptPushes()
+      const ink = { height: 400, strokes: [[10, 10, 50, 200, 40, 60]] }
+      useAppStore.getState().setInk('h', ink)
+      expect(Object.keys(loadSync().pending)).toEqual(['card:h'])
+
+      await leave()
+      const [sent] = leaving.mock.calls.at(-1)![0]
+      expect(sent).toMatchObject({ kind: 'card', id: 'h', deleted: false, data: { ink } })
+    })
+
     it('sends nothing when nothing is pending', async () => {
       syncedBefore()
       signedIn()
@@ -520,6 +535,24 @@ describe('sync engine', () => {
       useDeskStore.getState().closeEditor()
       initSync()
       expect(useAppStore.getState().data.cards[0].title).toBe('Del teléfono')
+      expect(loadSync().held).toEqual([])
+    })
+
+    it('holds fetched handwriting for the open Card, and applies it exactly when the editor closes (#47)', async () => {
+      syncedBefore()
+      signedIn()
+      useDeskStore.getState().openEditor('c1')
+      initSync()
+      const ink = { height: 650, strokes: [[10, 10, 50, 200, 40, 60], [500, 500, 50]] }
+      accountHas([cardRecord({ ...local, ink, updatedAt: 5 })], 12)
+      acceptPushes()
+
+      await syncNow()
+      expect(useAppStore.getState().data.cards[0]).not.toHaveProperty('ink')
+      expect(loadSync().held.map((record) => record.id)).toEqual(['c1'])
+
+      useDeskStore.getState().closeEditor()
+      expect(useAppStore.getState().data.cards[0].ink).toEqual(ink)
       expect(loadSync().held).toEqual([])
     })
 

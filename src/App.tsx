@@ -78,6 +78,8 @@ export default function App() {
   const setLanguage = useAppStore((state) => state.setLanguage)
   const theme = useAppStore((state) => state.theme)
   const setTheme = useAppStore((state) => state.setTheme)
+  const handwriting = useAppStore((state) => state.handwriting)
+  const setHandwriting = useAppStore((state) => state.setHandwriting)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const searchOpen = useDeskStore((state) => state.searchOpen)
   const toggleSearch = useDeskStore((state) => state.toggleSearch)
@@ -151,6 +153,19 @@ export default function App() {
         <div className="flex flex-col gap-2 py-2">
           <span className="text-xs font-semibold tracking-[0.08em] text-pencil uppercase">{t('theme')}</span>
           <Segmented label={t('theme')} options={themeOptions} value={theme} onChange={setTheme} />
+        </div>
+        {/* Only offers the handwriting box in the editor: handwriting a Card has always shows (#47). */}
+        <div className="flex flex-col gap-2 py-2">
+          <span className="text-xs font-semibold tracking-[0.08em] text-pencil uppercase">{t('handwritingOption')}</span>
+          <Segmented
+            label={t('handwritingOption')}
+            options={[
+              { value: 'no', label: t('no') },
+              { value: 'yes', label: t('yes') },
+            ]}
+            value={handwriting ? 'yes' : 'no'}
+            onChange={(value) => setHandwriting(value === 'yes')}
+          />
         </div>
         {/* Settings closes first: two sheets are never open at once. */}
         <AreasSection

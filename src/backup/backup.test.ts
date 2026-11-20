@@ -77,6 +77,16 @@ describe('readBackup', () => {
     expect(readBackup(makeBackup(data, exportedAt))).toEqual({ ok: true, data, exportedAt: '2026-10-11T18:04:12.345Z' })
   })
 
+  it('reads back a handwritten Card field by field, and Cards without handwriting stay without it', () => {
+    const data = fullDesk()
+    data.cards[1] = { ...data.cards[1], ink: { height: 650, strokes: [[10, 20, 50, 14, 26, 61], [500, 300, 50]] } }
+    const result = readBackup(makeBackup(data, exportedAt))
+    expect(result).toEqual({ ok: true, data, exportedAt: '2026-10-11T18:04:12.345Z' })
+    if (!result.ok) return
+    expect(result.data.cards[1].ink).toEqual(data.cards[1].ink)
+    expect(result.data.cards[0]).not.toHaveProperty('ink')
+  })
+
   it('keeps unknown extra fields', () => {
     const data = { ...fullDesk(), extra: 'kept' }
     expect(readBackup(makeBackup(data, exportedAt))).toMatchObject({ ok: true, data: { extra: 'kept' } })
@@ -109,6 +119,7 @@ describe('readBackup', () => {
     ['data without events', file({ data: { ...fullDesk(), events: undefined } })],
     ['a Card without an id', file({ data: { ...fullDesk(), cards: [{ ...fullDesk().cards[0], id: undefined }] } })],
     ['a Card in a missing Area', file({ data: { ...fullDesk(), cards: [{ ...fullDesk().cards[0], areaId: 'gone' }] } })],
+    ['damaged handwriting', file({ data: { ...fullDesk(), cards: [{ ...fullDesk().cards[0], ink: { height: 400, strokes: [[1, 2]] } }] } })],
   ])('refuses a Backup with %s as damaged', (_, text) => {
     expect(readBackup(text)).toEqual({ ok: false, reason: 'damaged' })
   })

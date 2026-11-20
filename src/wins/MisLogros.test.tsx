@@ -93,6 +93,13 @@ describe('MisLogros', () => {
     expect(rows[2]).toHaveTextContent('Trabajo · hace 5 días')
   })
 
+  it('names a Card with only handwriting "Escritura a mano" in the Jar list', () => {
+    resetStores({ cards: [makeCard({ id: 'h', areaId: 'a1', jarredAt: daysBefore(0), ink: { height: 400, strokes: [[1, 2, 50]] } })] })
+    const dialog = openMisLogros()
+    const [row] = within(within(dialog).getByRole('region', { name: 'En el frasco' })).getAllByRole('listitem')
+    expect(row.querySelector('b')).toHaveTextContent('Escritura a mano')
+  })
+
   it('an empty Jar says where jarred Cards will show up', () => {
     openMisLogros()
     expect(screen.getByText('Cuando lleves una tarjeta al frasco, aparece acá.')).toBeInTheDocument()

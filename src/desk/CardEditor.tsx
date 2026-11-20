@@ -1,9 +1,10 @@
-import { Pin, Plus, X } from 'lucide-react'
+import { PenLine, Pin, Plus, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { flushSync } from 'react-dom'
 import { Button } from '../components/ui/Button'
 import { Sheet } from '../components/ui/Sheet'
 import { useT } from '../i18n'
+import { InkBox } from '../ink/InkBox'
 import { useAppStore } from '../store/appStore'
 import type { Card } from '../types'
 import { useWinFeedback } from '../wins/feedback'
@@ -85,9 +86,14 @@ type EditorBodyProps = {
 function EditorBody({ card, titleRef, onClose, onPutInJar }: EditorBodyProps) {
   const t = useT()
   const areas = useAppStore((state) => state.data.areas)
+  const handwriting = useAppStore((state) => state.handwriting)
   const { updateCard, addItem, updateItem, toggleItem, removeItem, placeCard, deleteCard } = useAppStore.getState()
   const feedback = useWinFeedback()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // "A mano" opens an empty box without writing anything: the Card gets `ink` with its first stroke.
+  const [boxAdded, setBoxAdded] = useState(false)
+  // Handwriting a Card already has always shows, whatever the setting (#47).
+  const showInk = card.ink !== undefined || boxAdded
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const itemInputs = useRef(new Map<string, HTMLInputElement>())
 
@@ -97,6 +103,10 @@ function EditorBody({ card, titleRef, onClose, onPutInJar }: EditorBodyProps) {
     body.style.height = 'auto'
     body.style.height = `${Math.min(body.scrollHeight, BODY_MAX_HEIGHT)}px`
   }, [card.body])
+
+  const addRow = 'flex cursor-pointer items-center gap-2.5 rounded-lg py-1.5 pr-2 text-[15px] text-pencil hover:text-ink'
+  const dashedBox =
+    'grid size-[19px] flex-none place-items-center rounded-md border-[1.5px] border-dashed border-[color:color-mix(in_oklab,var(--color-pencil)_60%,transparent)]'
 
   const field = 'w-full border-b border-transparent bg-transparent outline-none placeholder:text-pencil focus-visible:border-rule'
 
@@ -120,6 +130,7 @@ function EditorBody({ card, titleRef, onClose, onPutInJar }: EditorBodyProps) {
         rows={3}
         className={`${field} min-h-[72px] resize-none py-0.5 text-[15.5px] leading-[1.6] text-ink-2`}
       />
+      {showInk && <InkBox cardId={card.id} ink={card.ink} />}
 
       <ul className="flex flex-col gap-1">
         {card.items.map((item) => (
@@ -169,24 +180,34 @@ function EditorBody({ card, titleRef, onClose, onPutInJar }: EditorBodyProps) {
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={() => {
-          // The new row must exist before the tap ends: iOS only opens the keyboard for a
-          // focus() made during the tap itself, so the store update is flushed right away.
-          let id: string | undefined
-          flushSync(() => {
-            id = addItem(card.id)
-          })
-          if (id) itemInputs.current.get(id)?.focus()
-        }}
-        className="flex cursor-pointer items-center gap-2.5 self-start rounded-lg py-1.5 pr-2 text-[15px] text-pencil hover:text-ink"
-      >
-        <span aria-hidden="true" className="grid size-[19px] flex-none place-items-center rounded-md border-[1.5px] border-dashed border-[color:color-mix(in_oklab,var(--color-pencil)_60%,transparent)]">
-          <Plus size={12} strokeWidth={2.5} />
-        </span>
-        {t('addItem')}
-      </button>
+      <div className="flex flex-wrap items-center gap-x-4">
+        <button
+          type="button"
+          onClick={() => {
+            // The new row must exist before the tap ends: iOS only opens the keyboard for a
+            // focus() made during the tap itself, so the store update is flushed right away.
+            let id: string | undefined
+            flushSync(() => {
+              id = addItem(card.id)
+            })
+            if (id) itemInputs.current.get(id)?.focus()
+          }}
+          className={addRow}
+        >
+          <span aria-hidden="true" className={dashedBox}>
+            <Plus size={12} strokeWidth={2.5} />
+          </span>
+          {t('addItem')}
+        </button>
+        {handwriting && !showInk && (
+          <button type="button" onClick={() => setBoxAdded(true)} className={addRow}>
+            <span aria-hidden="true" className={dashedBox}>
+              <PenLine size={12} strokeWidth={2.5} />
+            </span>
+            {t('addHandwriting')}
+          </button>
+        )}
+      </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-2 border-t border-rule pt-3">
         <label className="mr-auto flex items-center gap-2 text-[13px] text-pencil">

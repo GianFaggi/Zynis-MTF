@@ -72,6 +72,27 @@ describe('tidyLayout', () => {
     expect(positions.get('second')!.y - positions.get('first')!.y).toBe(FALLBACK_CARD_HEIGHT + 40)
   })
 
+  it('places a taller handwritten Card by its measured height, with no overlap (#47)', () => {
+    const narrow = [makeArea({ id: 'n', rect: { x: 0, y: 0, w: 300, h: 3000 } })]
+    const ink = { height: 2500, strokes: [[10, 10, 50, 900, 2400, 50]] }
+    const cards = [
+      makeCard({ id: 'handwritten', areaId: 'n', createdAt: 3, ink }),
+      makeCard({ id: 'below', areaId: 'n', createdAt: 2 }),
+      makeCard({ id: 'last', areaId: 'n', createdAt: 1 }),
+    ]
+    const heights = new Map([
+      ['handwritten', 460],
+      ['below', 120],
+      ['last', 120],
+    ])
+    const positions = tidyLayout(narrow, cards, heights, () => 8 / 18) // y jitter of exactly 0
+    expect(positions.get('below')!.y - positions.get('handwritten')!.y).toBe(460 + 40)
+    const placed = cards.map((card) => ({ ...positions.get(card.id)!, h: heights.get(card.id)! }))
+    for (let i = 0; i < placed.length; i++) {
+      for (let j = i + 1; j < placed.length; j++) expect(overlaps(placed[i], placed[j])).toBe(false)
+    }
+  })
+
   it('never changes a Card’s Area and ignores Cards in the Jar', () => {
     const cards = [makeCard({ id: 'c1', areaId: 'a2' }), makeCard({ id: 'jarred', areaId: 'a2', jarredAt: 9 })]
     const positions = tidyLayout(areas, cards, new Map(), random)

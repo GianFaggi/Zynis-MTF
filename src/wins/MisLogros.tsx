@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button'
 import { Segmented } from '../components/ui/Segmented'
 import { Sheet } from '../components/ui/Sheet'
 import { areaName } from '../desk/areas'
-import { displayTitle } from '../desk/cardText'
+import { displayTitle, hasInk } from '../desk/cardText'
 import { useDeskStore } from '../desk/deskStore'
 import { useT, type Translate } from '../i18n'
 import { useAppStore } from '../store/appStore'
@@ -128,7 +128,7 @@ function JarredCard({ card, area, now }: { card: Card; area: Area | undefined; n
         <Check size={13} strokeWidth={3} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <b className="font-semibold [overflow-wrap:anywhere]">{displayTitle(card) || t('card')}</b>
+        <b className="font-semibold [overflow-wrap:anywhere]">{displayTitle(card) || t(hasInk(card) ? 'handwriting' : 'card')}</b>
         <span className="flex items-center gap-1.5 text-[12.5px] text-pencil">
           {area && <i aria-hidden="true" className="size-[7px] rounded-full bg-(--b)" />}
           {area ? `${areaName(area, t)} · ${when}` : when}

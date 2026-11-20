@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CARD_WIDTH } from '../desk/geometry'
-import { AREA_JARS_KEY, ARRANGEMENT_KEY, DATA_KEY, LANGUAGE_KEY, THEME_KEY } from '../lib/storage'
+import { AREA_JARS_KEY, ARRANGEMENT_KEY, DATA_KEY, HANDWRITING_KEY, LANGUAGE_KEY, THEME_KEY } from '../lib/storage'
 import { makeArea, makeCard, makeData, makeItem, rowOfAreas } from '../test/fixtures'
 import type { MtfData } from '../types'
 import { createAppStore } from './appStore'
@@ -158,6 +158,11 @@ describe('default Areas', () => {
 })
 
 describe('Card actions', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
   it('createCard adds an empty Card in the Area under the point, on top', () => {
     const store = storeWith([makeCard({ id: 'old', position: { z: 7 } })])
     const id = store.getState().createCard({ x: 1500, y: 600 })!
@@ -293,9 +298,84 @@ describe('Card actions', () => {
     expect(store.getState().data).toBe(before)
   })
 
+  it('setInk sets, replaces and removes the handwriting in one write each, touching nothing else', () => {
+    vi.useFakeTimers({ now: 5000 })
+    const card = makeCard({ id: 'c1', title: 'Hola', body: 'texto', items: [makeItem({ id: 'i1', text: 'Pan' })] })
+    const store = storeWith([card])
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    const first = { height: 400, strokes: [[10, 20, 50]] }
+
+    store.getState().setInk('c1', first)
+    expect(setItem).toHaveBeenCalledTimes(1)
+    expect(cardIn(store, 'c1')).toEqual({ ...card, ink: first, updatedAt: 5000 })
+    expect(storedData().cards[0].ink).toEqual(first)
+
+    vi.setSystemTime(6000)
+    const second = { height: 650, strokes: [[10, 20, 50], [30, 40, 60]] }
+    store.getState().setInk('c1', second)
+    expect(cardIn(store, 'c1')).toEqual({ ...card, ink: second, updatedAt: 6000 })
+
+    vi.setSystemTime(7000)
+    store.getState().setInk('c1', null)
+    expect(cardIn(store, 'c1')).toEqual({ ...card, updatedAt: 7000 })
+    expect(cardIn(store, 'c1')).not.toHaveProperty('ink')
+    expect(storedData().cards[0]).not.toHaveProperty('ink')
+
+    const before = store.getState().data
+    store.getState().setInk('c1', null)
+    expect(store.getState().data).toBe(before)
+  })
+
+  it('closeCard drops a handwriting box left empty and keeps the rest of the Card', () => {
+    const store = storeWith([makeCard({ id: 'c1', title: 'Hola', ink: { height: 400, strokes: [] } })])
+    store.getState().closeCard('c1')
+    expect(cardIn(store, 'c1')).not.toHaveProperty('ink')
+    expect(cardIn(store, 'c1')!.title).toBe('Hola')
+    expect(storedData().cards[0]).not.toHaveProperty('ink')
+  })
+
+  it('closeCard removes a Card whose only content is an empty handwriting box', () => {
+    const store = storeWith([makeCard({ id: 'c1', ink: { height: 400, strokes: [] } })])
+    store.getState().closeCard('c1')
+    expect(storedData().cards).toEqual([])
+  })
+
+  it('closeCard keeps handwriting with strokes untouched', () => {
+    const store = storeWith([makeCard({ id: 'c1', ink: { height: 400, strokes: [[1, 2, 50]] } })])
+    const before = store.getState().data
+    store.getState().closeCard('c1')
+    expect(store.getState().data).toBe(before)
+  })
+
+  it('"Escritura a mano" is off until turned on, and setHandwriting writes only mtf_handwriting', () => {
+    const store = storeWith()
+    expect(store.getState().handwriting).toBe(false)
+    const before = store.getState().data
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+
+    store.getState().setHandwriting(true)
+    expect(store.getState().handwriting).toBe(true)
+    expect(store.getState().data).toBe(before)
+    expect(setItem.mock.calls.map(([key]) => key)).toEqual([HANDWRITING_KEY])
+    expect(createAppStore().getState().handwriting).toBe(true)
+
+    store.getState().setHandwriting(false)
+    expect(createAppStore().getState().handwriting).toBe(false)
+    expect(storedData()).not.toHaveProperty('handwriting')
+  })
+
+  it('an Import keeps "Escritura a mano"', () => {
+    const store = storeWith()
+    store.getState().setHandwriting(true)
+    store.getState().replaceData(makeData({ areas: [makeArea({ id: 'x1' })] }))
+    expect(store.getState().handwriting).toBe(true)
+    expect(localStorage.getItem(HANDWRITING_KEY)).toBe('1')
+  })
+
   it('actions on a Card that does not exist change nothing', () => {
     const store = storeWith()
     const before = store.getState().data
+    store.getState().setInk('nope', { height: 400, strokes: [[1, 2, 50]] })
     store.getState().updateCard('nope', { title: 'x' })
     store.getState().toggleItem('nope', 'i1')
     store.getState().dropCard('nope', { x: 0, y: 0 })
@@ -359,6 +439,15 @@ describe('Win events', () => {
     store.getState().closeCard('new', { isNew: true })
     expect(kinds(store)).toEqual([['note', 'new']])
     expect(storedData().events).toHaveLength(1)
+  })
+
+  it('closeCard keeps a new Card with only handwriting and counts one note', () => {
+    const store = storeWith()
+    const id = store.getState().createCard({ x: 500, y: 500 })!
+    store.getState().setInk(id, { height: 400, strokes: [[10, 20, 50]] })
+    store.getState().closeCard(id, { isNew: true })
+    expect(store.getState().data.cards.map((card) => card.id)).toEqual([id])
+    expect(kinds(store)).toEqual([['note', id]])
   })
 
   it('closeCard drops a checked blank Item together with its Win, and the Card Win follows', () => {

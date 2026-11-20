@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { areaForPoint, cleanName, defaultAreas, freeSlot, nextColor, sameRect, spotIn } from '../desk/areas'
-import { isEmptyCard, isFinished } from '../desk/cardText'
+import { hasInk, isEmptyCard, isFinished } from '../desk/cardText'
 import { CARD_WIDTH, FALLBACK_CARD_HEIGHT, randomTilt, type Point, type Rect } from '../desk/geometry'
 import { tidyLayout } from '../desk/tidy'
 import { detectLanguage } from '../i18n/detect'
@@ -9,15 +9,17 @@ import {
   loadAreaJars,
   loadArrangement,
   loadData,
+  loadHandwriting,
   loadLanguage,
   loadTheme,
   saveAreaJars,
   saveData,
+  saveHandwriting,
   saveLanguage,
   saveTheme,
   saveArrangement as storeArrangement,
 } from '../lib/storage'
-import type { Area, AreaColor, AreaId, Card, Item, Language, MtfData, SavedArrangement, Theme, WinEvent } from '../types'
+import type { Area, AreaColor, AreaId, Card, Ink, Item, Language, MtfData, SavedArrangement, Theme, WinEvent } from '../types'
 import { welcomeCard, type WelcomeContent } from '../welcome/welcomeCard'
 import { cardDeleted, cardJarred, itemToggled, itemsRemoved, jarVerdict, noteWritten, syncCardWin, type JarVerdict } from '../wins/rules'
 
@@ -48,6 +50,8 @@ export interface AppState {
    */
   placeWelcomeCard: (content: WelcomeContent) => string | undefined
   updateCard: (id: string, patch: Partial<Pick<Card, 'title' | 'body'>>) => void
+  /** Replaces a Card's handwriting (#47) in one write, when a stroke, an erase, a clear or an undo is committed. `null` removes it. */
+  setInk: (id: string, ink: Ink | null) => void
   /** A new empty Item at the end, or right after `afterItemId`. Returns its id; its text is typed with `updateItem`. */
   addItem: (cardId: string, afterItemId?: string) => string | undefined
   updateItem: (cardId: string, itemId: string, text: string) => void
@@ -71,7 +75,7 @@ export interface AppState {
   jarCard: (id: string, options?: { areaId?: AreaId }) => JarVerdict
   /** Takes a Card out of the Jar, back inside its Area and on top. */
   returnCard: (id: string) => void
-  /** Import: the whole document becomes `data`, already validated (at least one Area). The device settings (language, theme, saved arrangement, Area Jars) stay. */
+  /** Import: the whole document becomes `data`, already validated (at least one Area). The device settings (language, theme, saved arrangement, Area Jars, handwriting) stay. */
   replaceData: (data: MtfData) => void
 
   /** A new Area in the first free slot, in the first unused color. `name` is the provisional name, already translated. Returns its id. */
@@ -96,6 +100,10 @@ export interface AppState {
   /** "Frasco por área" (#19): a device setting, like the theme. Shows a small Jar in each Area. */
   areaJars: boolean
   setAreaJars: (on: boolean) => void
+
+  /** "Escritura a mano" (#47): a device setting, like the theme. Only offers the handwriting box; existing handwriting always shows. */
+  handwriting: boolean
+  setHandwriting: (on: boolean) => void
 }
 
 /** Brings `events` in line with a Card that just changed. */
@@ -122,6 +130,13 @@ function withCard(data: MtfData, id: string, change: (card: Card, now: number) =
   const card = change(data.cards[index], now)
   if (card === data.cards[index]) return data
   return { ...data, cards: data.cards.with(index, card), events: wins ? wins(data.events, card, now) : data.events }
+}
+
+/** The Card with no `ink` field at all, rather than `ink: undefined`, so it matches a Card that never had handwriting. */
+function withoutInk(card: Card, now: number): Card {
+  const next = { ...card, updatedAt: now }
+  delete next.ink
+  return next
 }
 
 function withItem(data: MtfData, cardId: string, itemId: string, change: (item: Item) => Partial<Item>, wins?: WinsRule): MtfData {
@@ -185,6 +200,11 @@ export function createAppStore() {
         set({ areaJars })
         saveAreaJars(areaJars)
       },
+      handwriting: loadHandwriting(),
+      setHandwriting: (handwriting) => {
+        set({ handwriting })
+        saveHandwriting(handwriting)
+      },
 
       ensureDefaultAreas: () =>
         update((data) => (data.areas.length > 0 ? data : { ...data, areas: defaultAreas(Date.now()) })),
@@ -225,6 +245,15 @@ export function createAppStore() {
       },
 
       updateCard: (id, patch) => update((data) => withCard(data, id, (card, now) => ({ ...card, ...patch, updatedAt: now }))),
+
+      setInk: (id, ink) =>
+        update((data) =>
+          withCard(data, id, (card, now) => {
+            if (ink !== null) return card.ink === ink ? card : { ...card, ink, updatedAt: now }
+            if (!('ink' in card)) return card
+            return withoutInk(card, now)
+          }),
+        ),
 
       addItem: (cardId, afterItemId) => {
         if (!findCard(get().data, cardId)) return undefined
@@ -330,10 +359,11 @@ export function createAppStore() {
           }
           const now = Date.now()
           const blank = card.items.filter((item) => item.text.trim() === '').map((item) => item.id)
-          let kept = card
+          // A handwriting box left empty is not kept, like a blank Item (#47).
+          let kept = card.ink && !hasInk(card) ? withoutInk(card, now) : card
           let events = data.events
           if (blank.length > 0) {
-            kept = { ...card, items: card.items.filter((item) => !blank.includes(item.id)), updatedAt: now }
+            kept = { ...kept, items: kept.items.filter((item) => !blank.includes(item.id)), updatedAt: now }
             events = syncCardWin(itemsRemoved(events, blank), kept, now, newId)
           }
           if (isNew) events = noteWritten(events, kept, now, newId)

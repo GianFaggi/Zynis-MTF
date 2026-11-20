@@ -13,6 +13,7 @@ export const WELCOME_PLACED_KEY = 'mtf_welcome_placed'
 export const INSTALL_NUDGE_SEEN_KEY = 'mtf_install_nudge_seen'
 export const ARRANGEMENT_KEY = 'mtf_arrangement'
 export const AREA_JARS_KEY = 'mtf_area_jars'
+export const HANDWRITING_KEY = 'mtf_handwriting'
 export const SESSION_KEY = 'mtf_session'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
 export const SYNC_KEY = 'mtf_sync'
@@ -121,6 +122,15 @@ export function loadAreaJars(): boolean {
 
 export function saveAreaJars(on: boolean): void {
   write(AREA_JARS_KEY, on ? '1' : '0')
+}
+
+/** Whether "Escritura a mano" is on on this device (#47); off unless `'1'` was stored. */
+export function loadHandwriting(): boolean {
+  return read(HANDWRITING_KEY) === '1'
+}
+
+export function saveHandwriting(on: boolean): void {
+  write(HANDWRITING_KEY, on ? '1' : '0')
 }
 
 /** Whether MTF already placed this device's Welcome Card (#20). A device setting, like the theme: never in the Backup. */

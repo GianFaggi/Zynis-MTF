@@ -5,9 +5,14 @@ export function usableItems(card: Card): Item[] {
   return card.items.filter((item) => item.text.trim() !== '')
 }
 
-/** No title, no text and no Item with text: such a Card is discarded when its editor closes. */
+/** At least one handwritten stroke (#47). An `ink` with no strokes is a box left empty, not content. */
+export function hasInk(card: Card): boolean {
+  return (card.ink?.strokes.length ?? 0) > 0
+}
+
+/** No title, no text, no Item with text and no handwriting: such a Card is discarded when its editor closes. */
 export function isEmptyCard(card: Card): boolean {
-  return card.title.trim() === '' && card.body.trim() === '' && usableItems(card).length === 0
+  return card.title.trim() === '' && card.body.trim() === '' && usableItems(card).length === 0 && !hasInk(card)
 }
 
 /** At least one Item with text, and every one of them checked. A Card without Items is never finished. */

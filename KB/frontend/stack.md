@@ -24,6 +24,7 @@ Scaffolded in change 1 with `npm create vite@latest` (`react-ts` template). `pac
 | lucide-react | 1.55.0 | |
 | zustand | 5.0.15 | |
 | @use-gesture/react | 10.3.1 | added in change 2 with its first use, the Desk ([desk.md](desk.md)) |
+| perfect-freehand | 1.2.3 | added in #47 with its first use, the handwriting box ([Handwriting](#handwriting-47)) |
 | vite-plugin-pwa | 2.0.0 | Workbox 7.4 |
 | @vite-pwa/assets-generator | 2.0.0 | dev; `npm run generate-pwa-assets` ([pwa.md](pwa.md)) |
 | vitest | 5.0.3 | |
@@ -48,6 +49,10 @@ Node: 24 locally, 22 in CI.
 - **@use-gesture/react** — drag, pinch, wheel and press-and-hold handling across touch, mouse and trackpad. It replaces the hand-written pointer code of the mockup, where the cross-device edge cases live.
 - Rejected: React Flow (diagram-oriented look and API), tldraw (whiteboard, own look, production license), Konva/PixiJS (pixel canvas, loses HTML text editing and accessibility)
 - Animations: CSS transitions/keyframes in the MVP. **Motion** can be added later if spring physics are needed.
+
+## Handwriting (#47)
+- **perfect-freehand** — turns a stroke's `[x, y, pressure]` points into the outline of a pressure-sensitive line; MTF fills that outline as an SVG `<path>` in the ink color ([desk.md](desk.md), [ADR 0013](../../docs/adr/0013-handwriting-as-optional-ink.md)). Why a library, against the rule below: MIT, zero dependencies, about 2 KB gzipped, a pure function (no DOM, easy to unit test), and the standard answer for pen ink (tldraw and Excalidraw use it). Rejected: a constant-width SVG polyline (no library, but loses the pressure that is the point of a Pencil); writing the outline geometry ourselves (~200 lines to maintain for no gain); a Canvas 2D (pixels, so it needs redrawing on every zoom and theme change, while SVG scales for free inside the Desk's CSS transform).
+- **Pointer Events by hand, not @use-gesture** — the box needs one pointer with its `pointerType`, `pressure`, `buttons` (a tablet pen's eraser end) and `getCoalescedEvents()`; @use-gesture is built for dragging and pinching elements. No handwriting recognition library: none works offline, for free, in the browser (the iPad's Scribble already turns Pencil writing into text in the text fields).
 
 ## State
 - **Zustand** — one small store for the Desk, Cards and Wins. Dragging updates state many times per second; Zustand lets components subscribe to only the slice they need, and persistence goes through one place (the storage layer) → [architecture.md](architecture.md)

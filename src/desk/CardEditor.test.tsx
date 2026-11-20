@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppStore } from '../store/appStore'
 import { makeArea, makeCard, makeItem, rowOfAreas } from '../test/fixtures'
 import { resetStores } from '../test/stores'
@@ -218,6 +218,90 @@ describe('CardEditor', () => {
       const id = useAppStore.getState().createCard({ x: 500, y: 500 })!
       openEditor(id, true)
       expect(screen.getByRole('button', { name: 'Llevar al frasco' })).toBeDisabled()
+    })
+
+    it('is available for a Card with only handwriting', () => {
+      const id = useAppStore.getState().createCard({ x: 500, y: 500 })!
+      act(() => useAppStore.getState().setInk(id, { height: 400, strokes: [[10, 10, 50]] }))
+      openEditor(id, true)
+      expect(screen.getByRole('button', { name: 'Llevar al frasco' })).toBeEnabled()
+    })
+  })
+
+  describe('handwriting (#47)', () => {
+    const box = () => screen.queryByRole('img', { name: 'Espacio para escribir a mano' })
+    const offer = () => screen.queryByRole('button', { name: 'A mano' })
+
+    beforeEach(() => {
+      // jsdom has no layout and no pointer capture (see InkBox.test.tsx).
+      Element.prototype.setPointerCapture = vi.fn()
+      Element.prototype.hasPointerCapture = vi.fn(() => true)
+      Element.prototype.releasePointerCapture = vi.fn()
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 0, y: 0, width: 500, height: 200 }))
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('with the setting off and no handwriting, the editor offers no box', () => {
+      openEditor()
+      expect(offer()).toBeNull()
+      expect(box()).toBeNull()
+    })
+
+    it('with the setting on, "A mano" adds an empty box below the text, writes nothing, and goes away', async () => {
+      useAppStore.setState({ handwriting: true })
+      const before = useAppStore.getState().data
+      openEditor()
+      await userEvent.click(offer()!)
+      expect(box()).toBeInTheDocument()
+      expect(offer()).toBeNull()
+      expect(useAppStore.getState().data).toBe(before)
+      expect(screen.getByRole('textbox', { name: 'Escribí algo…' }).compareDocumentPosition(box()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'Deshacer' })).toBeInTheDocument()
+    })
+
+    it('with the setting off, a Card that has handwriting still shows the box and its tools', () => {
+      resetStores({ cards: [makeCard({ id: 'c1', title: 'Viaje', ink: { height: 400, strokes: [[10, 10, 50]] } })] })
+      openEditor()
+      expect(box()).toBeInTheDocument()
+      expect(box()!.querySelectorAll('path[d^="M"]')).toHaveLength(1)
+      for (const name of ['Deshacer', 'Borrador', 'Borrar todo']) expect(screen.getByRole('button', { name })).toBeInTheDocument()
+      expect(offer()).toBeNull()
+    })
+
+    it('what is written in the box is the Card’s handwriting', async () => {
+      useAppStore.setState({ handwriting: true })
+      openEditor()
+      await userEvent.click(offer()!)
+      fireEvent.pointerDown(box()!, { pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1, clientX: 10, clientY: 10 })
+      fireEvent.pointerUp(box()!, { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10 })
+      expect(stored()!.ink).toEqual({ height: 400, strokes: [[20, 20, 50]] })
+    })
+
+    it('closing with an empty box leaves no handwriting, and "A mano" is offered again', async () => {
+      resetStores({ cards: [makeCard({ id: 'c1', title: 'Viaje', ink: { height: 400, strokes: [] } })] })
+      useAppStore.setState({ handwriting: true })
+      openEditor()
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+      expect(stored()).not.toHaveProperty('ink')
+
+      act(() => useDeskStore.getState().openEditor('c1'))
+      expect(offer()).toBeInTheDocument()
+      expect(box()).toBeNull()
+    })
+
+    it('a new Card with only handwriting survives closing the editor and counts a note', async () => {
+      useAppStore.setState({ handwriting: true })
+      const id = useAppStore.getState().createCard({ x: 500, y: 500 })!
+      openEditor(id, true)
+      await userEvent.click(offer()!)
+      fireEvent.pointerDown(box()!, { pointerId: 1, pointerType: 'pen', pressure: 0.5, button: 0, buttons: 1, clientX: 10, clientY: 10 })
+      fireEvent.pointerUp(box()!, { pointerId: 1, pointerType: 'pen', clientX: 10, clientY: 10 })
+      await userEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+      expect(stored(id)).toBeDefined()
+      expect(useAppStore.getState().data.events.map((event) => event.type)).toEqual(['note'])
     })
   })
 })

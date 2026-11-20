@@ -28,6 +28,7 @@ export const en: Messages = {
   themeSystem: 'System',
   themeLight: 'Light',
   themeDark: 'Dark',
+  handwritingOption: 'Handwriting',
 
   desk: 'Desk',
   work: 'Work',
@@ -49,6 +50,15 @@ export const en: Messages = {
   delete: 'Delete',
   deleteConfirm: 'Delete? Tap again',
   save: 'Save',
+
+  handwriting: 'Handwriting',
+  addHandwriting: 'Handwriting',
+  inkBox: 'Space to write by hand',
+  inkUndo: 'Undo',
+  inkEraser: 'Eraser',
+  inkClear: 'Clear all',
+  inkClearConfirm: 'Clear all? Tap again',
+  inkFull: 'This handwriting is full',
 
   areas: 'Areas',
   seeAll: 'See all',

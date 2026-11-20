@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { API_URL, resetWake } from '../account/api'
 import { initialAccountState, useAccountStore } from '../account/accountStore'
 import { saveSession } from '../lib/storage'
+import { makeCard } from '../test/fixtures'
 import type { SyncRecord } from '../types'
 import { KEEPALIVE_BYTES, PUSH_CHUNK_BYTES, chunkRecords, leaveSend, pullRecords, pushRecords } from './syncApi'
 
@@ -127,6 +128,22 @@ describe('syncApi', () => {
 
     expect(sync()).toHaveLength(1)
     expect(sync()[0][1].keepalive).toBeUndefined()
+  })
+
+  it('sends a Card with a lot of handwriting, over 60 KB on its own, as an ordinary push (#47)', async () => {
+    signedInAs('jwt')
+    const { sync } = stubFetch(async () => json(200, {}))
+    const stroke = Array.from({ length: 6000 }, (_, i) => [i % 1000, 100 + (i % 2000), 50 + (i % 50)]).flat()
+    const card = makeCard({ id: 'h', ink: { height: 2500, strokes: [stroke] } })
+    const batch: SyncRecord[] = [{ kind: 'card', id: 'h', updatedAt: 2, deleted: false, data: card }]
+    expect(new TextEncoder().encode(JSON.stringify({ records: batch })).byteLength).toBeGreaterThan(KEEPALIVE_BYTES)
+
+    const outcome = await leaveSend(batch, { renew: false })
+
+    expect(outcome).toEqual({ sent: batch })
+    expect(sync()).toHaveLength(1)
+    expect(sync()[0][1].keepalive).toBeUndefined()
+    expect(JSON.parse(sync()[0][1].body as string).records[0].data.ink).toEqual(card.ink)
   })
 
   it('renews an access token about to expire before a leave send on hiding', async () => {
