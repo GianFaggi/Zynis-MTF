@@ -1,16 +1,21 @@
 import { Check, Pin } from 'lucide-react'
 import { memo, type CSSProperties } from 'react'
 import { useT } from '../i18n'
+import { InkView } from '../ink/InkView'
 import { useAppStore } from '../store/appStore'
 import type { AreaColor, Card } from '../types'
 import { useWinFeedback } from '../wins/feedback'
 import { JarIcon } from '../wins/JarIcon'
-import { displayTitle, isFinished, usableItems } from './cardText'
+import { displayTitle, hasInk, isFinished, usableItems } from './cardText'
 import { useDeskStore } from './deskStore'
 import { ItemCheck } from './ItemCheck'
 import { matchesQuery } from './search'
 
 const SHOWN_ITEMS = 5
+/** Handwriting taller than this (px) is cut off and faded on the Card; the editor shows all of it. */
+const INK_MAX_HEIGHT_PX = 180
+/** In the far look, a Card with only handwriting shows it up to this height (px). */
+const FAR_INK_MAX_HEIGHT_PX = 260
 
 type DeskCardProps = {
   card: Card
@@ -33,6 +38,8 @@ export const DeskCard = memo(function DeskCard({ card, color }: DeskCardProps) {
   const feedback = useWinFeedback()
 
   const items = usableItems(card)
+  const title = displayTitle(card)
+  const ink = hasInk(card) ? card.ink : undefined
   const shown = items.slice(0, SHOWN_ITEMS)
   const checked = items.filter((item) => item.done).length
   const finished = isFinished(card)
@@ -53,19 +60,26 @@ export const DeskCard = memo(function DeskCard({ card, color }: DeskCardProps) {
       data-search={search}
       data-finished={finished ? '' : undefined}
       tabIndex={0}
-      aria-label={displayTitle(card) || t('card')}
+      aria-label={title || t(ink ? 'handwriting' : 'card')}
       onKeyDown={(event) => {
         if (event.key === 'Enter' && event.target === event.currentTarget) openEditor(card.id)
       }}
       style={style}
       className="group/card card-tint absolute top-0 left-0 z-(--z) w-[236px] cursor-pointer rounded-[14px] border border-[color:color-mix(in_oklab,var(--b)_18%,transparent)] px-[15px] pt-3.5 pb-3 shadow-paper [transform:translate(var(--x),var(--y))_rotate(var(--tilt))] group-data-far:p-[22px] group-data-tidying:transition-transform group-data-tidying:duration-500 group-data-tidying:ease-[cubic-bezier(.3,.7,.2,1)] data-lifted:z-[100000] data-lifted:cursor-grabbing data-lifted:shadow-lift data-lifted:[transform:translate(var(--x),var(--y))_scale(1.04)] data-[search=dim]:opacity-[.18] data-[search=hit]:shadow-[0_0_0_3px_var(--color-ink),var(--shadow-paper)] data-finished:card-won data-celebrate:animate-pop data-returning:pointer-events-none data-returning:z-[100000] data-returning:[transition:translate_.35s_ease,transform_.35s_ease] data-into-jar:pointer-events-none data-into-jar:z-[100000] data-into-jar:[transform:translate(var(--x),var(--y))_rotate(24deg)_scale(.12)] data-into-jar:opacity-0 data-into-jar:[transition:translate_.45s_cubic-bezier(.5,0,.8,.4),transform_.45s_ease,opacity_.45s_ease]"
     >
-      <p
-        aria-hidden="true"
-        className={`hidden font-display text-[34px] leading-[1.2] font-semibold text-balance [overflow-wrap:anywhere] group-data-far:line-clamp-3 ${finished ? 'text-accent-ink' : ''}`}
-      >
-        {displayTitle(card)}
-      </p>
+      {/* The far look: a large title; a Card with nothing but handwriting shows its handwriting instead. */}
+      {!title && ink ? (
+        <div data-far-ink="" aria-hidden="true" className="hidden group-data-far:block">
+          <InkView ink={ink} maxHeight={FAR_INK_MAX_HEIGHT_PX} />
+        </div>
+      ) : (
+        <p
+          aria-hidden="true"
+          className={`hidden font-display text-[34px] leading-[1.2] font-semibold text-balance [overflow-wrap:anywhere] group-data-far:line-clamp-3 ${finished ? 'text-accent-ink' : ''}`}
+        >
+          {title}
+        </p>
+      )}
 
       {/* Outside the near-look block, so the seal also marks the Card when zoomed out. */}
       {finished && (
@@ -97,6 +111,7 @@ export const DeskCard = memo(function DeskCard({ card, color }: DeskCardProps) {
         {card.body && (
           <p className="line-clamp-7 text-[14.5px] whitespace-pre-line text-ink-2 [overflow-wrap:anywhere]">{card.body}</p>
         )}
+        {ink && <InkView ink={ink} maxHeight={INK_MAX_HEIGHT_PX} />}
         {shown.length > 0 && (
           <ul className="flex flex-col gap-1.5">
             {shown.map((item) => (

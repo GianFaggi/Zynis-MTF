@@ -5,8 +5,8 @@ import App from './App'
 import { initialAccountState, useAccountStore } from './account/accountStore'
 import { makeBackup } from './backup/backup'
 import { useDeskStore } from './desk/deskStore'
-import { LANGUAGE_KEY, THEME_KEY, emptySync, saveSession, saveSync } from './lib/storage'
-import { useAppStore } from './store/appStore'
+import { HANDWRITING_KEY, LANGUAGE_KEY, THEME_KEY, emptySync, saveSession, saveSync } from './lib/storage'
+import { createAppStore, useAppStore } from './store/appStore'
 import { USER_AGENTS, restoreDevice, stubDevice } from './test/device'
 import { makeArea, makeCard, makeData, rowOfAreas } from './test/fixtures'
 import { resetStores } from './test/stores'
@@ -150,13 +150,32 @@ describe('App', () => {
     expect(useDeskStore.getState()).toMatchObject({ editingId: card.id, newCardId: card.id })
   })
 
+  it('"Escritura a mano" is No on a fresh device; Sí is remembered, and the editor offers "A mano"', async () => {
+    const { unmount } = render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    const group = screen.getByRole('group', { name: 'Escritura a mano' })
+    expect(within(group).getAllByRole('button').map((button) => button.textContent)).toEqual(['No', 'Sí'])
+    expect(within(group).getByRole('button', { name: 'No' })).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(within(group).getByRole('button', { name: 'Sí' }))
+    expect(localStorage.getItem(HANDWRITING_KEY)).toBe('1')
+    for (const button of within(group).getAllByRole('button')) expect(button.className).not.toMatch(/accent/)
+    unmount()
+
+    // A reload: the store reads the setting back from storage.
+    useAppStore.setState({ handwriting: createAppStore().getState().handwriting })
+    render(<App />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
+    expect(within(screen.getByRole('group', { name: 'Escritura a mano' })).getByRole('button', { name: 'Sí' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('Settings shows the account, the language, the theme, the Areas, the Backup, the install and the introduction sections, in that order', async () => {
     render(<App />)
     await userEvent.click(screen.getByRole('button', { name: 'Ajustes' }))
     const settings = screen.getByRole('dialog', { name: 'Ajustes' })
 
     const labels = [...settings.querySelectorAll('span.uppercase')].map((label) => label.textContent)
-    expect(labels).toEqual(['Cuenta', 'Idioma', 'Tema', 'Áreas', 'Copia de seguridad', 'Instalar la app', 'Introducción'])
+    expect(labels).toEqual(['Cuenta', 'Idioma', 'Tema', 'Escritura a mano', 'Áreas', 'Copia de seguridad', 'Instalar la app', 'Introducción'])
     expect(within(settings).getByRole('button', { name: 'Exportar copia' })).toBeInTheDocument()
     expect(within(settings).getByRole('button', { name: 'Importar copia' })).toBeInTheDocument()
   })

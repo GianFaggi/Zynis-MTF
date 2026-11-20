@@ -4,6 +4,7 @@ import {
   AREA_JARS_KEY,
   ARRANGEMENT_KEY,
   DATA_KEY,
+  HANDWRITING_KEY,
   INSTALL_NUDGE_SEEN_KEY,
   LANGUAGE_KEY,
   RECOVERY_KEY_PREFIX,
@@ -24,6 +25,7 @@ import {
   loadArrangement,
   loadData,
   clearSession,
+  loadHandwriting,
   loadInstallNudgeSeen,
   loadLanguage,
   loadSession,
@@ -34,6 +36,7 @@ import {
   saveAreaJars,
   saveArrangement,
   saveData,
+  saveHandwriting,
   saveInstallNudgeSeen,
   saveLanguage,
   saveSession,
@@ -380,6 +383,34 @@ describe('Area Jars setting', () => {
       throw new DOMException('blocked', 'SecurityError')
     })
     expect(loadAreaJars()).toBe(false)
+  })
+})
+
+describe('Handwriting setting', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("is on only when '1' is stored", () => {
+    expect(loadHandwriting()).toBe(false)
+    saveHandwriting(true)
+    expect(localStorage.getItem(HANDWRITING_KEY)).toBe('1')
+    expect(loadHandwriting()).toBe(true)
+    saveHandwriting(false)
+    expect(localStorage.getItem(HANDWRITING_KEY)).toBe('0')
+    expect(loadHandwriting()).toBe(false)
+    localStorage.setItem(HANDWRITING_KEY, 'true')
+    expect(loadHandwriting()).toBe(false)
+  })
+
+  it('reads as off when storage refuses to read, without throwing', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    localStorage.setItem(HANDWRITING_KEY, '1')
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    expect(() => loadHandwriting()).not.toThrow()
+    expect(loadHandwriting()).toBe(false)
   })
 })
 

@@ -30,6 +30,11 @@ describe('matchesQuery', () => {
     expect(matchesQuery(card, 'pan')).toBe(false)
   })
 
+  it('never matches handwriting: a Card with only handwriting matches nothing (#47)', () => {
+    const handwritten = makeCard({ id: 'h', ink: { height: 400, strokes: [[10, 10, 50, 200, 40, 50]] } })
+    for (const query of ['a', '1', '10', 'ink', 'escritura']) expect(matchesQuery(handwritten, query)).toBe(false)
+  })
+
   it('an empty or blank query matches nothing', () => {
     expect(matchesQuery(card, '')).toBe(false)
     expect(matchesQuery(card, '   ')).toBe(false)

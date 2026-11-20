@@ -115,6 +115,46 @@ describe('DeskCard', () => {
     expect(useAppStore.getState().data.events.map((event) => event.type)).toEqual(['item', 'card'])
   })
 
+  describe('handwriting (#47)', () => {
+    const ink = { height: 400, strokes: [[10, 10, 50, 200, 40, 50]] }
+
+    it('shows the title, then the text, then the handwriting, then the Items', () => {
+      resetStores({ cards: [makeCard({ id: 'h', title: 'Viaje', body: 'Salimos', ink, items: [makeItem({ id: 'i1', text: 'Pasajes' })] })] })
+      renderStored('h')
+      const near = screen.getByRole('article', { name: 'Viaje' }).querySelector('.group-data-far\\:hidden')!
+      const order = [...near.children].map((child) => (child.matches('[data-ink-view]') ? 'ink' : child.tagName.toLowerCase()))
+      expect(order).toEqual(['h3', 'p', 'ink', 'ul', 'footer'])
+      expect(near.querySelector<HTMLElement>('[data-ink-view]')!.style.maxHeight).toBe('180px')
+    })
+
+    it('is named "Escritura a mano" with only handwriting, and shows it in the far look instead of an empty title', () => {
+      resetStores({ cards: [makeCard({ id: 'h', ink })] })
+      renderStored('h')
+      const article = screen.getByRole('article', { name: 'Escritura a mano' })
+      const far = article.querySelector('[data-far-ink]')!
+      expect(far).toHaveClass('hidden', 'group-data-far:block')
+      expect(far.querySelectorAll('path')).toHaveLength(1)
+      expect(article.querySelector('p.font-display')).toBeNull()
+    })
+
+    it('in the far look, a Card with a title, text or Items shows that, not its handwriting', () => {
+      for (const content of [{ title: 'Viaje' }, { body: 'Salimos' }, { items: [makeItem({ id: 'i1', text: 'Pasajes' })] }]) {
+        resetStores({ cards: [makeCard({ id: 'h', ink, ...content })] })
+        const { unmount, container } = renderStored('h')
+        expect(container.querySelector('[data-far-ink]')).toBeNull()
+        expect(container.querySelector('p.font-display')).not.toBeEmptyDOMElement()
+        unmount()
+      }
+    })
+
+    it('an empty handwriting box shows nothing and keeps the usual name', () => {
+      resetStores({ cards: [makeCard({ id: 'h', ink: { height: 400, strokes: [] } })] })
+      const { container } = renderStored('h')
+      expect(screen.getByRole('article', { name: 'Tarjeta' })).toBeInTheDocument()
+      expect(container.querySelector('svg')).toBeNull()
+    })
+  })
+
   it('takes its Area color through --b', () => {
     renderStored('c1')
     expect(screen.getByRole('article').style.getPropertyValue('--b')).toBe('var(--b-preview, var(--color-sage))')

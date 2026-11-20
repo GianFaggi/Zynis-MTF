@@ -105,6 +105,13 @@ Everything else stays ink, pencil and paper: the Dock (its "Frasco" button inclu
 
 **The paper plane is the sign of sync: ink and paper, never the accent** (#35). Travelling between devices is not a Win. The plane (`PaperPlane`) has an `ink` outline, a `sheet` wing and a `paper` keel, and its dotted trail is `pencil`. The sync indicator's `Send` icon is `ink-2`. It lives in a 320 × 72 scene (`viewBox`) whose edges fade with a `mask-image`, so the plane leaves on the right and comes back in from the left. At rest (reduced motion, or a wait that gave up at 90 s) it sits mid-arc on the whole trail. Approved in [design/mtf-mockup-avion.html](../../design/mtf-mockup-avion.html).
 
+**Handwriting is ink, never the accent** (#47). Strokes are SVG paths filled with `currentColor`, and both the box and the Card set `text-ink`, so handwriting is `--color-ink` and switches with the theme with no stored color ([ADR 0013](../../docs/adr/0013-handwriting-as-optional-ink.md)). There is one ink color and one width: no palette, no highlighter.
+
+- **The box** (`InkBox`) sits in the editor between the text and the Items: full width, `rounded-xl`, a `sheet` fill at 60% over the Card tint, and a 1 px `rule` ring (a ring, not a border, so the box on screen is exactly the drawing area). Its aspect ratio is the handwriting's (`1000 / height`), so it grows taller as the user writes near its bottom. Crosshair cursor; cell cursor in eraser mode. `touch-none`, `select-none` and no iOS callout.
+- **Its tool row** is three kit `Button`s under the box: Deshacer (`Undo2`, quiet, disabled with nothing to undo), Borrador (`Eraser`, a quiet toggle: `pressed` turns it ink-filled, never accent) and Borrar todo (`Trash2`, `danger`, with the editor's second-tap pattern). "Esta escritura está completa" shows below the box in 13 px `pencil` (`role="status"`), not as an error.
+- **"A mano"** sits beside "Añadir elemento" with the same quiet look: 15 px `pencil` text and the 19 px dashed box, here with a `PenLine` icon.
+- **On the Card** (`InkView`) handwriting is scaled to the Card's width under its text, cut at 180 px with a 36 px fade (`mask-image` with absolute stops, so shorter handwriting is never faded). In the far look a Card with only handwriting shows it filling the Card instead of an empty title.
+
 ## Typography
 
 - **Literata** (serif) — Card titles, Area labels (italic), wordmark `MTF` (26 px semibold italic; the capitals read heavier than the old lowercase `mtf` at 28 px), big numbers in Mis logros
@@ -136,6 +143,7 @@ Feature pieces that use the accent live outside the kit, which never does: `Item
 ## Rules
 
 - **Color is information.** Area colors identify Areas; the accent means "you did something". Never use the accent for decoration or navigation — not even the focus ring (the mockup used accent there; the app uses ink).
+- **Handwriting is ink, never the accent.** One ink color that follows the theme; its tools are kit buttons in ink and paper ([Handwriting](#tokens)).
 - **The paper plane is the sign of sync: ink and paper, never the accent.** Waiting for the server shows the plane and calm messages, never a spinner, a progress bar or a countdown ([Where the accent is allowed](#tokens)).
 - **Third-party marks keep their own colors, and only there.** The one today is Google's "G" (`GoogleMark` in `src/account/`, #36) on the quiet "Continuar con Google" button: 18 px, decorative (`aria-hidden`), in Google's four colors as its sign-in branding asks, inline in the SVG (they are not MTF tokens, so they do not go in `src/index.css`). The button around it stays MTF's own `Button`, never Google's white or blue one, and it uses no logo upload on the consent screen (that would require Google's verification).
 - **No chrome bars.** Controls float on the paper (pill groups, dock, FAB); there is no header bar and no tab bar.

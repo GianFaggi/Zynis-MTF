@@ -3,11 +3,14 @@ import { makeCard, makeData, makeItem, rowOfAreas } from '../test/fixtures'
 import type { MtfData } from '../types'
 import { isValidData } from './validate'
 
+/** Handwriting with two strokes, one of them a single dot; new each time, since cases mutate it. */
+const newInk = () => ({ height: 650, strokes: [[10, 20, 50, 14, 26, 61], [500, 300, 50]] })
+
 function valid(): MtfData {
   return makeData({
     areas: rowOfAreas(),
     cards: [
-      makeCard({ id: 'c1', areaId: 'a1', title: 'Compras', items: [makeItem({ id: 'i1', text: 'Pan', done: true })] }),
+      makeCard({ id: 'c1', areaId: 'a1', title: 'Compras', items: [makeItem({ id: 'i1', text: 'Pan', done: true })], ink: newInk() }),
       makeCard({ id: 'c2', areaId: 'a2', title: 'Viaje', items: [makeItem({ id: 'i2', text: 'Pasajes' })], jarredAt: 9 }),
     ],
     events: [
@@ -68,8 +71,26 @@ describe('isValidData', () => {
     ['an event cardId that is not text', (doc) => Object.assign(doc.events[0], { cardId: 7 })],
     ['a null entity', (doc) => Object.assign(doc, { events: [null] })],
     ['no Areas', (doc) => Object.assign(doc, { areas: [], cards: [] })],
+    ['handwriting that is not an object', (doc) => Object.assign(doc.cards[0], { ink: [] })],
+    ['handwriting without a height', (doc) => Reflect.deleteProperty(doc.cards[0].ink!, 'height')],
+    ['a handwriting height that is not whole', (doc) => (doc.cards[0].ink!.height = 400.5)],
+    ['a handwriting height of 0', (doc) => (doc.cards[0].ink!.height = 0)],
+    ['a handwriting height above the maximum', (doc) => (doc.cards[0].ink!.height = 2501)],
+    ['handwriting strokes not a list', (doc) => Object.assign(doc.cards[0].ink!, { strokes: {} })],
+    ['a stroke that is not a list', (doc) => Object.assign(doc.cards[0].ink!, { strokes: [7] })],
+    ['a stroke whose length is not a multiple of 3', (doc) => doc.cards[0].ink!.strokes[0].push(9)],
+    ['an empty stroke', (doc) => doc.cards[0].ink!.strokes.push([])],
+    ['a stroke with a string', (doc) => Object.assign(doc.cards[0].ink!.strokes, { 1: ['500', 300, 50] })],
+    ['a stroke with a non-finite number', (doc) => (doc.cards[0].ink!.strokes[1][0] = NaN)],
   ])('refuses %s', (_, change) => {
     expect(isValidData(broken(change))).toBe(false)
+  })
+
+  it('accepts a Card with handwriting, a Card without, and an empty box', () => {
+    expect(valid().cards[0].ink).toBeDefined()
+    expect(valid().cards[1]).not.toHaveProperty('ink')
+    expect(isValidData(broken((doc) => (doc.cards[0].ink = { height: 400, strokes: [] })))).toBe(true)
+    expect(isValidData(broken((doc) => (doc.cards[0].ink!.strokes[1] = [-20, 9999, 50])))).toBe(true)
   })
 
   it('accepts every Area color, the three added in #7 included, and nothing else', () => {

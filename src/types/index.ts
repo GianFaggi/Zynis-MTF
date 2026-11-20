@@ -62,6 +62,17 @@ export interface Item {
   updatedAt: number
 }
 
+/**
+ * A Card's handwriting (#47, ADR 0013). Points are in box coordinates: the box is always
+ * `INK_WIDTH` (1000) units wide and `height` units tall. Each stroke is a flat list of
+ * integers `[x, y, p, x, y, p, …]`, with `p` the pressure 0–100. A Card never keeps
+ * an `Ink` with no strokes: `closeCard` removes it.
+ */
+export interface Ink {
+  height: number
+  strokes: number[][]
+}
+
 export interface Card {
   id: string
   areaId: AreaId
@@ -72,6 +83,8 @@ export interface Card {
   position: { x: number; y: number; tilt: number; z: number }
   /** In the Jar since; `null` = on the Desk. */
   jarredAt: number | null
+  /** Handwriting (#47); missing = none. Optional, so Cards from before it need no migration. */
+  ink?: Ink
   createdAt: number
   updatedAt: number
 }

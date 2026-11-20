@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeCard, makeItem } from '../test/fixtures'
-import { displayTitle, isEmptyCard, isFinished, pendingItems, usableItems } from './cardText'
+import { displayTitle, hasInk, isEmptyCard, isFinished, pendingItems, usableItems } from './cardText'
 
 const items = [makeItem({ id: 'i1', text: 'Pan' }), makeItem({ id: 'i2', text: '  ' }), makeItem({ id: 'i3', text: 'Leche' })]
 
@@ -19,8 +19,22 @@ describe('isEmptyCard', () => {
     ['a title', { title: 'Hola' }],
     ['text', { body: 'algo' }],
     ['an Item with text', { items }],
+    ['only one handwritten stroke', { ink: { height: 400, strokes: [[10, 20, 50]] } }],
   ])('is false with %s', (_, overrides) => {
     expect(isEmptyCard(makeCard({ id: 'c1', ...overrides }))).toBe(false)
+  })
+
+  it('is true with a handwriting box left empty, or no ink, and no text', () => {
+    expect(isEmptyCard(makeCard({ id: 'c1', ink: { height: 400, strokes: [] } }))).toBe(true)
+    expect(isEmptyCard(makeCard({ id: 'c1' }))).toBe(true)
+  })
+})
+
+describe('hasInk', () => {
+  it('is true only with at least one stroke', () => {
+    expect(hasInk(makeCard({ id: 'c1', ink: { height: 400, strokes: [[1, 2, 50]] } }))).toBe(true)
+    expect(hasInk(makeCard({ id: 'c1', ink: { height: 400, strokes: [] } }))).toBe(false)
+    expect(hasInk(makeCard({ id: 'c1' }))).toBe(false)
   })
 })
 
@@ -51,6 +65,10 @@ describe('isFinished / pendingItems', () => {
 })
 
 describe('displayTitle', () => {
+  it('stays empty for a Card with only handwriting: callers name it themselves', () => {
+    expect(displayTitle(makeCard({ id: 'c1', ink: { height: 400, strokes: [[1, 2, 50]] } }))).toBe('')
+  })
+
   it('is the title when there is one', () => {
     expect(displayTitle(makeCard({ id: 'c1', title: 'Viaje', body: 'Salimos el viernes' }))).toBe('Viaje')
   })

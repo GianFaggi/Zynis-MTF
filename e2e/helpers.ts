@@ -82,6 +82,18 @@ export function storedData(page: Page): Promise<MtfData> {
   return page.evaluate(() => JSON.parse(localStorage.getItem('mtf_data')!))
 }
 
+/** A screen point on empty paper: not on a Card, a label or a control. */
+export async function emptyPaper(page: Page) {
+  const viewport = page.viewportSize()!
+  const point = { x: Math.round(viewport.width * 0.6), y: Math.round(viewport.height * 0.6) }
+  const onPaper = await page.evaluate(
+    ({ x, y }) => !document.elementFromPoint(x, y)?.closest('[data-card-id], [data-area-label], button'),
+    point,
+  )
+  expect(onPaper).toBe(true)
+  return point
+}
+
 export async function center(locator: Locator) {
   const box = (await locator.boundingBox())!
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
@@ -150,6 +162,44 @@ export class Touch {
     await this.send('touchStart', fingers(startGap))
     for (let step = 1; step <= steps; step++) await this.send('touchMove', fingers(startGap + ((endGap - startGap) * step) / steps))
     await this.send('touchEnd', [])
+  }
+}
+
+/**
+ * A pen through the Chrome DevTools Protocol (#47): Playwright has no pen API, but CDP's
+ * `Input.dispatchMouseEvent` takes `pointerType: 'pen'` and a `force` (0–1), which Chrome
+ * delivers as pointer events with `pointerType` "pen" and that `pressure`.
+ */
+export class Pen {
+  private readonly cdp: CDPSession
+
+  private constructor(cdp: CDPSession) {
+    this.cdp = cdp
+  }
+
+  static async on(page: Page) {
+    return new Pen(await page.context().newCDPSession(page))
+  }
+
+  private send(type: 'mousePressed' | 'mouseMoved' | 'mouseReleased', point: { x: number; y: number }, force: number) {
+    return this.cdp.send('Input.dispatchMouseEvent', {
+      type,
+      x: Math.round(point.x),
+      y: Math.round(point.y),
+      button: 'left',
+      buttons: type === 'mouseReleased' ? 0 : 1,
+      clickCount: type === 'mouseMoved' ? 0 : 1,
+      force: type === 'mouseReleased' ? 0 : force,
+      pointerType: 'pen',
+    })
+  }
+
+  /** The pen down at the first point, through the others, and up at the last one. */
+  async stroke(points: { x: number; y: number }[], { pressure = 0.5 } = {}) {
+    await this.send('mouseMoved', points[0], 0)
+    await this.send('mousePressed', points[0], pressure)
+    for (const point of points.slice(1)) await this.send('mouseMoved', point, pressure)
+    await this.send('mouseReleased', points.at(-1)!, 0)
   }
 }
 

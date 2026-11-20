@@ -1,21 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
-import { Touch, areaLabel, card, deskCard, deskScale, seedDesk } from './helpers.ts'
+import { Touch, areaLabel, card, deskCard, deskScale, emptyPaper, seedDesk } from './helpers.ts'
 
 test.use({ locale: 'es-AR' })
 
 const trip = card({ id: 'trip', title: 'Viaje a Córdoba', body: 'Salimos el viernes', position: { x: 200, y: 300, tilt: 0 } })
-
-/** A screen point on empty paper: not on a Card, a label or a control. */
-async function emptyPaper(page: Page) {
-  const viewport = page.viewportSize()!
-  const point = { x: Math.round(viewport.width * 0.6), y: Math.round(viewport.height * 0.6) }
-  const onPaper = await page.evaluate(
-    ({ x, y }) => !document.elementFromPoint(x, y)?.closest('[data-card-id], [data-area-label], button'),
-    point,
-  )
-  expect(onPaper).toBe(true)
-  return point
-}
 
 async function ctrlWheel(page: Page, at: { x: number; y: number }, deltaY: number) {
   await page.mouse.move(at.x, at.y)

@@ -21,6 +21,16 @@ describe('dictionaries', () => {
     expect(translate('en', 'settings')).toBe('Settings')
   })
 
+  it('names every handwriting label in both languages (#47)', () => {
+    const keys = ['handwritingOption', 'handwriting', 'addHandwriting', 'inkBox', 'inkUndo', 'inkEraser', 'inkClear', 'inkClearConfirm', 'inkFull'] as const
+    for (const key of keys) {
+      expect(es).toHaveProperty(key)
+      expect(en).toHaveProperty(key)
+    }
+    expect(translate('es', 'inkClearConfirm')).toBe('¿Borrar todo? Tocá otra vez')
+    expect(translate('en', 'inkFull')).toBe('This handwriting is full')
+  })
+
   it('says the sync toast in both languages (#37)', () => {
     expect(translate('es', 'syncUpToDate')).toBe('Tu escritorio está al día')
     expect(translate('en', 'syncUpToDate')).toBe('Your desk is up to date')

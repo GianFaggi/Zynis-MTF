@@ -32,9 +32,9 @@ State and components:
 | `AreaRegion.tsx` | One Area, in one wrapper at its rect's top-left: the soft tinted region, its label with the Card count, the edit button, the resize handle and, while "Frasco por área" is on, its Area Jar ([Area Jars](#area-jars-19)) |
 | `AreaEditor.tsx` | The Area editor sheet: name, 12 color swatches, Borrar área with the destination of its Cards |
 | `AreasSection.tsx` | The Areas group of Settings: one row per Area (opens its editor), Nueva área, Acomodar áreas with its in-place confirmation, and the "Frasco por área" No / Sí option (#19) |
-| `DeskCard.tsx` | One Card on the Desk (memoized); a finished Card wears `card-won`, the filled "Llevala al frasco" chip and a ✓ seal, and plays a one-time pop + stamp when `data-celebrate` is set ([design-system.md](design-system.md)) |
+| `DeskCard.tsx` | One Card on the Desk (memoized); a finished Card wears `card-won`, the filled "Llevala al frasco" chip and a ✓ seal, and plays a one-time pop + stamp when `data-celebrate` is set ([design-system.md](design-system.md)). Shows its handwriting under the text with `InkView` ([Handwriting](#handwriting-47)) |
 | `ItemCheck.tsx` | An Item's box, shared by `DeskCard` and `CardEditor`; `onToggle` gets the box element so sparks start from it |
-| `CardEditor.tsx` | The editor sheet, with "Llevar al frasco" |
+| `CardEditor.tsx` | The editor sheet, with "Llevar al frasco", and the handwriting box (`InkBox`) with "A mano" while the setting is on ([Handwriting](#handwriting-47)) |
 | `Dock.tsx` | Area buttons, Frasco, See all, Tidy up |
 | `SearchBox.tsx` | The search field |
 
@@ -75,6 +75,7 @@ Functions that random numbers feed (`spotIn`, `tidyLayout`, `randomTilt`) take a
 - A drag interrupted by the system (`pointercancel`) or by a second finger (a pinch starts) is cancelled: the Card goes back to where it started and keeps its Area. The same goes for an Area move or resize.
 - `releaseOutcome()`: a released `drag` drops (a Card or an Area), a `resize` ends the resize, a `pending` press that moved < 9 px opens the Card or, on a label, flies to the Area.
 - The Desk has `touch-action: none`, no text selection, no iOS long-press callout, and no context menu.
+- **A pen acts like the mouse on the Desk** (`nextIntent` treats `pen` as `mouse`: drag after 4 px). Handwriting (#47) happens only in the editor's box, never on the Desk, so no Desk gesture changed for it ([Handwriting](#handwriting-47)).
 
 ## Areas
 
@@ -114,8 +115,21 @@ Why Areas became movable and resizable, and why their Cards travel with them →
 
 - Below `s < 0.55` Cards collapse to their **title only** (34 px Literata, at most 3 lines), so a zoomed-out Desk reads like a map.
 - A Card without a title shows `displayTitle(card)`: its first text line, or its Items joined.
+- A Card with none of them but with handwriting (#47) shows its handwriting instead of an empty title: an `InkView` filling the Card's width, cut at 260 px with a fade. A Card with a title, text or Items shows only that, like any other Card.
 - The Desk writes `data-far` on the world `div`; Cards switch look with `group-data-[far]:` utilities, so the flip re-renders no React.
 - The Area edit button, the resize handle and the Area Jars (#19) hide in the far look (`group-data-far:hidden`). The Desk Jar always shows.
+
+## Handwriting (#47)
+
+A Card can hold Handwriting: ink written with a pen, a mouse or a finger in a box inside the editor, kept as drawn and never turned into text ([ADR 0013](../../docs/adr/0013-handwriting-as-optional-ink.md), `src/ink/`).
+
+- **In the editor, never on the Desk.** With a graphics tablet the pen *is* the pointer, so a pen press on the Desk could not mean both "move this Card" and "write". The box (`InkBox`) sits in `EditorBody` between the text and the Items. "A mano" beside "Añadir elemento" opens an empty box while the device setting **Escritura a mano** is on (`appStore.handwriting`, off by default); the box exists only in the editor until its first stroke writes `ink`. Handwriting a Card already has always shows, setting or not.
+- **Box coordinates.** Points are stored in a box 1000 units wide (`INK_WIDTH`) and `height` tall (400 new, +250 when a stroke ends within 120 of the bottom, at most 2500). Screen points are scaled by the box's on-screen width, rounded and clamped to the box. So the same handwriting has the same layout in a 600 px editor, a phone sheet and a 236 px Card.
+- **Which pointer draws** (`input.ts`): the pen and the mouse always; the finger until the box sees a pen (`penSeen`, per editor: the body is keyed by Card, so it resets when the editor closes). A pen landing during a finger stroke discards that stroke (the palm lands first). A finger after a pen is ignored without `preventDefault`. A right click does not draw.
+- **One stroke.** `pointerdown` → `preventDefault()` and `setPointerCapture`, so the stroke keeps its moves after leaving the box and nothing under it reacts (the Sheet closes only on a press that starts and ends on its scrim). `pointermove` appends `getCoalescedEvents()` points to a ref (skipping moves under 2 units) and redraws the live path in one `requestAnimationFrame`; no store write per move. `pointerup` simplifies the stroke (RDP, 0.8 units), checks the 12 000-point limit (`addStroke`), grows the box, and calls `setInk` once. `pointercancel` drops it.
+- **Pressure.** A pen's `pressure` becomes 1–100; the mouse, the finger and a pen reporting 0 get 50 (even width). perfect-freehand turns the points into a filled outline (`render.ts`, cached per stroke array).
+- **Tools.** Deshacer (undo stack of previous `Ink` values, max 50, this editor session only), Borrador (a toggle; a pen's eraser end, `buttons & 32`, erases without it), Borrar todo (second tap). The eraser removes whole strokes within 14 units of its path, live, and commits once on `pointerup`. "Esta escritura está completa" shows when a stroke would pass the limit, until something is erased, cleared or undone.
+- **On the Desk.** `DeskCard` shows `InkView` after the text and before the Items, cut at 180 px with a fade; the far look shows it only for a Card with nothing else ([Far zoom](#far-zoom-semantic-zoom)). Tidy up needs no rule: it measures the rendered Card, handwriting included. Search never matches handwriting. A handwriting-only Card is named "Escritura a mano" (its `aria-label`, the Jar list in Mis logros) and is not empty: it is kept when its editor closes, counts as a note written and can go to the Jar.
 
 ## Navigation helpers
 

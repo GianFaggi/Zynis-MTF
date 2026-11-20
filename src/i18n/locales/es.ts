@@ -28,6 +28,7 @@ export const es = {
   themeSystem: 'Sistema',
   themeLight: 'Claro',
   themeDark: 'Oscuro',
+  handwritingOption: 'Escritura a mano',
 
   desk: 'Escritorio',
   work: 'Trabajo',
@@ -49,6 +50,15 @@ export const es = {
   delete: 'Borrar',
   deleteConfirm: '¿Borrar? Tocá otra vez',
   save: 'Guardar',
+
+  handwriting: 'Escritura a mano',
+  addHandwriting: 'A mano',
+  inkBox: 'Espacio para escribir a mano',
+  inkUndo: 'Deshacer',
+  inkEraser: 'Borrador',
+  inkClear: 'Borrar todo',
+  inkClearConfirm: '¿Borrar todo? Tocá otra vez',
+  inkFull: 'Esta escritura está completa',
 
   areas: 'Áreas',
   seeAll: 'Ver todo',
