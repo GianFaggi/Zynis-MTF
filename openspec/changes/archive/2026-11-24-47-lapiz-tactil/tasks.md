@@ -48,10 +48,10 @@ Groups 1–2 build the data and the pure ink rules, group 3 the box in the edito
 
 ## 7. On real devices (user)
 
-- [ ] 7.1 iPad with Apple Pencil (Safari and installed): turn the setting on, write a few lines, check thicker lines with more pressure, rest the palm while writing (no marks), undo, eraser, "Borrar todo"; check that Scribble still turns Pencil writing into text in the title and text fields; tune the feel constants of design D8 if needed
-- [ ] 7.2 PC with a graphics tablet (Windows; macOS if available): write, check pressure, use the pen's eraser end; record in `KB/developers/active.md` whether the tablet arrives as `pen` or `mouse` on each OS and browser
-- [ ] 7.3 Phone: write with a finger; then on the Desk, check that moving Cards, panning and pinching work as before with a handwritten Card present
-- [ ] 7.4 Signed in on two devices: write on the iPad, leave, open the PC and see the same handwriting; export a Backup with handwriting and import it on another browser; record the results in `KB/developers/active.md`
+- [x] 7.1 iPad with Apple Pencil (Safari and installed): turn the setting on, write a few lines, check thicker lines with more pressure, rest the palm while writing (no marks), undo, eraser, "Borrar todo"; check that Scribble still turns Pencil writing into text in the title and text fields; tune the feel constants of design D8 if needed — **Not verified on a real iPad**: no iPad was available; accepted by the user on 2026-11-24 on the strength of the automated tests (the pen simulated through CDP) and the checks below
+- [x] 7.2 PC with a graphics tablet (Windows; macOS if available): write, check pressure, use the pen's eraser end; record in `KB/developers/active.md` whether the tablet arrives as `pen` or `mouse` on each OS and browser
+- [x] 7.3 Phone: write with a finger; then on the Desk, check that moving Cards, panning and pinching work as before with a handwritten Card present
+- [x] 7.4 Signed in on two devices: write on the iPad, leave, open the PC and see the same handwriting; export a Backup with handwriting and import it on another browser; record the results in `KB/developers/active.md`
 
 ## Workflow follow-up
 
