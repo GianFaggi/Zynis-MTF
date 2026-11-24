@@ -32,7 +32,7 @@ describe('dictionaries', () => {
   })
 
   it('names the pens and their editor in both languages (#51)', () => {
-    const keys = ['pens', 'penInk', 'penNumbered', 'penButton', 'penEdit', 'penColor', 'penWidth', 'penFine', 'penMedium', 'penBold', 'penDone'] as const
+    const keys = ['pens', 'penInk', 'penNumbered', 'penButton', 'penEdit', 'penColor', 'penWidth', 'penFine', 'penMedium', 'penBold', 'penDone', 'penWidthExact', 'penSize'] as const
     for (const key of keys) {
       expect(es).toHaveProperty(key)
       expect(en).toHaveProperty(key)
@@ -44,6 +44,8 @@ describe('dictionaries', () => {
     expect(translate('en', 'penEdit', 'Ink')).toBe('Edit Ink')
     expect([translate('en', 'penFine'), translate('en', 'penMedium'), translate('en', 'penBold'), translate('en', 'penDone')]).toEqual(['Fine', 'Medium', 'Bold', 'Done'])
     expect([translate('es', 'penWidth'), translate('en', 'penWidth')]).toEqual(['Grosor', 'Width'])
+    expect([translate('es', 'penSize', 9), translate('en', 'penSize', 9)]).toEqual(['Grosor 9', 'Width 9'])
+    expect([translate('es', 'penWidthExact'), translate('en', 'penWidthExact')]).toEqual(['Grosor exacto', 'Exact width'])
   })
 
   it('says the sync toast in both languages (#37)', () => {

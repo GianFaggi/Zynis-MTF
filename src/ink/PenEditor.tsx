@@ -3,6 +3,7 @@ import { Button } from '../components/ui/Button'
 import { Segmented } from '../components/ui/Segmented'
 import { useT } from '../i18n'
 import { useAppStore } from '../store/appStore'
+import { INK_SIZE_SLIDER } from './constants'
 import { PEN_WIDTHS, penName, penWidth, type PenWidth } from './pens'
 
 type PenEditorProps = {
@@ -12,7 +13,7 @@ type PenEditorProps = {
 /**
  * The chosen pen's editor (#51, design D6): a small panel above the tray with the pen's color
  * (the browser's own `<input type="color">`, any color; not for Tinta, which follows the theme)
- * and its width. Changes apply at once, through `editPen`. It closes on "Listo", on Esc (caught
+ * and its width: a preset, or any step between them on a slider. Changes apply at once, through `editPen`. It closes on "Listo", on Esc (caught
  * before the Card editor's Sheet sees it), and on a press anywhere outside it but the tray.
  */
 export function PenEditor({ onClose }: PenEditorProps) {
@@ -78,15 +79,29 @@ export function PenEditor({ onClose }: PenEditorProps) {
         </label>
       )}
       <div className="flex flex-col gap-1.5">
-        <span aria-hidden="true" className="text-[13px] text-pencil">
+        <span aria-hidden="true" className="flex justify-between text-[13px] text-pencil">
           {t('penWidth')}
+          <span data-pen-size="" className="tabular-nums">
+            {pen.size}
+          </span>
         </span>
         <Segmented<PenWidth>
           label={t('penWidth')}
           options={PEN_WIDTHS.map((preset) => ({ value: preset.width, label: t(preset.label) }))}
-          // A size from before a retune matches no preset: none shows as pressed until one is picked.
+          // A step between presets matches none: none shows as pressed until one is picked.
           value={width as PenWidth}
           onChange={(value) => edit(index, { size: PEN_WIDTHS.find((preset) => preset.width === value)!.size })}
+        />
+        {/* Steps between the presets (design D2). Ink, never the accent: this is MTF's own UI. */}
+        <input
+          type="range"
+          aria-label={t('penWidthExact')}
+          min={INK_SIZE_SLIDER.min}
+          max={INK_SIZE_SLIDER.max}
+          step={INK_SIZE_SLIDER.step}
+          value={pen.size}
+          onChange={(event) => edit(index, { size: Number(event.target.value) })}
+          className="h-8 w-full cursor-pointer slider-ink"
         />
       </div>
       <div className="flex justify-end">

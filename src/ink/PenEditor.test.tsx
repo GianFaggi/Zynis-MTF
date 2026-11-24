@@ -47,6 +47,33 @@ describe('PenEditor', () => {
     expect(useAppStore.getState().pens.pens[0].size).toBe(4)
   })
 
+  it('the slider sets any step between the presets, and then no preset shows as pressed (design D2)', () => {
+    renderEditor(1)
+    const slider = screen.getByRole('slider', { name: 'Grosor exacto' })
+    expect(slider).toHaveAttribute('min', '2')
+    expect(slider).toHaveAttribute('max', '20')
+    expect(slider).toHaveValue('7')
+    fireEvent.change(slider, { target: { value: '9' } })
+    expect(useAppStore.getState().pens.pens[1]).toEqual({ color: '#3a78c2', size: 9 })
+    expect(JSON.parse(localStorage.getItem(PENS_KEY)!).pens[1].size).toBe(9)
+    for (const name of ['Fino', 'Medio', 'Grueso']) expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false')
+    expect(document.querySelector('[data-pen-size]')).toHaveTextContent('9')
+  })
+
+  it('a preset moves the slider to its step', async () => {
+    renderEditor(0)
+    fireEvent.change(screen.getByRole('slider', { name: 'Grosor exacto' }), { target: { value: '15' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Grueso' }))
+    expect(screen.getByRole('slider', { name: 'Grosor exacto' })).toHaveValue('12')
+    expect(screen.getByRole('button', { name: 'Grueso' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('never uses the accent', () => {
+    renderEditor(1)
+    const dialog = screen.getByRole('dialog')
+    for (const element of [dialog, ...dialog.querySelectorAll('*')]) expect(element.getAttribute('class') ?? '').not.toMatch(/accent/)
+  })
+
   it('closes with "Listo"', async () => {
     const { onClose } = renderEditor(1)
     await userEvent.click(screen.getByRole('button', { name: 'Listo' }))
@@ -84,5 +111,6 @@ describe('PenEditor', () => {
     expect(screen.getByRole('dialog', { name: 'Edit Ink' })).toBeInTheDocument()
     for (const name of ['Fine', 'Medium', 'Bold', 'Done']) expect(screen.getByRole('button', { name })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Width' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Exact width' })).toBeInTheDocument()
   })
 })
