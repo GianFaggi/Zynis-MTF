@@ -65,7 +65,7 @@ Group 1 builds the data, the pure style rules and the device key. Group 2 draws 
 - [x] 5.1 Add a section on `<input type="color">` (what it opens on each OS, why it needs no library, its `#rrggbb` value) and the parallel `styles` list to `aprendizaje/escritura-a-mano.md`, in Spanish.
 - [x] 5.2 Update `KB/roadmap.md` (#51 with a summary) and `KB/developers/active.md` (modified files). Verify that every link in the edited KBs resolves.
 - [x] 5.3 Run `command npm test`, `command npm run lint`, `command npm run build` and `command npm run test:e2e`. Verify that all pass and that `openspec validate 51-lapices-color-grosor --strict` is valid.
-- [ ] 5.4 (user) Phone: choose and edit pens with the finger, drag the width slider, pick a color in the system picker, write, check the editor does not hide what is being written, reload, and switch to the dark theme. PC with the graphics tablet: pressure within each width, the eraser end on a Grueso stroke. Signed in on two devices: colored handwriting travels and the pens stay on each device. Record the results, and any tuning of the default colors or of the Fino / Grueso sizes, in `KB/developers/active.md`.
+- [x] 5.4 (user) Phone: choose and edit pens with the finger, drag the width slider, pick a color in the system picker, write, check the editor does not hide what is being written, reload, and switch to the dark theme. PC with the graphics tablet: pressure within each width, the eraser end on a Grueso stroke. Signed in on two devices: colored handwriting travels and the pens stay on each device. Record the results, and any tuning of the default colors or of the Fino / Grueso sizes, in `KB/developers/active.md`.
 
 ## 6. Width steps (added after the first merge)
 

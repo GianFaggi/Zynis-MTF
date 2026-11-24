@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: What a valid Backup is
-Import SHALL accept a file only when it is an MTF Backup whose schema version MTF understands and whose Areas, Cards, Items and win events all have a valid shape: unique ids, the expected fields with the expected types, Area colors from the known set, every Card in an Area of the file, a well-formed handwriting on every Card that has one (with a well-formed style on each stroke when the handwriting carries styles), and at least one Area. A Card without handwriting, and handwriting without styles, SHALL be valid. An older version SHALL be migrated to the current one.
+Import SHALL accept a file only when it is an MTF Backup whose schema version MTF understands and whose Areas, Cards, Items and win events all have a valid shape: unique ids, the expected fields with the expected types, Area colors from the known set, every Card in an Area of the file, well-formed handwriting (stroke styles included) on every Card that has one, and at least one Area. A Card without handwriting SHALL be valid. An older version SHALL be migrated to the current one.
 
 #### Scenario: Valid Backup accepted
 - **WHEN** the user picks a Backup exported by this version of MTF
