@@ -19,11 +19,19 @@ The user SHALL be able to create a Card with the floating `+` button, which plac
 - **THEN** a new Card appears where they double-clicked and belongs to Recordar
 
 ### Requirement: Empty new Cards are discarded
-When the editor of a Card closes and the Card has no title, no text and no Item with text, the Card SHALL be removed instead of left blank on the Desk.
+When the editor of a Card closes and the Card has no title, no text, no Item with text and no handwriting, the Card SHALL be removed instead of left blank on the Desk. A Card is empty, for this and for the Jar, only when it has none of the four.
 
 #### Scenario: Close without writing
 - **WHEN** the user creates a Card and closes the editor without writing anything
 - **THEN** no new Card remains on the Desk
+
+#### Scenario: Only handwriting
+- **WHEN** the user creates a Card, writes only in its handwriting box and closes the editor
+- **THEN** the Card stays on the Desk and counts as a note written
+
+#### Scenario: Only handwriting goes to the Jar
+- **WHEN** a Card has only handwriting and the user opens its editor
+- **THEN** "Llevar al frasco" is available
 
 ### Requirement: Edit a Card
 Tapping or clicking a Card, or pressing `Enter` on a focused Card, SHALL open it in the editor. The editor SHALL edit the title, the free text and the checklist, show the Card's Area color, and save every change as it is made. It SHALL close with its close button, its "Guardar" (Save) button, `Esc` and by tapping outside it. The button is named Save, not Done, so it never reads as finishing the Card.
@@ -64,11 +72,19 @@ In the editor the user SHALL be able to change an Item's text, check or uncheck 
 - **THEN** no empty Item remains
 
 ### Requirement: Card on the Desk
-A Card on the Desk SHALL show its title, its text (shortened when long), up to five Items with a "+N más" line for the rest, the number of checked Items over the total when it has Items, and a pin mark when pinned. It SHALL be tinted with its Area's color. A finished Card SHALL show a "Llevala al frasco" chip in the accent color in place of the checked count, and SHALL stand out with the accent: a warmed fill, an accent border with a soft halo, its title in the accent and a seal with a check on its corner, with none of its content faded. Cards in the Jar SHALL NOT be shown on the Desk.
+A Card on the Desk SHALL show its title, its text (shortened when long), its handwriting scaled down to the Card's width (cut off when tall), up to five Items with a "+N más" line for the rest, the number of checked Items over the total when it has Items, and a pin mark when pinned. It SHALL be tinted with its Area's color. A finished Card SHALL show a "Llevala al frasco" chip in the accent color in place of the checked count, and SHALL stand out with the accent: a warmed fill, an accent border with a soft halo, its title in the accent and a seal with a check on its corner, with none of its content faded. Cards in the Jar SHALL NOT be shown on the Desk.
 
 #### Scenario: Long checklist
 - **WHEN** a Card has 7 Items, 2 of them checked
 - **THEN** it shows the first 5 Items, "+2 más" and "2/7"
+
+#### Scenario: Handwriting on the Card
+- **WHEN** a Card has a title, text and handwriting
+- **THEN** the Card shows the title, then the text, then the handwriting scaled down to the Card's width, then its Items
+
+#### Scenario: Tall handwriting
+- **WHEN** a Card's handwriting is much taller than it is wide
+- **THEN** the Card shows its top part and fades it out, and the editor shows all of it
 
 #### Scenario: Finished Card chip
 - **WHEN** every Item of a Card is checked
