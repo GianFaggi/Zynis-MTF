@@ -129,6 +129,12 @@ test.describe('desktop', () => {
     await editor(page).getByRole('button', { name: 'Deshacer' }).click()
     expect(await storedStrokes(page, 'trip')).toHaveLength(1)
 
+    // The keyboard does the same: Ctrl+Z takes back the stroke just drawn.
+    await mouseStroke(page, await inBox(page, [[0.1, 0.6], [0.4, 0.6]]))
+    expect(await storedStrokes(page, 'trip')).toHaveLength(2)
+    await page.keyboard.press('Control+z')
+    expect(await storedStrokes(page, 'trip')).toHaveLength(1)
+
     await editor(page).getByRole('button', { name: 'Borrar todo' }).click()
     expect(await storedStrokes(page, 'trip')).toHaveLength(1)
     await editor(page).getByRole('button', { name: '¿Borrar todo? Tocá otra vez' }).click()

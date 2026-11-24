@@ -78,6 +78,8 @@ The first part shipped in PR #52. This group runs on `feat/51-grosor-tramos`, an
   - the slider reads "Exact width" in English.
 - [x] 6.2 Extend `e2e/handwriting.spec.ts`: set a pen's slider to a step between presets, draw, reload, and check that the stored stroke has that size. Update `KB/frontend/design-system.md`, `KB/frontend/testing.md`, `KB/developers/active.md` and `aprendizaje/escritura-a-mano.md` (`<input type="range">`). Run `command npm test`, `command npm run lint`, `command npm run build` and `command npm run test:e2e`, and verify that `openspec validate 51-lapices-color-grosor --strict` is valid.
 
+- [x] 6.3 Make Ctrl+Z / ⌘Z do "Deshacer" while the box is shown, except with the focus in a text field (asked for during the first device check). Verify `InkBox.test.tsx` (Ctrl+Z and ⌘Z take back the last stroke; in a text input or textarea, with Shift, or with nothing to undo, nothing happens to the ink; it works with the pen slider focused) and the `undo and "Borrar todo"` e2e case.
+
 ## Workflow follow-up
 
 - Group 5.4 can run on the Vercel preview of the PR, except the sync half, which needs an origin the API's CORS accepts. If the preview is refused, run that half after the merge on `mtf.zynis.com.ar` and archive in a follow-up PR, as #47 did. Otherwise `/opsx:archive` runs on the ticket branch, so the archive reaches `main` in the same PR.
