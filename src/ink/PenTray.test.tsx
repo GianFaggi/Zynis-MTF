@@ -70,6 +70,14 @@ describe('PenTray', () => {
     expect(screen.getByRole('button', { name: 'Lápiz 2, Grueso' })).toBeInTheDocument()
   })
 
+  it('names a width between the presets by its number, never by the nearest preset (design D2)', () => {
+    useAppStore.getState().editPen(1, { size: 9 })
+    useAppStore.getState().editPen(0, { size: 2 })
+    renderTray()
+    expect(screen.getByRole('button', { name: 'Lápiz 2, Grosor 9' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tinta, Grosor 2' })).toBeInTheDocument()
+  })
+
   it('shows the pencil badge only on the chosen pen, and never uses the accent', () => {
     const { container } = renderTray()
     const badges = container.querySelectorAll('[data-pen-badge]')

@@ -18,7 +18,7 @@ The handwriting box SHALL offer four pens: "Tinta" (EN "Ink") first, and three m
 - **THEN** the eraser is off, that pen is chosen and the next stroke draws
 
 ### Requirement: Editing a pen
-A tap on the chosen pen SHALL open its editor, with the pen's width as "Fino", "Medio" or "Grueso" (EN "Fine", "Medium", "Bold") and, except for Tinta, its color, picked freely from any color. A change SHALL apply to the pen at once and to the strokes drawn after it. The editor SHALL close with "Listo" (EN "Done"), Esc, a press outside it, or a stroke in the box. Tinta's color SHALL NOT be editable: it always follows the theme.
+A tap on the chosen pen SHALL open its editor, with the pen's width as "Fino", "Medio" or "Grueso" (EN "Fine", "Medium", "Bold"), or set step by step on a slider from 2 to 20, and, except for Tinta, its color, picked freely from any color. A change SHALL apply to the pen at once and to the strokes drawn after it. The editor SHALL close with "Listo" (EN "Done"), Esc, a press outside it, or a stroke in the box. Tinta's color SHALL NOT be editable: it always follows the theme.
 
 #### Scenario: Change a pen's color
 - **WHEN** the user taps the chosen Lápiz 2, picks green and writes
@@ -27,6 +27,14 @@ A tap on the chosen pen SHALL open its editor, with the pen's width as "Fino", "
 #### Scenario: Change Tinta's width
 - **WHEN** the user taps the chosen Tinta and picks "Grueso"
 - **THEN** the editor offers no color, and the next Tinta strokes are thicker
+
+#### Scenario: Fine-tune the width step by step
+- **WHEN** the user opens the chosen Lápiz 2's editor and moves the width slider one step past "Medio"
+- **THEN** no preset shows as chosen, the editor shows the new width, and the next stroke is a little thicker than a "Medio" one
+
+#### Scenario: A preset moves the slider
+- **WHEN** the slider is between presets and the user picks "Grueso"
+- **THEN** the slider moves to Grueso's step and "Grueso" shows as chosen
 
 #### Scenario: A tap on another pen does not edit
 - **WHEN** Tinta is chosen and the user taps Lápiz 2 once
@@ -133,7 +141,7 @@ The handwriting box SHALL offer "Deshacer" (EN "Undo"), which takes back the las
 - **THEN** the stroke is removed and the pen keeps its new color
 
 ### Requirement: Handwriting in both languages
-Every label of this capability (the setting, "A mano", "Deshacer", "Borrador", "Borrar todo", its confirmation, the full message, the box's accessible name, the pens' names, the pen editor's title, color, widths and "Listo") SHALL be shown in Spanish or English, following the UI language.
+Every label of this capability (the setting, "A mano", "Deshacer", "Borrador", "Borrar todo", its confirmation, the full message, the box's accessible name, the pens' names, the pen editor's title, color, widths, its width slider and "Listo") SHALL be shown in Spanish or English, following the UI language.
 
 #### Scenario: English
 - **WHEN** the UI language is English and the user opens a Card with handwriting

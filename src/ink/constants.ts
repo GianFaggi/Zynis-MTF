@@ -47,6 +47,9 @@ export const DEFAULT_STYLE: InkStyle = { color: null, size: INK_SIZES.medium }
 export const INK_MIN_SIZE = 1
 export const INK_MAX_SIZE = 40
 
+/** The editor's width slider (#51, design D2): steps of 1 between the presets, which sit on it at 4, 7 and 12. */
+export const INK_SIZE_SLIDER = { min: 2, max: 20, step: 1 } as const
+
 /**
  * The pens on a new device (#51, design D5): Tinta, then a blue, a red and a green, all Medio.
  * Mid-lightness colors that read on both papers; tunable after trying them on a device.

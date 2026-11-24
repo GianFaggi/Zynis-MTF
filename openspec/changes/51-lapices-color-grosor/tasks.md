@@ -65,7 +65,18 @@ Group 1 builds the data, the pure style rules and the device key. Group 2 draws 
 - [x] 5.1 Add a section on `<input type="color">` (what it opens on each OS, why it needs no library, its `#rrggbb` value) and the parallel `styles` list to `aprendizaje/escritura-a-mano.md`, in Spanish.
 - [x] 5.2 Update `KB/roadmap.md` (#51 with a summary) and `KB/developers/active.md` (modified files). Verify that every link in the edited KBs resolves.
 - [x] 5.3 Run `command npm test`, `command npm run lint`, `command npm run build` and `command npm run test:e2e`. Verify that all pass and that `openspec validate 51-lapices-color-grosor --strict` is valid.
-- [ ] 5.4 (user) Phone: choose and edit pens with the finger, pick a color in the system picker, write, check the editor does not hide what is being written, reload, and switch to the dark theme. PC with the graphics tablet: pressure within each width, the eraser end on a Grueso stroke. Signed in on two devices: colored handwriting travels and the pens stay on each device. Record the results, and any tuning of the default colors or of the Fino / Grueso sizes, in `KB/developers/active.md`.
+- [ ] 5.4 (user) Phone: choose and edit pens with the finger, drag the width slider, pick a color in the system picker, write, check the editor does not hide what is being written, reload, and switch to the dark theme. PC with the graphics tablet: pressure within each width, the eraser end on a Grueso stroke. Signed in on two devices: colored handwriting travels and the pens stay on each device. Record the results, and any tuning of the default colors or of the Fino / Grueso sizes, in `KB/developers/active.md`.
+
+## 6. Width steps (added after the first merge)
+
+The first part shipped in PR #52. This group runs on `feat/51-grosor-tramos`, and that PR also carries the archive.
+
+- [x] 6.1 Add `INK_SIZE_SLIDER` (2–20, step 1) to `src/ink/constants.ts`. Make `widthLabel` name a preset only when the size is one, and its number otherwise ("Grosor 9" / "Width 9"). Add a native `<input type="range">` ("Grosor exacto" / "Exact width", `accent-color` ink) under the presets in `PenEditor`, with the current size beside the caption (design D2, D6). Verify `PenEditor.test.tsx`, `PenTray.test.tsx` and `i18n.test.ts`:
+  - moving the slider to 9 sets size 9, and leaves no preset pressed;
+  - "Grueso" moves the slider to 12;
+  - a pen at size 9 is named "Lápiz 2, Grosor 9";
+  - the slider reads "Exact width" in English.
+- [x] 6.2 Extend `e2e/handwriting.spec.ts`: set a pen's slider to a step between presets, draw, reload, and check that the stored stroke has that size. Update `KB/frontend/design-system.md`, `KB/frontend/testing.md`, `KB/developers/active.md` and `aprendizaje/escritura-a-mano.md` (`<input type="range">`). Run `command npm test`, `command npm run lint`, `command npm run build` and `command npm run test:e2e`, and verify that `openspec validate 51-lapices-color-grosor --strict` is valid.
 
 ## Workflow follow-up
 

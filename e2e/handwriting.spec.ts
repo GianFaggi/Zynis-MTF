@@ -278,6 +278,21 @@ test.describe('desktop', () => {
       { color: '#8a2be2', size: 12 },
       { color: null, size: 7 },
     ])
+
+    // A step between the presets, with the slider's own keys: Medio 7 → 9, kept by the next stroke.
+    await penButton(page, 'Tinta').click()
+    const slider = page.getByRole('dialog', { name: 'Editar Tinta' }).getByRole('slider', { name: 'Grosor exacto' })
+    await slider.press('ArrowRight')
+    await slider.press('ArrowRight')
+    await expect(slider).toHaveValue('9')
+    await expect(penButton(page, 'Tinta')).toHaveAccessibleName('Tinta, Grosor 9')
+    await mouseStroke(page, await inBox(page, [[0.6, 0.15], [0.9, 0.15]]))
+    await expect(slider).toBeHidden()
+    expect((await storedInk(page, 'trip'))!.styles).toEqual([
+      { color: '#8a2be2', size: 12 },
+      { color: null, size: 7 },
+      { color: null, size: 9 },
+    ])
   })
 
   test('pens: Lápiz 3 with a pen’s pressure, back from the eraser, and through a Backup to a fresh device (#51)', async ({ page, browser, baseURL }) => {

@@ -66,6 +66,8 @@ export const es = {
   penEdit: (pen: string) => `Editar ${pen}`,
   penColor: 'Color',
   penWidth: 'Grosor',
+  penWidthExact: 'Grosor exacto',
+  penSize: (size: number) => `Grosor ${size}`,
   penFine: 'Fino',
   penMedium: 'Medio',
   penBold: 'Grueso',

@@ -364,3 +364,12 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 0 0.15 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 220px 220px;
 }
+
+/*
+ * A native slider drawn in ink (#51: the pen editor's width steps). `accent-color` is the CSS
+ * property that tints native controls, unrelated to the --color-accent token, which is kept for
+ * wins: browsers default it to their own blue, so MTF's sliders set it to ink.
+ */
+@utility slider-ink {
+  accent-color: var(--color-ink);
+}

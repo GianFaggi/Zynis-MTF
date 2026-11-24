@@ -28,8 +28,8 @@ export function penWidth(size: number): PenWidth | undefined {
   return PEN_WIDTHS.find((preset) => preset.size === size)?.width
 }
 
-/** "Fino", "Medio", "Grueso"; the nearest preset's name for a size that matches none. */
+/** "Fino", "Medio", "Grueso" for a preset; "Grosor 9" for a step between them (design D2). */
 export function widthLabel(t: Translate, size: number): string {
-  const nearest = PEN_WIDTHS.reduce((best, preset) => (Math.abs(preset.size - size) < Math.abs(best.size - size) ? preset : best))
-  return t(nearest.label)
+  const preset = PEN_WIDTHS.find((candidate) => candidate.size === size)
+  return preset ? t(preset.label) : t('penSize', size)
 }

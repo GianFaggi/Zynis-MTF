@@ -66,6 +66,8 @@ export const en: Messages = {
   penEdit: (pen: string) => `Edit ${pen}`,
   penColor: 'Color',
   penWidth: 'Width',
+  penWidthExact: 'Exact width',
+  penSize: (size: number) => `Width ${size}`,
   penFine: 'Fine',
   penMedium: 'Medium',
   penBold: 'Bold',
