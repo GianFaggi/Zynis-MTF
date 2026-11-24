@@ -6,7 +6,7 @@ Lets the same Desk (Areas, Cards with their Items, and Wins) travel between the 
 ## Requirements
 
 ### Requirement: What travels
-Sync SHALL carry every Area, every Card (on the Desk and in the Jar, with its Items and its handwriting) and every Win of the signed-in Account. It SHALL NOT carry device settings: the language, the theme, Mi disposición, Frasco por área, Escritura a mano, the Welcome Card flag, the install nudge and the session stay on each device.
+Sync SHALL carry every Area, every Card (on the Desk and in the Jar, with its Items and its handwriting, each stroke with its color and width) and every Win of the signed-in Account. It SHALL NOT carry device settings: the language, the theme, Mi disposición, Frasco por área, Escritura a mano, the pens, the Welcome Card flag, the install nudge and the session stay on each device.
 
 #### Scenario: A Card reaches the other device
 - **WHEN** the user writes a Card on the phone, leaves MTF, and then opens MTF on the PC with the same Account
@@ -15,6 +15,10 @@ Sync SHALL carry every Area, every Card (on the Desk and in the Jar, with its It
 #### Scenario: Handwriting reaches the other device
 - **WHEN** the user writes by hand in a Card on the iPad, leaves MTF, and then opens MTF on the PC with the same Account
 - **THEN** the Card on the PC shows the same handwriting
+
+#### Scenario: Colored handwriting reaches the other device
+- **WHEN** the user writes in a Card with a red pen and a thick Tinta on the iPad, leaves MTF, and then opens MTF on the PC
+- **THEN** the Card on the PC shows the same strokes in the same color and width
 
 #### Scenario: Wins reach the other device
 - **WHEN** the user checks an Item on the phone and later opens MTF on the PC
@@ -27,6 +31,10 @@ Sync SHALL carry every Area, every Card (on the Desk and in the Jar, with its It
 #### Scenario: The handwriting setting stays on each device
 - **WHEN** the user turns "Escritura a mano" on on the iPad and then opens MTF on the phone
 - **THEN** the phone keeps "Escritura a mano" as it was
+
+#### Scenario: The pens stay on each device
+- **WHEN** the user changes Lápiz 2 to green on the iPad and then opens MTF on the phone
+- **THEN** the phone's Lápiz 2 is as it was
 
 ### Requirement: Only with a session
 Sync SHALL run only while the device has a session. With no session MTF SHALL make no sync request, and signing out SHALL stop sync and leave every Card, Area and Win on the device.
