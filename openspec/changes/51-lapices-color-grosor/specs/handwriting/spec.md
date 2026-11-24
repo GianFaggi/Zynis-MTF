@@ -122,7 +122,15 @@ Handwriting SHALL be kept and shown as drawn. Strokes drawn with Tinta SHALL use
 - **THEN** that Card is not a match
 
 ### Requirement: Undo
-The handwriting box SHALL offer "Deshacer" (EN "Undo"), which takes back the last stroke drawn, erased or cleared since the editor opened, one at a time. It SHALL be disabled when there is nothing to take back. Choosing or editing a pen SHALL NOT be a step to take back.
+The handwriting box SHALL offer "Deshacer" (EN "Undo"), which takes back the last stroke drawn, erased or cleared since the editor opened, one at a time. It SHALL be disabled when there is nothing to take back. Choosing or editing a pen SHALL NOT be a step to take back. On a keyboard, Ctrl+Z (⌘Z on a Mac) SHALL do the same while the box is shown, except when the focus is in a text field, where it keeps undoing what was typed.
+
+#### Scenario: Undo with the keyboard
+- **WHEN** the user draws two strokes with the mouse and presses Ctrl+Z
+- **THEN** only the first stroke remains
+
+#### Scenario: Ctrl+Z in a text field undoes typing
+- **WHEN** the user has drawn a stroke, types in the Card's text and presses Ctrl+Z there
+- **THEN** the typing is undone and the stroke stays
 
 #### Scenario: Undo a stroke
 - **WHEN** the user draws two strokes and chooses "Deshacer"

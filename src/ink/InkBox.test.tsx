@@ -160,6 +160,53 @@ describe('InkBox', () => {
     expect(undo).toBeDisabled()
   })
 
+  it('Ctrl+Z and ⌘Z take back the last stroke, like "Deshacer"', async () => {
+    render(<Harness />)
+    stroke(mouse, [[10, 10], [100, 10]])
+    stroke(mouse, [[10, 60], [100, 60]])
+    const first = storedInk()!.strokes[0]
+
+    await userEvent.keyboard('{Control>}z{/Control}')
+    expect(storedInk()!.strokes).toEqual([first])
+    await userEvent.keyboard('{Meta>}z{/Meta}')
+    expect(storedInk()!.strokes).toEqual([])
+  })
+
+  it('Ctrl+Z while typing in a text field is left to the field; with Shift or nothing to undo it does nothing', async () => {
+    render(
+      <>
+        <input aria-label="Título" />
+        <textarea aria-label="Texto" />
+        <Harness />
+      </>,
+    )
+    stroke(mouse, [[10, 10], [100, 10]])
+    const drawn = storedInk()!.strokes
+
+    for (const name of ['Título', 'Texto']) {
+      await userEvent.click(screen.getByLabelText(name))
+      await userEvent.keyboard('{Control>}z{/Control}')
+      expect(storedInk()!.strokes).toEqual(drawn)
+    }
+    ;(document.activeElement as HTMLElement).blur()
+    await userEvent.keyboard('{Control>}{Shift>}z{/Shift}{/Control}')
+    expect(storedInk()!.strokes).toEqual(drawn)
+
+    await userEvent.keyboard('{Control>}z{/Control}')
+    expect(storedInk()!.strokes).toEqual([])
+    const unhandled = fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    expect(unhandled).toBe(true)
+  })
+
+  it('Ctrl+Z works with the pen editor’s slider focused, which has no undo of its own', async () => {
+    render(<Harness />)
+    stroke(mouse, [[10, 10], [100, 10]])
+    await userEvent.click(screen.getByRole('button', { name: 'Tinta, Medio' }))
+    screen.getByRole('slider', { name: 'Grosor exacto' }).focus()
+    await userEvent.keyboard('{Control>}z{/Control}')
+    expect(storedInk()!.strokes).toEqual([])
+  })
+
   it('the eraser removes the whole stroke it passes over, and choosing it again goes back to writing', async () => {
     render(<Harness />)
     stroke(mouse, [[10, 10], [100, 10]])

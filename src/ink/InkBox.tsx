@@ -1,5 +1,5 @@
 import { Eraser, Trash2, Undo2 } from 'lucide-react'
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useEffectEvent, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Button } from '../components/ui/Button'
 import { useT } from '../i18n'
 import { useAppStore } from '../store/appStore'
@@ -33,6 +33,21 @@ interface Live {
   styleOf: Map<readonly number[], InkStyle>
 }
 
+/** Inputs that do not type: Ctrl+Z there is free for the box. Every other input, and textareas, keep their own undo. */
+const NON_TEXT_INPUTS = new Set(['range', 'color', 'checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'image'])
+
+/** Whether a key pressed on `target` belongs to text being typed, whose Ctrl+Z is the browser's. */
+function typesText(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable || target instanceof HTMLTextAreaElement) return true
+  return target instanceof HTMLInputElement && !NON_TEXT_INPUTS.has(target.type)
+}
+
+/** Ctrl+Z, or ⌘Z on a Mac; never with Shift or Alt, which are other shortcuts. */
+function isUndoKey(event: KeyboardEvent): boolean {
+  return (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'z'
+}
+
 /** `strokes` (some of `ink`'s, after an erase) with the style each had in `styleOf`. */
 function keptInk(height: number, strokes: number[][], styleOf: Map<readonly number[], InkStyle>): Ink {
   return withStyles(height, strokes, strokes.map((stroke) => styleOf.get(stroke)!))
@@ -49,7 +64,8 @@ type InkBoxProps = {
  * the pen and the mouse always draw, the finger draws until the box sees a pen (`penSeen`,
  * reset with each editor, since the editor body is keyed by Card). A stroke follows its
  * pointer through pointer capture, is drawn live in an animation frame, and is written once,
- * on `pointerup`, through `setInk`. Undo keeps the previous `Ink` values of this session.
+ * on `pointerup`, through `setInk`. Undo keeps the previous `Ink` values of this session, and
+ * Ctrl+Z / ⌘Z does the same as its button unless the focus is typing text.
  * Each stroke is drawn and kept with the chosen pen's style (#51); an erase keeps the style
  * of every stroke left. Choosing or editing a pen is a device setting, never an undo step.
  */
@@ -190,6 +206,21 @@ export function InkBox({ cardId, ink: stored }: InkBoxProps) {
     setFull(false)
     setConfirmClear(false)
   }
+
+  // Ctrl+Z / ⌘Z is "Deshacer" while the box is on screen, unless the focus is typing text
+  // (the title, the text, an Item), which keeps the browser's own undo.
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    if (!isUndoKey(event) || event.defaultPrevented || typesText(event.target)) return
+    if (live.current || undo.length === 0) return
+    event.preventDefault()
+    undoLast()
+  })
+
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => onKeyDown(event)
+    window.addEventListener('keydown', listener)
+    return () => window.removeEventListener('keydown', listener)
+  }, [])
 
   const clearAll = () => {
     if (!confirmClear) return setConfirmClear(true)
