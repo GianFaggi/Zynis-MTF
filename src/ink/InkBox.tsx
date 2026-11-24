@@ -3,12 +3,15 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { Button } from '../components/ui/Button'
 import { useT } from '../i18n'
 import { useAppStore } from '../store/appStore'
-import type { Ink } from '../types'
+import type { Ink, InkStyle } from '../types'
 import { INK_INITIAL_HEIGHT, INK_UNDO_LIMIT, INK_WIDTH } from './constants'
 import { eraseSegment } from './erase'
 import { addStroke, appendPoint, inkPressure, toBoxPoint, type BoxRect } from './geometry'
 import { inkPointer, isEraserEnd, pointerDown, type InkPointer } from './input'
+import { PenEditor } from './PenEditor'
+import { PenTray } from './PenTray'
 import { inkPaths, strokePath } from './render'
+import { strokeStyles, withStyles } from './style'
 
 /** A box with nothing written yet. Shared and never mutated, like every `Ink`. */
 const EMPTY_INK: Ink = { height: INK_INITIAL_HEIGHT, strokes: [] }
@@ -20,11 +23,19 @@ interface Live {
   /** The box on screen when the stroke started. */
   rect: BoxRect
   erase: boolean
-  /** Drawing: the stroke's points so far. */
+  /** Drawing: the stroke's points so far, and the pen it is drawn with. */
   points: number[]
+  style: InkStyle
   /** Erasing: the strokes still standing, and where the eraser last was. */
   strokes: number[][]
   last: { x: number; y: number } | null
+  /** Erasing: each stroke's style when the pass started. Stroke arrays are unique and never mutated (#51, design D3). */
+  styleOf: Map<readonly number[], InkStyle>
+}
+
+/** `strokes` (some of `ink`'s, after an erase) with the style each had in `styleOf`. */
+function keptInk(height: number, strokes: number[][], styleOf: Map<readonly number[], InkStyle>): Ink {
+  return withStyles(height, strokes, strokes.map((stroke) => styleOf.get(stroke)!))
 }
 
 type InkBoxProps = {
@@ -39,20 +50,25 @@ type InkBoxProps = {
  * reset with each editor, since the editor body is keyed by Card). A stroke follows its
  * pointer through pointer capture, is drawn live in an animation frame, and is written once,
  * on `pointerup`, through `setInk`. Undo keeps the previous `Ink` values of this session.
+ * Each stroke is drawn and kept with the chosen pen's style (#51); an erase keeps the style
+ * of every stroke left. Choosing or editing a pen is a device setting, never an undo step.
  */
 export function InkBox({ cardId, ink: stored }: InkBoxProps) {
   const t = useT()
   const ink = stored ?? EMPTY_INK
+  const pen = useAppStore((state) => state.pens.pens[state.pens.chosen])
   const livePath = useRef<SVGPathElement>(null)
   const live = useRef<Live | null>(null)
   const frame = useRef(0)
   const penSeen = useRef(false)
   const [eraser, setEraser] = useState(false)
-  /** The strokes left while an eraser pass is live; `null` when none is. */
-  const [erasing, setErasing] = useState<number[][] | null>(null)
+  /** The handwriting left while an eraser pass is live; `null` when none is. */
+  const [erasing, setErasing] = useState<Ink | null>(null)
   const [undo, setUndo] = useState<Ink[]>([])
   const [confirmClear, setConfirmClear] = useState(false)
   const [full, setFull] = useState(false)
+  /** Whether the chosen pen's editor is open. */
+  const [editingPen, setEditingPen] = useState(false)
 
   useEffect(() => () => cancelAnimationFrame(frame.current), [])
 
@@ -67,7 +83,7 @@ export function InkBox({ cardId, ink: stored }: InkBoxProps) {
     frame.current = requestAnimationFrame(() => {
       frame.current = 0
       const current = live.current
-      livePath.current?.setAttribute('d', current && !current.erase ? strokePath(current.points, false) : '')
+      livePath.current?.setAttribute('d', current && !current.erase ? strokePath(current.points, false, current.style.size) : '')
     })
   }
 
@@ -91,7 +107,7 @@ export function InkBox({ cardId, ink: stored }: InkBoxProps) {
       const kept = eraseSegment(current.strokes, from.x, from.y, x, y)
       if (kept !== current.strokes) {
         current.strokes = kept
-        setErasing(kept)
+        setErasing(keptInk(ink.height, kept, current.styleOf))
       }
     }
   }
@@ -115,17 +131,24 @@ export function InkBox({ cardId, ink: stored }: InkBoxProps) {
     // No text selection, no iOS callout; capture keeps the stroke ours after it leaves the box.
     event.preventDefault()
     box.setPointerCapture(event.pointerId)
+    const erase = eraser || isEraserEnd(pointerType, event.buttons)
+    const styles = strokeStyles(ink)
     const current: Live = {
       pointerId: event.pointerId,
       pointerType,
       rect: { left, top, width },
-      erase: eraser || isEraserEnd(pointerType, event.buttons),
+      erase,
       points: [],
+      style: pen,
       strokes: ink.strokes,
       last: null,
+      styleOf: erase ? new Map(ink.strokes.map((stroke, index) => [stroke, styles[index]])) : new Map(),
     }
     live.current = current
+    if (pen.color) livePath.current?.setAttribute('fill', pen.color)
+    else livePath.current?.removeAttribute('fill')
     setConfirmClear(false)
+    setEditingPen(false)
     addPoints(current, [event.nativeEvent])
     drawLive()
   }
@@ -146,11 +169,11 @@ export function InkBox({ cardId, ink: stored }: InkBoxProps) {
     endLive()
     if (current.erase) {
       if (current.strokes === ink.strokes) return
-      commit({ ...ink, strokes: current.strokes })
+      commit(keptInk(ink.height, current.strokes, current.styleOf))
       setFull(false)
       return
     }
-    const next = addStroke(ink, current.points)
+    const next = addStroke(ink, current.points, current.style)
     if (next === null) return setFull(true)
     if (next !== ink) commit(next)
   }
@@ -175,7 +198,7 @@ export function InkBox({ cardId, ink: stored }: InkBoxProps) {
     setFull(false)
   }
 
-  const shown = erasing ? { ...ink, strokes: erasing } : ink
+  const shown = erasing ?? ink
 
   return (
     <div className="flex flex-col gap-2">
@@ -193,8 +216,8 @@ export function InkBox({ cardId, ink: stored }: InkBoxProps) {
         className="relative w-full cursor-crosshair touch-none rounded-xl bg-sheet/60 text-ink ring-1 ring-rule select-none [-webkit-touch-callout:none] data-eraser:cursor-cell"
       >
         <svg viewBox={`0 0 ${INK_WIDTH} ${ink.height}`} aria-hidden="true" focusable="false" className="absolute inset-0 size-full fill-current">
-          {inkPaths(shown).map((d, index) => (
-            <path key={index} d={d} />
+          {inkPaths(shown).map(({ d, color }, index) => (
+            <path key={index} d={d} fill={color ?? undefined} />
           ))}
           <path ref={livePath} />
         </svg>
@@ -204,7 +227,17 @@ export function InkBox({ cardId, ink: stored }: InkBoxProps) {
           {t('inkFull')}
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="relative flex flex-wrap items-center gap-2">
+        <PenTray
+          eraser={eraser}
+          onChoose={() => {
+            setEraser(false)
+            setEditingPen(false)
+            setConfirmClear(false)
+          }}
+          onEdit={() => setEditingPen(true)}
+        />
+        {editingPen && <PenEditor onClose={() => setEditingPen(false)} />}
         <Button onClick={undoLast} disabled={undo.length === 0}>
           <Undo2 size={15} aria-hidden="true" />
           {t('inkUndo')}

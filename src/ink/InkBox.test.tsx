@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { Sheet } from '../components/ui/Sheet'
 import { useAppStore } from '../store/appStore'
 import { makeCard } from '../test/fixtures'
 import { resetStores } from '../test/stores'
@@ -221,6 +222,94 @@ describe('InkBox', () => {
     expect(storedInk()!.strokes).toEqual([long, [20, 200, 50]])
   })
 
+  describe('pens (#51)', () => {
+    const red = { color: '#d0443a', size: 12 }
+    const green = { color: '#2f9a5e', size: 4 }
+
+    function withPen(index: 0 | 1 | 2 | 3, style: { color: string | null; size: number }) {
+      act(() => {
+        useAppStore.getState().editPen(index, style)
+        useAppStore.getState().choosePen(index)
+      })
+    }
+
+    it('a stroke with a red Lápiz 2 is committed with that pen’s style', () => {
+      render(<Harness />)
+      withPen(1, red)
+      stroke(mouse, [[10, 10], [100, 10]])
+      expect(storedInk()!.styles).toEqual([red])
+    })
+
+    it('draws the live stroke in the chosen pen’s color, and a Tinta one with no fill', () => {
+      const { container } = render(<Harness />)
+      withPen(1, red)
+      down(mouse, 10, 10)
+      const live = container.querySelector('svg')!.lastElementChild!
+      expect(live).toHaveAttribute('fill', '#d0443a')
+      up(mouse, 10, 10)
+
+      act(() => useAppStore.getState().choosePen(0))
+      down(mouse, 10, 50)
+      expect(live).not.toHaveAttribute('fill')
+      up(mouse, 10, 50)
+    })
+
+    it('a session only in Tinta commits handwriting with no styles key', () => {
+      render(<Harness />)
+      stroke(mouse, [[10, 10], [100, 10]])
+      stroke(pen, [[10, 60], [100, 60]])
+      expect(storedInk()).not.toHaveProperty('styles')
+    })
+
+    it('erasing the middle of three styled strokes keeps the other two with their own styles, and undo brings it back with its style', async () => {
+      render(<Harness />)
+      withPen(1, red)
+      stroke(mouse, [[10, 10], [100, 10]])
+      withPen(2, green)
+      stroke(mouse, [[10, 60], [100, 60]])
+      withPen(0, { color: null, size: 7 })
+      stroke(mouse, [[10, 110], [100, 110]])
+      const [top, middle, bottom] = storedInk()!.strokes
+      expect(storedInk()!.styles).toEqual([red, green, { color: null, size: 7 }])
+
+      await userEvent.click(screen.getByRole('button', { name: 'Borrador' }))
+      stroke(mouse, [[50, 50], [50, 70]])
+      expect(storedInk()).toEqual({ height: 400, strokes: [top, bottom], styles: [red, { color: null, size: 7 }] })
+
+      await userEvent.click(screen.getByRole('button', { name: 'Deshacer' }))
+      expect(storedInk()).toEqual({ height: 400, strokes: [top, middle, bottom], styles: [red, green, { color: null, size: 7 }] })
+    })
+
+    it('erasing every colored stroke leaves Tinta-only handwriting with no styles key', async () => {
+      render(<Harness />)
+      withPen(1, red)
+      stroke(mouse, [[10, 10], [100, 10]])
+      withPen(0, { color: null, size: 7 })
+      stroke(mouse, [[10, 60], [100, 60]])
+      await userEvent.click(screen.getByRole('button', { name: 'Borrador' }))
+      stroke(mouse, [[50, 0], [50, 30]])
+      expect(storedInk()).not.toHaveProperty('styles')
+      expect(storedInk()!.strokes).toHaveLength(1)
+    })
+
+    it('"Borrar todo" leaves no styles', async () => {
+      render(<Harness />)
+      withPen(1, red)
+      stroke(mouse, [[10, 10], [100, 10]])
+      await userEvent.click(screen.getByRole('button', { name: 'Borrar todo' }))
+      await userEvent.click(screen.getByRole('button', { name: '¿Borrar todo? Tocá otra vez' }))
+      expect(storedInk()).toEqual({ height: 400, strokes: [] })
+    })
+
+    it('over styles a version without pens left misaligned, a new stroke turns the earlier ones to Tinta', () => {
+      act(() => useAppStore.getState().setInk('c1', { height: 400, strokes: [[20, 20, 50]], styles: [red, green] }))
+      render(<Harness />)
+      withPen(1, red)
+      stroke(mouse, [[10, 60]])
+      expect(storedInk()!.styles).toEqual([{ color: null, size: 7 }, red])
+    })
+  })
+
   it('stops the system from selecting or scrolling, and never uses the accent', () => {
     const { container } = render(<Harness />)
     expect(box()).toHaveClass('touch-none', 'select-none', '[-webkit-touch-callout:none]')
@@ -233,5 +322,143 @@ describe('InkBox', () => {
     render(<Harness />)
     expect(screen.getByRole('img', { name: 'Space to write by hand' })).toBeInTheDocument()
     for (const name of ['Undo', 'Eraser', 'Clear all']) expect(screen.getByRole('button', { name })).toBeInTheDocument()
+  })
+
+  describe('the pen tray and editor (#51)', () => {
+    const tinta = () => screen.getByRole('button', { name: /^Tinta,/ })
+    const pen2 = () => screen.getByRole('button', { name: /^Lápiz 2,/ })
+    const pen3 = () => screen.getByRole('button', { name: /^Lápiz 3,/ })
+    const editor = () => screen.queryByRole('dialog')
+
+    it('the tray comes first in the tool row, before Deshacer', () => {
+      render(<Harness />)
+      const buttons = screen.getAllByRole('button').map((button) => button.getAttribute('aria-label') ?? button.textContent)
+      expect(buttons.slice(0, 5)).toEqual(['Tinta, Medio', 'Lápiz 2, Medio', 'Lápiz 3, Medio', 'Lápiz 4, Medio', 'Deshacer'])
+    })
+
+    it('tapping Lápiz 3 chooses it and the next stroke is drawn with it; tapping it again opens its editor', async () => {
+      render(<Harness />)
+      await userEvent.click(pen3())
+      expect(pen3()).toHaveAttribute('aria-pressed', 'true')
+      expect(editor()).toBeNull()
+      stroke(mouse, [[10, 10], [100, 10]])
+      expect(storedInk()!.styles).toEqual([{ color: '#d0443a', size: 7 }])
+
+      await userEvent.click(pen3())
+      expect(screen.getByRole('dialog', { name: 'Editar Lápiz 3' })).toBeInTheDocument()
+    })
+
+    it('a tap on a pen while the eraser is on turns the eraser off, opens no editor, and the next stroke draws', async () => {
+      render(<Harness />)
+      stroke(mouse, [[10, 10], [100, 10]])
+      await userEvent.click(screen.getByRole('button', { name: 'Borrador' }))
+      expect(tinta()).toHaveAttribute('aria-pressed', 'false')
+
+      await userEvent.click(tinta())
+      expect(screen.getByRole('button', { name: 'Borrador' })).toHaveAttribute('aria-pressed', 'false')
+      expect(tinta()).toHaveAttribute('aria-pressed', 'true')
+      expect(editor()).toBeNull()
+      stroke(mouse, [[10, 60], [100, 60]])
+      expect(storedInk()!.strokes).toHaveLength(2)
+    })
+
+    it('changing the color to green updates the pen’s dot and the next stroke, not the strokes already drawn', async () => {
+      const { container } = render(<Harness />)
+      await userEvent.click(pen2())
+      stroke(mouse, [[10, 10], [100, 10]])
+      await userEvent.click(pen2())
+      fireEvent.change(screen.getByLabelText('Color'), { target: { value: '#00ff00' } })
+      expect(container.querySelectorAll<HTMLElement>('[data-pen-dot]')[1].style.backgroundColor).toBe('rgb(0, 255, 0)')
+      await userEvent.click(screen.getByRole('button', { name: 'Listo' }))
+
+      stroke(mouse, [[10, 60], [100, 60]])
+      expect(storedInk()!.styles).toEqual([
+        { color: '#3a78c2', size: 7 },
+        { color: '#00ff00', size: 7 },
+      ])
+    })
+
+    it('"Grueso" on Tinta makes the next Tinta strokes thicker, still with no color', async () => {
+      render(<Harness />)
+      await userEvent.click(tinta())
+      await userEvent.click(screen.getByRole('button', { name: 'Grueso' }))
+      expect(screen.getByRole('button', { name: 'Tinta, Grueso' })).toBeInTheDocument()
+      stroke(mouse, [[10, 10], [100, 10]])
+      expect(storedInk()!.styles).toEqual([{ color: null, size: 12 }])
+    })
+
+    it('Esc closes the pen editor but not the Card editor around it', async () => {
+      const closeCard = vi.fn()
+      render(
+        <Sheet open title="Viaje" closeLabel="Cerrar" onClose={closeCard}>
+          <Harness />
+        </Sheet>,
+      )
+      await userEvent.click(tinta())
+      expect(screen.getByRole('dialog', { name: 'Editar Tinta' })).toBeInTheDocument()
+      expect(screen.getAllByRole('dialog')).toHaveLength(2)
+      await userEvent.keyboard('{Escape}')
+      expect(screen.getAllByRole('dialog')).toHaveLength(1)
+      expect(closeCard).not.toHaveBeenCalled()
+      expect(tinta()).toHaveFocus()
+
+      await userEvent.keyboard('{Escape}')
+      expect(closeCard).toHaveBeenCalledOnce()
+    })
+
+    it('a press in the box closes the editor and draws', async () => {
+      render(<Harness />)
+      await userEvent.click(pen2())
+      await userEvent.click(pen2())
+      expect(editor()).not.toBeNull()
+      act(() => stroke(mouse, [[10, 10], [100, 10]]))
+      expect(editor()).toBeNull()
+      expect(storedInk()!.strokes).toHaveLength(1)
+    })
+
+    it('a tap on another pen while the editor is open chooses it and closes the editor', async () => {
+      render(<Harness />)
+      await userEvent.click(tinta())
+      expect(editor()).not.toBeNull()
+      await userEvent.click(pen3())
+      expect(editor()).toBeNull()
+      expect(pen3()).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('undo after editing a pen removes the stroke and keeps the pen’s new color', async () => {
+      render(<Harness />)
+      await userEvent.click(pen2())
+      stroke(mouse, [[10, 10], [100, 10]])
+      await userEvent.click(pen2())
+      fireEvent.change(screen.getByLabelText('Color'), { target: { value: '#00ff00' } })
+      await userEvent.click(screen.getByRole('button', { name: 'Listo' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Deshacer' }))
+      expect(storedInk()!.strokes).toEqual([])
+      expect(useAppStore.getState().pens.pens[1].color).toBe('#00ff00')
+      expect(screen.getByRole('button', { name: 'Deshacer' })).toBeDisabled()
+    })
+
+    it('the chosen pen stays chosen in another Card’s box', async () => {
+      const { unmount } = render(<Harness />)
+      await userEvent.click(screen.getByRole('button', { name: /^Lápiz 4,/ }))
+      unmount()
+      render(<InkBox cardId="c2" ink={undefined} />)
+      expect(screen.getByRole('button', { name: /^Lápiz 4,/ })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('never uses the accent, with the editor open', async () => {
+      const { container } = render(<Harness />)
+      await userEvent.click(pen2())
+      await userEvent.click(pen2())
+      expect(container.innerHTML).not.toMatch(/accent/)
+    })
+
+    it('reads the pens and widths in English', async () => {
+      useAppStore.setState({ language: 'en' })
+      render(<Harness />)
+      await userEvent.click(screen.getByRole('button', { name: 'Ink, Medium' }))
+      expect(screen.getByRole('dialog', { name: 'Edit Ink' })).toBeInTheDocument()
+      for (const name of ['Fine', 'Medium', 'Bold']) expect(screen.getByRole('button', { name })).toBeInTheDocument()
+    })
   })
 })

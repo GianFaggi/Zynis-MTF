@@ -1,5 +1,5 @@
 import { AREA_COLORS } from '../desk/areas'
-import { INK_MAX_HEIGHT } from '../ink/constants'
+import { INK_MAX_HEIGHT, INK_MAX_SIZE, INK_MIN_SIZE } from '../ink/constants'
 import type { MtfData } from '../types'
 
 // The strict entity check for a Backup (ADR 0006). `loadData()` trusts the entities
@@ -56,7 +56,21 @@ function isItem(item: Entity): boolean {
 const isStroke = (stroke: unknown) =>
   Array.isArray(stroke) && stroke.length >= 3 && stroke.length % 3 === 0 && stroke.every(isNumber)
 
-/** A Card's handwriting (#47, ADR 0013): a whole `height` within the box limit and a list of strokes. */
+const HEX_COLOR = /^#[0-9a-f]{6}$/i
+
+/** One stroke's style (#51, ADR 0014): Tinta (`null`) or a `#rrggbb` color, and a whole width within the bounds. */
+const isStrokeStyle = (style: unknown) =>
+  isEntity(style) &&
+  (style.color === null || (typeof style.color === 'string' && HEX_COLOR.test(style.color))) &&
+  Number.isInteger(style.size) &&
+  (style.size as number) >= INK_MIN_SIZE &&
+  (style.size as number) <= INK_MAX_SIZE
+
+/**
+ * A Card's handwriting (#47, ADR 0013): a whole `height` within the box limit, a list of strokes
+ * and, optionally, their styles. Styles of another length than the strokes are accepted: a version
+ * without pens leaves them so, and they read as all Tinta (ADR 0014).
+ */
 function isInk(ink: unknown): boolean {
   return (
     isEntity(ink) &&
@@ -64,7 +78,8 @@ function isInk(ink: unknown): boolean {
     (ink.height as number) >= 1 &&
     (ink.height as number) <= INK_MAX_HEIGHT &&
     Array.isArray(ink.strokes) &&
-    ink.strokes.every(isStroke)
+    ink.strokes.every(isStroke) &&
+    isOptional(ink.styles, (styles) => Array.isArray(styles) && styles.every(isStrokeStyle))
   )
 }
 

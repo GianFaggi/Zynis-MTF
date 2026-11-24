@@ -1,4 +1,5 @@
-import type { Language, MtfData, SavedArrangement, StoredSession, SyncState, Theme } from '../types'
+import { DEFAULT_PENS, INK_MAX_SIZE, INK_MIN_SIZE } from '../ink/constants'
+import type { InkStyle, Language, MtfData, Pens, SavedArrangement, StoredSession, SyncState, Theme } from '../types'
 
 // The only module that touches localStorage (KB/frontend/storage.md, ADR 0004).
 // Every access is wrapped: if the browser refuses storage (blocked, private mode,
@@ -14,6 +15,7 @@ export const INSTALL_NUDGE_SEEN_KEY = 'mtf_install_nudge_seen'
 export const ARRANGEMENT_KEY = 'mtf_arrangement'
 export const AREA_JARS_KEY = 'mtf_area_jars'
 export const HANDWRITING_KEY = 'mtf_handwriting'
+export const PENS_KEY = 'mtf_pens'
 export const SESSION_KEY = 'mtf_session'
 export const RECOVERY_KEY_PREFIX = 'mtf_data_recovery_'
 export const SYNC_KEY = 'mtf_sync'
@@ -131,6 +133,29 @@ export function loadHandwriting(): boolean {
 
 export function saveHandwriting(on: boolean): void {
   write(HANDWRITING_KEY, on ? '1' : '0')
+}
+
+/**
+ * The handwriting box's four pens and the chosen one (#51). Missing, unparseable, refused or
+ * malformed in any part reads as `DEFAULT_PENS`, never throwing. Tinta's color is always `null`,
+ * whatever is stored: it follows the theme.
+ */
+export function loadPens(): Pens {
+  const raw = read(PENS_KEY)
+  if (raw === null) return DEFAULT_PENS
+  try {
+    const value: unknown = JSON.parse(raw)
+    if (!isPens(value)) return DEFAULT_PENS
+    const [ink, second, third, fourth] = value.pens
+    const own = (pen: InkStyle): InkStyle => ({ color: pen.color!.toLowerCase(), size: pen.size })
+    return { chosen: value.chosen, pens: [{ color: null, size: ink.size }, own(second), own(third), own(fourth)] }
+  } catch {
+    return DEFAULT_PENS
+  }
+}
+
+export function savePens(pens: Pens): void {
+  write(PENS_KEY, JSON.stringify(pens))
 }
 
 /** Whether MTF already placed this device's Welcome Card (#20). A device setting, like the theme: never in the Backup. */
@@ -311,6 +336,23 @@ function isArrangement(value: unknown): value is SavedArrangement {
   if (!isRecord(value) || !isRecord(value.rects) || !Number.isFinite(value.savedAt)) return false
   return Object.values(value.rects).every(
     (rect) => isRecord(rect) && (['x', 'y', 'w', 'h'] as const).every((side) => Number.isFinite(rect[side])),
+  )
+}
+
+/** A pen width: a whole number within the stroke bounds. */
+function isPenSize(size: unknown): boolean {
+  return Number.isInteger(size) && (size as number) >= INK_MIN_SIZE && (size as number) <= INK_MAX_SIZE
+}
+
+/** Four pens with valid widths, pens 2–4 with a `#rrggbb` color, and `chosen` one of them. Tinta's stored color is not checked: it is ignored. */
+function isPens(value: unknown): value is Pens {
+  if (!isRecord(value) || !Array.isArray(value.pens) || value.pens.length !== 4) return false
+  if (!(Number.isInteger(value.chosen) && (value.chosen as number) >= 0 && (value.chosen as number) <= 3)) return false
+  return value.pens.every(
+    (pen, index) =>
+      isRecord(pen) &&
+      isPenSize(pen.size) &&
+      (index === 0 || (typeof pen.color === 'string' && /^#[0-9a-f]{6}$/i.test(pen.color))),
   )
 }
 

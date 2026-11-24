@@ -1,4 +1,4 @@
-import type { Ink } from '../types'
+import type { Ink, InkStyle } from '../types'
 import {
   INK_FLAT_PRESSURE,
   INK_GROW_MARGIN,
@@ -9,6 +9,7 @@ import {
   INK_SIMPLIFY_TOLERANCE,
   INK_WIDTH,
 } from './constants'
+import { strokeStyles, withStyles } from './style'
 
 // Handwriting geometry (#47, design D3 and D7; ADR 0013). Points live in box
 // coordinates: x 0–INK_WIDTH, y 0–height, integers, plus a pressure 0–100. A stroke
@@ -117,12 +118,12 @@ export function pointCount(ink: Ink): number {
 }
 
 /**
- * The handwriting with a finished stroke added: simplified, then grown if it ends near the
- * bottom. `null` when it would pass `INK_MAX_POINTS`: the stroke is not kept.
+ * The handwriting with a finished stroke added in `style` (#51): simplified, then grown if it
+ * ends near the bottom. `null` when it would pass `INK_MAX_POINTS`: the stroke is not kept.
  */
-export function addStroke(ink: Ink, raw: readonly number[]): Ink | null {
+export function addStroke(ink: Ink, raw: readonly number[], style: InkStyle): Ink | null {
   const stroke = simplifyStroke(raw)
   if (stroke.length === 0) return ink
   if (pointCount(ink) + stroke.length / 3 > INK_MAX_POINTS) return null
-  return { height: grownHeight(ink.height, stroke), strokes: [...ink.strokes, stroke] }
+  return withStyles(grownHeight(ink.height, stroke), [...ink.strokes, stroke], [...strokeStyles(ink), style])
 }

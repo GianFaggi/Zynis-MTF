@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 import type { MtfData } from '../src/types/index.ts'
-import { AREAS, card, deskCard, seedDesk, storedData } from './helpers.ts'
+import { AREAS, card, deskCard, exportBackup, importBackup, seedDesk, storedData } from './helpers.ts'
 
 test.use({ locale: 'es-AR' })
 
@@ -34,25 +34,6 @@ const seeded: MtfData = {
 
 function openSettings(page: Page) {
   return page.getByRole('button', { name: 'Ajustes' }).click()
-}
-
-/** Exports through Settings and returns the downloaded file's name and path. */
-async function exportBackup(page: Page) {
-  await openSettings(page)
-  const download = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Exportar copia' }).click()
-  const file = await download
-  await expect(page.getByRole('status')).toContainText('Copia lista')
-  await page.keyboard.press('Escape')
-  return { name: file.suggestedFilename(), path: (await file.path())! }
-}
-
-async function importBackup(page: Page, path: string) {
-  await openSettings(page)
-  await page.locator('input[type="file"]').setInputFiles(path)
-  await page.getByRole('button', { name: 'Reemplazar mis datos' }).click()
-  await expect(page.getByRole('dialog', { name: 'Ajustes' })).toBeHidden()
-  await expect(page.getByRole('status')).toContainText('Copia importada')
 }
 
 /** Keeps a new Card through the editor: a change made after the export. */

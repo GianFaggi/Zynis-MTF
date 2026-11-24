@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CARD_WIDTH } from '../desk/geometry'
-import { AREA_JARS_KEY, ARRANGEMENT_KEY, DATA_KEY, HANDWRITING_KEY, LANGUAGE_KEY, THEME_KEY } from '../lib/storage'
+import { DEFAULT_PENS } from '../ink/constants'
+import { AREA_JARS_KEY, ARRANGEMENT_KEY, DATA_KEY, HANDWRITING_KEY, LANGUAGE_KEY, PENS_KEY, THEME_KEY } from '../lib/storage'
 import { makeArea, makeCard, makeData, makeItem, rowOfAreas } from '../test/fixtures'
 import type { MtfData } from '../types'
 import { createAppStore } from './appStore'
@@ -370,6 +371,43 @@ describe('Card actions', () => {
     store.getState().replaceData(makeData({ areas: [makeArea({ id: 'x1' })] }))
     expect(store.getState().handwriting).toBe(true)
     expect(localStorage.getItem(HANDWRITING_KEY)).toBe('1')
+  })
+
+  it('the pens start as the defaults; choosePen and editPen write only mtf_pens and survive a reload (#51)', () => {
+    const store = storeWith()
+    expect(store.getState().pens).toEqual(DEFAULT_PENS)
+    const before = store.getState().data
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+
+    store.getState().choosePen(2)
+    store.getState().editPen(2, { color: '#00ff00' })
+    store.getState().editPen(2, { size: 12 })
+    expect(store.getState().pens.chosen).toBe(2)
+    expect(store.getState().pens.pens[2]).toEqual({ color: '#00ff00', size: 12 })
+    expect(store.getState().pens.pens[1]).toEqual(DEFAULT_PENS.pens[1])
+    expect(store.getState().data).toBe(before)
+    expect(new Set(setItem.mock.calls.map(([key]) => key))).toEqual(new Set([PENS_KEY]))
+
+    const reloaded = createAppStore().getState().pens
+    expect(reloaded.chosen).toBe(2)
+    expect(reloaded.pens[2]).toEqual({ color: '#00ff00', size: 12 })
+    expect(storedData()).not.toHaveProperty('pens')
+  })
+
+  it('editPen never gives Tinta a color, only a width', () => {
+    const store = storeWith()
+    store.getState().editPen(0, { color: '#ff0000', size: 4 })
+    expect(store.getState().pens.pens[0]).toEqual({ color: null, size: 4 })
+  })
+
+  it('an Import keeps the pens and the chosen pen', () => {
+    const store = storeWith()
+    store.getState().choosePen(3)
+    store.getState().editPen(3, { color: '#abcdef' })
+    const pens = store.getState().pens
+    store.getState().replaceData(makeData({ areas: [makeArea({ id: 'x1' })] }))
+    expect(store.getState().pens).toBe(pens)
+    expect(JSON.parse(localStorage.getItem(PENS_KEY)!)).toEqual(pens)
   })
 
   it('actions on a Card that does not exist change nothing', () => {

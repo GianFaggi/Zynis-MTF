@@ -63,6 +63,17 @@ export interface Item {
 }
 
 /**
+ * How one stroke looks (#51, ADR 0014): the pen it was drawn with. Also the shape of a pen
+ * (`Pens`), a device setting.
+ */
+export interface InkStyle {
+  /** Lowercase `#rrggbb`; `null` is Tinta, which follows the theme's ink color. */
+  color: string | null
+  /** The perfect-freehand size in box units, an integer (`INK_SIZES`). */
+  size: number
+}
+
+/**
  * A Card's handwriting (#47, ADR 0013). Points are in box coordinates: the box is always
  * `INK_WIDTH` (1000) units wide and `height` units tall. Each stroke is a flat list of
  * integers `[x, y, p, x, y, p, …]`, with `p` the pressure 0–100. A Card never keeps
@@ -71,6 +82,19 @@ export interface Item {
 export interface Ink {
   height: number
   strokes: number[][]
+  /**
+   * `styles[i]` is how `strokes[i]` looks (#51, ADR 0014). Left out when every stroke is Tinta
+   * Medio. Read only through `strokeStyles`: a length that differs from `strokes` (left by a
+   * version without pens) reads as all Tinta Medio.
+   */
+  styles?: InkStyle[]
+}
+
+/** The four pens of the handwriting box and the chosen one (#51): a device setting (`mtf_pens`), never in `MtfData`. */
+export interface Pens {
+  chosen: 0 | 1 | 2 | 3
+  /** Pen 0 is Tinta: its `color` is always `null`. */
+  pens: [InkStyle, InkStyle, InkStyle, InkStyle]
 }
 
 export interface Card {

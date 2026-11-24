@@ -51,8 +51,12 @@ One line of a Card's checklist, which can be checked or unchecked.
 _Avoid_: Task, subtask, todo, checkbox
 
 **Handwriting** (ES: **Escritura a mano**):
-Ink the user writes by hand, with a pen, a mouse or a finger, in a Card's handwriting box in the editor. It is kept exactly as drawn, pressure included, in one ink color that follows the theme, and is never turned into text nor searched. A Card with only Handwriting is not empty. The box is offered by the device setting **Escritura a mano** (EN: **Handwriting**, in Settings, off by default, not in the Backup); Handwriting a Card already has always shows. In the box the finger draws until a pen touches it; from then on, while the editor is open, the finger is ignored so a resting palm leaves no marks. The code calls it `ink` ([ADR 0013](docs/adr/0013-handwriting-as-optional-ink.md)).
+Ink the user writes by hand, with a pen, a mouse or a finger, in a Card's handwriting box in the editor. It is kept exactly as drawn, pressure included, each stroke with the color and width of the Pen it was drawn with: strokes in Tinta follow the theme, strokes in another Pen keep their color in both themes. It is never turned into text nor searched. A Card with only Handwriting is not empty. The box is offered by the device setting **Escritura a mano** (EN: **Handwriting**, in Settings, off by default, not in the Backup); Handwriting a Card already has always shows. In the box the finger draws until a pen touches it; from then on, while the editor is open, the finger is ignored so a resting palm leaves no marks. The code calls it `ink` ([ADR 0013](docs/adr/0013-handwriting-as-optional-ink.md)).
 _Avoid_: Drawing, sketch, canvas, ink (in UI copy)
+
+**Pen** (ES: **Lápiz**):
+One of the four styles of the handwriting box, each a color and a width (Fino / Medio / Grueso; EN Fine / Medium / Bold). The first is **Tinta** (EN **Ink**), whose color follows the theme and cannot be changed; the other three, **Lápiz 2–4** (EN **Pen 2–4**), take any color. One Pen is chosen; tapping it again opens its editor. The Pens and the chosen one are a device setting, never in the Backup or sync. Editing a Pen never changes strokes already drawn ([ADR 0014](docs/adr/0014-stroke-styles-parallel-list.md)).
+_Avoid_: Brush, marker, color picker (in UI copy)
 
 **Finished Card**:
 A Card whose Items with text are all checked (it has at least one). A Card without Items is never finished, but it can still go into the Jar. Adding an unchecked Item makes a finished Card unfinished again, and it loses its Card Win until it is finished again. On the Desk, a finished Card shows the "Llevala al frasco" chip.

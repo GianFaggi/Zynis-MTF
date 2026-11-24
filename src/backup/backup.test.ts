@@ -87,6 +87,20 @@ describe('readBackup', () => {
     expect(result.data.cards[0]).not.toHaveProperty('ink')
   })
 
+  it('reads back handwriting written with several pens, every stroke with its color and width (#51)', () => {
+    const data = fullDesk()
+    const ink = {
+      height: 650,
+      strokes: [[10, 20, 50, 14, 26, 61], [500, 300, 50], [40, 40, 70]],
+      styles: [{ color: '#d0443a', size: 12 }, { color: null, size: 7 }, { color: null, size: 4 }],
+    }
+    data.cards[1] = { ...data.cards[1], ink }
+    const result = readBackup(makeBackup(data, exportedAt))
+    expect(result).toEqual({ ok: true, data, exportedAt: '2026-10-11T18:04:12.345Z' })
+    if (!result.ok) return
+    expect(result.data.cards[1].ink).toEqual(ink)
+  })
+
   it('keeps unknown extra fields', () => {
     const data = { ...fullDesk(), extra: 'kept' }
     expect(readBackup(makeBackup(data, exportedAt))).toMatchObject({ ok: true, data: { extra: 'kept' } })
@@ -120,6 +134,10 @@ describe('readBackup', () => {
     ['a Card without an id', file({ data: { ...fullDesk(), cards: [{ ...fullDesk().cards[0], id: undefined }] } })],
     ['a Card in a missing Area', file({ data: { ...fullDesk(), cards: [{ ...fullDesk().cards[0], areaId: 'gone' }] } })],
     ['damaged handwriting', file({ data: { ...fullDesk(), cards: [{ ...fullDesk().cards[0], ink: { height: 400, strokes: [[1, 2]] } }] } })],
+    [
+      'a damaged stroke style',
+      file({ data: { ...fullDesk(), cards: [{ ...fullDesk().cards[0], ink: { height: 400, strokes: [[1, 2, 50]], styles: [{ color: 'red', size: 7 }] } }] } }),
+    ],
   ])('refuses a Backup with %s as damaged', (_, text) => {
     expect(readBackup(text)).toEqual({ ok: false, reason: 'damaged' })
   })

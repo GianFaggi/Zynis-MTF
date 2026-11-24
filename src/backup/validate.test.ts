@@ -5,6 +5,7 @@ import { isValidData } from './validate'
 
 /** Handwriting with two strokes, one of them a single dot; new each time, since cases mutate it. */
 const newInk = () => ({ height: 650, strokes: [[10, 20, 50, 14, 26, 61], [500, 300, 50]] })
+const red = { color: '#d0443a', size: 12 }
 
 function valid(): MtfData {
   return makeData({
@@ -82,6 +83,15 @@ describe('isValidData', () => {
     ['an empty stroke', (doc) => doc.cards[0].ink!.strokes.push([])],
     ['a stroke with a string', (doc) => Object.assign(doc.cards[0].ink!.strokes, { 1: ['500', 300, 50] })],
     ['a stroke with a non-finite number', (doc) => (doc.cards[0].ink!.strokes[1][0] = NaN)],
+    ['stroke styles that are not a list', (doc) => Object.assign(doc.cards[0].ink!, { styles: { 0: red } })],
+    ['a stroke style that is not an object', (doc) => Object.assign(doc.cards[0].ink!, { styles: [red, null] })],
+    ['a stroke color that is a name', (doc) => Object.assign(doc.cards[0].ink!, { styles: [red, { color: 'red', size: 7 }] })],
+    ['a stroke color with five digits', (doc) => Object.assign(doc.cards[0].ink!, { styles: [red, { color: '#12345', size: 7 }] })],
+    ['a stroke without a color', (doc) => Object.assign(doc.cards[0].ink!, { styles: [red, { size: 7 }] })],
+    ['a stroke width that is not whole', (doc) => Object.assign(doc.cards[0].ink!, { styles: [red, { color: null, size: 7.5 }] })],
+    ['a stroke width of 0', (doc) => Object.assign(doc.cards[0].ink!, { styles: [red, { color: null, size: 0 }] })],
+    ['a stroke width above 40', (doc) => Object.assign(doc.cards[0].ink!, { styles: [red, { color: null, size: 41 }] })],
+    ['a stroke width as text', (doc) => Object.assign(doc.cards[0].ink!, { styles: [red, { color: null, size: '7' }] })],
   ])('refuses %s', (_, change) => {
     expect(isValidData(broken(change))).toBe(false)
   })
@@ -91,6 +101,17 @@ describe('isValidData', () => {
     expect(valid().cards[1]).not.toHaveProperty('ink')
     expect(isValidData(broken((doc) => (doc.cards[0].ink = { height: 400, strokes: [] })))).toBe(true)
     expect(isValidData(broken((doc) => (doc.cards[0].ink!.strokes[1] = [-20, 9999, 50])))).toBe(true)
+  })
+
+  it('accepts handwriting with stroke styles, in either case, and without them (#51)', () => {
+    expect(valid().cards[0].ink).not.toHaveProperty('styles')
+    expect(isValidData(broken((doc) => (doc.cards[0].ink!.styles = [red, { color: null, size: 4 }])))).toBe(true)
+    expect(isValidData(broken((doc) => (doc.cards[0].ink!.styles = [{ color: '#D0443A', size: 1 }, { color: null, size: 40 }])))).toBe(true)
+  })
+
+  it('accepts stroke styles of another length than the strokes: a version without pens leaves them so', () => {
+    expect(isValidData(broken((doc) => (doc.cards[0].ink!.styles = [red])))).toBe(true)
+    expect(isValidData(broken((doc) => (doc.cards[0].ink!.styles = [red, red, red])))).toBe(true)
   })
 
   it('accepts every Area color, the three added in #7 included, and nothing else', () => {

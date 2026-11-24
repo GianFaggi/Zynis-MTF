@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MTF — Lápices (mockup)</title>
+<style>
+  :root {
+    --paper: #f5f1ea; --sheet: #fcfaf6; --ink: #2a2724; --ink-2: #4a4540;
+    --pencil: #766e66; --rule: #e3dcd1; --hover: rgb(70 50 30 / .07);
+    --danger: #b3261e; --sky: #4c84c2; --scrim: rgb(40 30 20 / .32);
+    --card-tint: 10%;
+    --shadow: 0 1px 2px rgb(70 50 30 / .07), 0 8px 20px rgb(70 50 30 / .07);
+    --lift: 0 18px 40px rgb(70 50 30 / .22);
+    color-scheme: light;
+  }
+  [data-theme="dark"] {
+    --paper: #1c1a18; --sheet: #272421; --ink: #ece6de; --ink-2: #cfc7bd;
+    --pencil: #a39a90; --rule: #3a3530; --hover: rgb(255 255 255 / .07);
+    --danger: #f2b8b5; --sky: #7db0e6; --scrim: rgb(0 0 0 / .5);
+    --card-tint: 14%;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 16px; min-height: 100dvh;
+  }
+  .serif { font-family: Georgia, "Times New Roman", serif; }
+  .wrap { max-width: 1060px; margin: 0 auto; display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+
+  header.top { max-width: 1060px; margin: 0 auto 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  header.top h1 { font-size: 22px; margin: 0; font-weight: 600; }
+  header.top h1 small { font: 500 13px system-ui; color: var(--pencil); margin-left: 6px; }
+  .seg { display: inline-flex; background: var(--hover); border-radius: 999px; padding: 3px; }
+  .seg button { border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .spacer { flex: 1; }
+
+  /* Editor sheet */
+  .sheetp {
+    --b: var(--sky);
+    background: color-mix(in oklab, var(--b) var(--card-tint), var(--sheet));
+    border-radius: 22px; box-shadow: var(--lift); padding: 18px 18px 20px; max-width: 640px; width: 100%; margin: 0 auto;
+    position: relative;
+  }
+  .sheetp .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .area { font-size: 12.5px; font-weight: 600; color: color-mix(in oklab, var(--b) 75%, var(--ink)); }
+  .sheetp h2 { font-size: 22px; margin: 2px 0 4px; font-weight: 600; }
+  .sheetp p.body { margin: 0 0 14px; color: var(--ink-2); }
+  .iconbtn { border: 0; background: none; color: var(--ink-2); width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; cursor: pointer; }
+  .iconbtn:hover { background: var(--hover); }
+
+  /* Ink box */
+  .box {
+    position: relative; width: 100%; aspect-ratio: 1000 / 400; border-radius: 12px;
+    background: color-mix(in oklab, var(--sheet) 60%, transparent);
+    box-shadow: inset 0 0 0 1px var(--rule); touch-action: none; user-select: none; -webkit-user-select: none;
+    cursor: crosshair; overflow: hidden;
+  }
+  .box.erase { cursor: cell; }
+  .box svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* Tool row */
+  .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 10px; }
+  .pens { display: flex; gap: 6px; align-items: center; padding: 4px; border-radius: 999px; background: var(--hover); }
+  .pen {
+    position: relative; width: 40px; height: 40px; border-radius: 999px; border: 0; cursor: pointer;
+    background: var(--sheet); display: grid; place-items: center; padding: 0;
+    box-shadow: inset 0 0 0 1px var(--rule);
+  }
+  .pen .dot { border-radius: 999px; background: var(--c); }
+  .pen[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); }
+  .pen .edit {
+    position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 999px;
+    background: var(--ink); color: var(--paper); display: none; place-items: center;
+  }
+  .variant-a .pen[aria-pressed="true"] .edit { display: grid; }
+  .btn {
+    border: 0; background: none; color: var(--ink); font: inherit; font-size: 14px; padding: 8px 12px; border-radius: 10px;
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn:disabled { opacity: .4; cursor: default; background: none; }
+  .btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .btn.danger { color: var(--danger); }
+  .btn.primary { background: var(--ink); color: var(--paper); }
+  .hint { font-size: 13px; color: var(--pencil); margin-top: 8px; min-height: 1.2em; }
+
+  /* Pen editor popover */
+  .pop {
+    position: absolute; z-index: 5; width: min(320px, calc(100% - 24px)); background: var(--sheet); color: var(--ink);
+    border-radius: 16px; box-shadow: var(--lift); padding: 14px; display: grid; gap: 12px;
+  }
+  .pop h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .lbl { font-size: 12.5px; color: var(--pencil); width: 100%; }
+  input[type="color"] { width: 52px; height: 40px; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 10px; }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: 1px solid var(--rule); border-radius: 10px; }
+  .widths { display: flex; gap: 6px; }
+  .wbtn { border: 0; background: var(--hover); color: var(--ink); width: 64px; height: 44px; border-radius: 10px; cursor: pointer; display: grid; place-items: center; gap: 2px; font-size: 11.5px; }
+  .wbtn[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+  .wbtn span.l { display: block; width: 32px; border-radius: 99px; background: currentColor; }
+  .preview { height: 56px; border-radius: 10px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule); }
+  .preview svg { width: 100%; height: 100%; }
+  .note-inline { font-size: 12.5px; color: var(--pencil); }
+
+  /* Settings (variant B) */
+  .settings { max-width: 640px; margin: 0 auto 18px; background: var(--sheet); border-radius: 18px; box-shadow: var(--shadow); padding: 14px 16px; }
+  .settings h3 { margin: 0 0 2px; font-size: 13px; color: var(--pencil); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .srow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--rule); }
+  .srow:first-of-type { border-top: 0; }
+  .srow .name { flex: 1; }
+  .srow .name small { display: block; color: var(--pencil); font-size: 12.5px; }
+
+  /* Notes */
+  aside.notes { background: var(--sheet); border-radius: 18px; box-shadow: var(--shadow); padding: 16px; font-size: 14px; }
+  aside.notes h3 { margin: 0 0 8px; font-size: 15px; }
+  aside.notes ul { margin: 0 0 12px; padding-left: 18px; }
+  aside.notes li { margin-bottom: 6px; }
+  aside.notes .q { background: var(--hover); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  aside.notes .q b { display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1 class="serif">MTF <small>Lápices de la escritura a mano</small></h1>
+  <span class="spacer"></span>
+  <div class="seg" role="group" aria-label="Variante">
+    <button id="vA" aria-pressed="true">A · Se editan en el recuadro</button>
+    <button id="vB" aria-pressed="false">B · Se editan en Ajustes</button>
+  </div>
+  <div class="seg" role="group" aria-label="Tema">
+    <button id="tL" aria-pressed="true">Claro</button>
+    <button id="tD" aria-pressed="false">Oscuro</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <main>
+    <!-- Variant B: pens are defined in Settings -->
+    <section class="settings" id="settings" hidden>
+      <h3>Ajustes · Escritura a mano</h3>
+      <div id="settingsRows"></div>
+    </section>
+
+    <section class="sheetp" id="sheet">
+      <div class="head">
+        <span class="area">Trabajo</span>
+        <span class="spacer" style="flex:1"></span>
+        <button class="iconbtn" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <h2 class="serif">Ideas para el viernes</h2>
+      <p class="body">Probá dibujar en el recuadro con cada lápiz.</p>
+
+      <div class="box" id="box" aria-label="Escritura a mano">
+        <svg id="svg" viewBox="0 0 1000 400" preserveAspectRatio="none"></svg>
+      </div>
+
+      <div class="tools">
+        <div class="pens" id="pens" role="group" aria-label="Lápices"></div>
+        <button class="btn" id="undo" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+          Deshacer
+        </button>
+        <button class="btn" id="eraser" aria-pressed="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+          Borrador
+        </button>
+        <button class="btn danger" id="clear">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span id="clearLbl">Borrar todo</span>
+        </button>
+      </div>
+      <div class="hint" id="hint"></div>
+
+      <div class="pop" id="pop" hidden role="dialog" aria-label="Editar lápiz">
+        <h3 id="popTitle">Lápiz 2</h3>
+        <div class="row" id="colorRow">
+          <span class="lbl">Color</span>
+          <input type="color" id="color" aria-label="Color">
+          <span class="note-inline" id="colorNote">La rueda del sistema: cualquier color.</span>
+        </div>
+        <div class="row">
+          <span class="lbl">Grosor</span>
+          <div class="widths" id="widths"></div>
+        </div>
+        <div class="preview"><svg viewBox="0 0 320 56" preserveAspectRatio="none"><path id="prev" fill="none" stroke-linecap="round" stroke-linejoin="round" d="M16 36 C 60 8, 90 50, 130 28 S 200 10, 230 34 S 290 40, 304 20"/></svg></div>
+        <div class="row" style="justify-content:flex-end">
+          <button class="btn primary" id="done">Listo</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="notes">
+    <h3>Cómo se usa</h3>
+    <ul id="howA">
+      <li>Hay <b>4 lápices</b>. Tocás uno para escribir con él: queda elegido hasta que elijas otro, también al abrir otra Card o recargar.</li>
+      <li>Tocás <b>otra vez el lápiz elegido</b> (o su lápiz chiquito) para editarlo: color con la rueda y grosor.</li>
+      <li><b>Tinta</b> es el primero: sigue al tema (oscuro en claro, crema en oscuro). Su color no se edita, su grosor sí.</li>
+    </ul>
+    <ul id="howB" hidden>
+      <li>Los lápices se definen <b>una vez en Ajustes</b>, debajo de "Escritura a mano".</li>
+      <li>En el recuadro solo se <b>eligen</b>: un toque y listo. Editar un lápiz es ir a Ajustes.</li>
+      <li><b>Tinta</b> es el primero: sigue al tema. Su color no se edita, su grosor sí.</li>
+    </ul>
+    <ul>
+      <li>Un color elegido se ve <b>igual en los dos temas</b>. Probá el azul oscuro en tema oscuro: si no se lee, lo cambiás vos.</li>
+      <li>La presión del lápiz sigue engrosando el trazo dentro del grosor elegido (en el mockup se simula sin presión).</li>
+      <li>Los lápices son del dispositivo, como el tema: no van al Backup ni al sync. Los <b>trazos</b> sí llevan su color y grosor.</li>
+    </ul>
+    <h3>Para decidir</h3>
+    <div class="q"><b>¿A o B?</b>Editar en el recuadro (a mano, más rápido) o en Ajustes (el recuadro queda más simple).</div>
+    <div class="q"><b>Editar un lápiz, ¿cambia lo ya escrito?</b>En el mockup <i>no</i>: cada trazo guarda el color con el que se dibujó. Editá el Lápiz 2 después de escribir con él y mirá.</div>
+    <div class="q"><b>¿4 lápices está bien?</b>Tinta + 3 tuyos. Podrían ser más o menos.</div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  const WIDTHS = [{ id: 'fino', label: 'Fino', w: 4 }, { id: 'medio', label: 'Medio', w: 7 }, { id: 'grueso', label: 'Grueso', w: 13 }];
+  const pens = [
+    { id: 'tinta', name: 'Tinta', color: null, width: 'medio' },
+    { id: 'p2', name: 'Lápiz 2', color: '#1f3a6b', width: 'medio' },
+    { id: 'p3', name: 'Lápiz 3', color: '#c0392b', width: 'fino' },
+    { id: 'p4', name: 'Lápiz 4', color: '#2e7d4f', width: 'grueso' },
+  ];
+  let variant = 'A';
+  let current = 'tinta';
+  let editing = null;
+  let eraser = false;
+  let strokes = [];          // { color: hex|null (null = tinta), w, pts: [[x,y], ...] }
+  const undo = [];
+  let confirmClear = false;
+
+  const $ = (id) => document.getElementById(id);
+  const box = $('box'), svg = $('svg'), pop = $('pop');
+  const widthOf = (p) => WIDTHS.find((w) => w.id === p.width).w;
+  const paint = (c) => c ?? 'var(--ink)';
+
+  /* ---------- pens tray ---------- */
+  function renderPens() {
+    const el = $('pens');
+    el.innerHTML = '';
+    for (const p of pens) {
+      const b = document.createElement('button');
+      b.className = 'pen';
+      b.setAttribute('aria-pressed', String(p.id === current && !eraser));
+      b.setAttribute('aria-label', p.name);
+      b.title = p.name + ' · ' + WIDTHS.find((w) => w.id === p.width).label;
+      const d = 8 + widthOf(p) * 1.3;
+      b.innerHTML = `<span class="dot" style="--c:${paint(p.color)};width:${d}px;height:${d}px"></span>` +
+        `<span class="edit"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>`;
+      b.onclick = () => {
+        if (variant === 'A' && p.id === current && !eraser) { openPop(p, b); return; }
+        current = p.id; setEraser(false); closePop(); renderPens();
+      };
+      el.appendChild(b);
+    }
+  }
+
+  /* ---------- pen editor ---------- */
+  function openPop(p, anchor) {
+    editing = p;
+    $('popTitle').textContent = 'Editar ' + p.name;
+    $('colorRow').style.display = p.color === null ? 'none' : '';
+    $('color').value = p.color ?? '#000000';
+    renderWidths();
+    renderPreview();
+    pop.hidden = false;
+    const host = variant === 'A' ? $('sheet') : $('settings');
+    host.appendChild(pop);
+    const hr = host.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+    const left = Math.max(12, Math.min(ar.left - hr.left - 20, hr.width - pop.offsetWidth - 12));
+    const below = ar.bottom - hr.top + 10;
+    pop.style.left = left + 'px';
+    pop.style.top = (variant === 'A' ? Math.max(12, ar.top - hr.top - pop.offsetHeight - 10) : below) + 'px';
+  }
+  function closePop() { pop.hidden = true; editing = null; }
+  function renderWidths() {
+    const el = $('widths'); el.innerHTML = '';
+    for (const w of WIDTHS) {
+      const b = document.createElement('button');
+      b.className = 'wbtn';
+      b.setAttribute('aria-pressed', String(editing.width === w.id));
+      b.innerHTML = `<span class="l" style="height:${Math.max(2, w.w * 0.6)}px"></span>${w.label}`;
+      b.onclick = () => { editing.width = w.id; renderWidths(); renderPreview(); refresh(); };
+      el.appendChild(b);
+    }
+  }
+  function renderPreview() {
+    const prev = $('prev');
+    prev.setAttribute('stroke', paint(editing.color));
+    prev.setAttribute('stroke-width', widthOf(editing) * 0.55);
+  }
+  $('color').oninput = (e) => { editing.color = e.target.value; renderPreview(); refresh(); };
+  $('done').onclick = closePop;
+  document.addEventListener('pointerdown', (e) => {
+    if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.pen, .srow button')) closePop();
+  });
+
+  /* ---------- settings (variant B) ---------- */
+  function renderSettings() {
+    const el = $('settingsRows'); el.innerHTML = '';
+    const top = document.createElement('div');
+    top.className = 'srow';
+    top.innerHTML = `<span class="name">Escritura a mano</span><div class="seg"><button aria-pressed="false">No</button><button aria-pressed="true">Sí</button></div>`;
+    el.appendChild(top);
+    for (const p of pens) {
+      const r = document.createElement('div');
+      r.className = 'srow';
+      const d = 8 + widthOf(p) * 1.3;
+      r.innerHTML = `<span class="pen" style="pointer-events:none"><span class="dot" style="--c:${paint(p.color)};width:${d}px;height:${d}px"></span></span>` +
+        `<span class="name">${p.name}<small>${p.color === null ? 'Sigue al tema' : p.color.toUpperCase()} · ${WIDTHS.find((w) => w.id === p.width).label}</small></span>`;
+      const btn = document.createElement('button');
+      btn.className = 'btn'; btn.textContent = 'Editar';
+      btn.onclick = () => openPop(p, btn);
+      r.appendChild(btn);
+      el.appendChild(r);
+    }
+  }
+
+  function refresh() { renderPens(); if (variant === 'B') renderSettings(); }
+
+  /* ---------- drawing ---------- */
+  const NS = 'http://www.w3.org/2000/svg';
+  function pathD(pts) {
+    if (pts.length === 1) return `M${pts[0][0]},${pts[0][1]}l0.01,0`;
+    let d = `M${pts[0][0]},${pts[0][1]}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+      d += ` Q${pts[i][0]},${pts[i][1]} ${mx},${my}`;
+    }
+    const l = pts[pts.length - 1];
+    return d + ` L${l[0]},${l[1]}`;
+  }
+  function strokeEl(s) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', pathD(s.pts));
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke', paint(s.color));
+    p.setAttribute('stroke-width', s.w);
+    p.setAttribute('stroke-linecap', 'round');
+    p.setAttribute('stroke-linejoin', 'round');
+    return p;
+  }
+  function draw() {
+    svg.innerHTML = '';
+    for (const s of strokes) svg.appendChild(strokeEl(s));
+    $('undo').disabled = undo.length === 0;
+  }
+  function toBox(e) {
+    const r = box.getBoundingClientRect();
+    return [Math.round(((e.clientX - r.left) / r.width) * 1000), Math.round(((e.clientY - r.top) / r.height) * 400)];
+  }
+  function near(s, x, y) {
+    return s.pts.some(([px, py]) => Math.hypot(px - x, py - y) < 14 + s.w / 2);
+  }
+  let live = null;
+  box.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    closePop();
+    clearConfirm();
+    box.setPointerCapture(e.pointerId);
+    const erase = eraser || e.button === 5 || (e.buttons & 32) !== 0;
+    if (erase) { live = { erase: true, before: strokes }; eraseAt(toBox(e)); return; }
+    const pen = pens.find((p) => p.id === current);
+    const s = { color: pen.color, w: widthOf(pen), pts: [toBox(e)] };
+    live = { erase: false, s, el: strokeEl(s) };
+    svg.appendChild(live.el);
+  });
+  box.addEventListener('pointermove', (e) => {
+    if (!live) return;
+    if (live.erase) { eraseAt(toBox(e)); return; }
+    const pt = toBox(e), last = live.s.pts[live.s.pts.length - 1];
+    if (Math.hypot(pt[0] - last[0], pt[1] - last[1]) < 2) return;
+    live.s.pts.push(pt);
+    live.el.setAttribute('d', pathD(live.s.pts));
+  });
+  const end = () => {
+    if (!live) return;
+    if (live.erase) { if (live.before !== strokes) undo.push(live.before); }
+    else { undo.push(strokes); strokes = [...strokes, live.s]; }
+    live = null; draw();
+  };
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', end);
+  function eraseAt([x, y]) {
+    const left = strokes.filter((s) => !near(s, x, y));
+    if (left.length !== strokes.length) { strokes = left; draw(); }
+  }
+  function setEraser(on) {
+    eraser = on;
+    $('eraser').setAttribute('aria-pressed', String(on));
+    box.classList.toggle('erase', on);
+    renderPens();
+  }
+  $('eraser').onclick = () => { closePop(); setEraser(!eraser); };
+  $('undo').onclick = () => { if (undo.length) { strokes = undo.pop(); draw(); } };
+  function clearConfirm() { confirmClear = false; $('clearLbl').textContent = 'Borrar todo'; }
+  $('clear').onclick = () => {
+    if (!confirmClear) { confirmClear = true; $('clearLbl').textContent = '¿Borrar todo? Tocá otra vez'; return; }
+    if (strokes.length) { undo.push(strokes); strokes = []; draw(); }
+    clearConfirm();
+  };
+
+  /* ---------- seed: a little handwriting so colors can be compared ---------- */
+  function wave(x0, y0, len, amp, step, color, w) {
+    const pts = [];
+    for (let x = 0; x <= len; x += step) pts.push([x0 + x, Math.round(y0 + Math.sin(x / 18) * amp + Math.sin(x / 7) * amp * 0.35)]);
+    return { color, w, pts };
+  }
+  strokes = [
+    wave(60, 110, 300, 18, 6, null, 7),
+    wave(60, 200, 240, 16, 6, '#1f3a6b', 7),
+    wave(330, 200, 160, 16, 6, '#c0392b', 4),
+    { color: '#2e7d4f', w: 13, pts: [[560, 90], [600, 70], [660, 75], [700, 110], [690, 160], [640, 180], [580, 170], [555, 130], [560, 90]] },
+  ];
+
+  /* ---------- variant + theme ---------- */
+  function setVariant(v) {
+    variant = v; closePop();
+    $('vA').setAttribute('aria-pressed', String(v === 'A'));
+    $('vB').setAttribute('aria-pressed', String(v === 'B'));
+    $('settings').hidden = v !== 'B';
+    $('howA').hidden = v !== 'A';
+    $('howB').hidden = v !== 'B';
+    document.body.classList.toggle('variant-a', v === 'A');
+    refresh();
+    $('hint').textContent = v === 'A' ? 'Tocá el lápiz elegido otra vez para editarlo.' : 'Los lápices se editan en Ajustes, arriba.';
+  }
+  function setTheme(t) {
+    document.documentElement.dataset.theme = t;
+    $('tL').setAttribute('aria-pressed', String(t === 'light'));
+    $('tD').setAttribute('aria-pressed', String(t === 'dark'));
+  }
+  $('vA').onclick = () => setVariant('A');
+  $('vB').onclick = () => setVariant('B');
+  $('tL').onclick = () => setTheme('light');
+  $('tD').onclick = () => setTheme('dark');
+
+  setTheme('light');
+  setVariant('A');
+  draw();
+})();
+</script>
+</body>
+</html>

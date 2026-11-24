@@ -17,8 +17,9 @@ type InkViewProps = {
 
 /**
  * Handwriting, read-only (#47, design D8): an SVG at 100% of the width it gets, with the
- * box's `viewBox`, so it keeps its proportions and layout on every screen. Strokes are
- * filled with `currentColor` set to the ink token, so they follow the theme.
+ * box's `viewBox`, so it keeps its proportions and layout on every screen. Tinta strokes
+ * have no `fill` and inherit `currentColor`, the ink token, so they follow the theme; a pen's
+ * stroke has its own `fill`, the same in both themes (#51).
  */
 export function InkView({ ink, maxHeight }: InkViewProps) {
   const svg = (
@@ -29,8 +30,8 @@ export function InkView({ ink, maxHeight }: InkViewProps) {
       style={{ aspectRatio: `${INK_WIDTH} / ${ink.height}` }}
       className="block h-auto w-full fill-current text-ink"
     >
-      {inkPaths(ink).map((d, index) => (
-        <path key={index} d={d} />
+      {inkPaths(ink).map(({ d, color }, index) => (
+        <path key={index} d={d} fill={color ?? undefined} />
       ))}
     </svg>
   )
