@@ -147,6 +147,22 @@ describe('DeskCard', () => {
       }
     })
 
+    it('keeps each stroke’s color in the near look and the far look (#51)', () => {
+      const styled = {
+        height: 400,
+        strokes: [[10, 10, 50, 200, 40, 50], [10, 100, 50, 200, 100, 50], [10, 200, 50]],
+        styles: [{ color: '#d0443a', size: 12 }, { color: null, size: 4 }, { color: '#3a78c2', size: 7 }],
+      }
+      const fills = (root: Element) => [...root.querySelectorAll('path')].map((path) => path.getAttribute('fill'))
+      for (const content of [{ title: 'Viaje' }, {}]) {
+        resetStores({ cards: [makeCard({ id: 'h', ink: styled, ...content })] })
+        const { unmount, container } = renderStored('h')
+        const view = container.querySelector(content.title ? '[data-ink-view]' : '[data-far-ink]')!
+        expect(fills(view)).toEqual(['#d0443a', null, '#3a78c2'])
+        unmount()
+      }
+    })
+
     it('an empty handwriting box shows nothing and keeps the usual name', () => {
       resetStores({ cards: [makeCard({ id: 'h', ink: { height: 400, strokes: [] } })] })
       const { container } = renderStored('h')

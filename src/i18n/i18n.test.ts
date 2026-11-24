@@ -31,6 +31,21 @@ describe('dictionaries', () => {
     expect(translate('en', 'inkFull')).toBe('This handwriting is full')
   })
 
+  it('names the pens and their editor in both languages (#51)', () => {
+    const keys = ['pens', 'penInk', 'penNumbered', 'penButton', 'penEdit', 'penColor', 'penWidth', 'penFine', 'penMedium', 'penBold', 'penDone'] as const
+    for (const key of keys) {
+      expect(es).toHaveProperty(key)
+      expect(en).toHaveProperty(key)
+    }
+    expect(translate('es', 'penNumbered', 2)).toBe('Lápiz 2')
+    expect(translate('en', 'penNumbered', 3)).toBe('Pen 3')
+    expect(translate('es', 'penButton', 'Lápiz 2', 'Fino')).toBe('Lápiz 2, Fino')
+    expect(translate('es', 'penEdit', 'Tinta')).toBe('Editar Tinta')
+    expect(translate('en', 'penEdit', 'Ink')).toBe('Edit Ink')
+    expect([translate('en', 'penFine'), translate('en', 'penMedium'), translate('en', 'penBold'), translate('en', 'penDone')]).toEqual(['Fine', 'Medium', 'Bold', 'Done'])
+    expect([translate('es', 'penWidth'), translate('en', 'penWidth')]).toEqual(['Grosor', 'Width'])
+  })
+
   it('says the sync toast in both languages (#37)', () => {
     expect(translate('es', 'syncUpToDate')).toBe('Tu escritorio está al día')
     expect(translate('en', 'syncUpToDate')).toBe('Your desk is up to date')

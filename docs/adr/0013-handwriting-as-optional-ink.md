@@ -1,5 +1,7 @@
 # Handwriting is optional ink on the Card, in box coordinates, with no schema bump
 
+> Amended by [ADR 0014](0014-stroke-styles-parallel-list.md): strokes drawn with a pen other than Tinta keep their color and width in an optional `ink.styles` list.
+
 A Card can hold Handwriting (#47). It is stored on the Card itself, as an optional field:
 
 ```ts

@@ -11,15 +11,17 @@ import {
   loadData,
   loadHandwriting,
   loadLanguage,
+  loadPens,
   loadTheme,
   saveAreaJars,
   saveData,
   saveHandwriting,
   saveLanguage,
+  savePens,
   saveTheme,
   saveArrangement as storeArrangement,
 } from '../lib/storage'
-import type { Area, AreaColor, AreaId, Card, Ink, Item, Language, MtfData, SavedArrangement, Theme, WinEvent } from '../types'
+import type { Area, AreaColor, AreaId, Card, Ink, InkStyle, Item, Language, MtfData, Pens, SavedArrangement, Theme, WinEvent } from '../types'
 import { welcomeCard, type WelcomeContent } from '../welcome/welcomeCard'
 import { cardDeleted, cardJarred, itemToggled, itemsRemoved, jarVerdict, noteWritten, syncCardWin, type JarVerdict } from '../wins/rules'
 
@@ -75,7 +77,7 @@ export interface AppState {
   jarCard: (id: string, options?: { areaId?: AreaId }) => JarVerdict
   /** Takes a Card out of the Jar, back inside its Area and on top. */
   returnCard: (id: string) => void
-  /** Import: the whole document becomes `data`, already validated (at least one Area). The device settings (language, theme, saved arrangement, Area Jars, handwriting) stay. */
+  /** Import: the whole document becomes `data`, already validated (at least one Area). The device settings (language, theme, saved arrangement, Area Jars, handwriting, pens) stay. */
   replaceData: (data: MtfData) => void
 
   /** A new Area in the first free slot, in the first unused color. `name` is the provisional name, already translated. Returns its id. */
@@ -104,6 +106,13 @@ export interface AppState {
   /** "Escritura a mano" (#47): a device setting, like the theme. Only offers the handwriting box; existing handwriting always shows. */
   handwriting: boolean
   setHandwriting: (on: boolean) => void
+
+  /** The handwriting box's four pens and the chosen one (#51): a device setting, like the theme. Never in `data`, a Backup or sync. */
+  pens: Pens
+  /** Chooses the pen the next strokes are drawn with. */
+  choosePen: (index: Pens['chosen']) => void
+  /** Changes a pen's color or width; Tinta's color stays `null`. Strokes already drawn keep their own style. */
+  editPen: (index: Pens['chosen'], patch: Partial<InkStyle>) => void
 }
 
 /** Brings `events` in line with a Card that just changed. */
@@ -204,6 +213,20 @@ export function createAppStore() {
       setHandwriting: (handwriting) => {
         set({ handwriting })
         saveHandwriting(handwriting)
+      },
+      pens: loadPens(),
+      choosePen: (chosen) => {
+        const pens = { ...get().pens, chosen }
+        set({ pens })
+        savePens(pens)
+      },
+      editPen: (index, patch) => {
+        const current = get().pens
+        const pen = { ...current.pens[index], ...patch }
+        if (index === 0) pen.color = null
+        const pens: Pens = { ...current, pens: current.pens.with(index, pen) as Pens['pens'] }
+        set({ pens })
+        savePens(pens)
       },
 
       ensureDefaultAreas: () =>

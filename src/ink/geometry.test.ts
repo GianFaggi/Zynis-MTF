@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { INK_MAX_HEIGHT, INK_MAX_POINTS } from './constants'
+import { DEFAULT_STYLE, INK_MAX_HEIGHT, INK_MAX_POINTS } from './constants'
 import { addStroke, appendPoint, grownHeight, inkPressure, pointCount, segmentDistance, simplifyStroke, toBoxPoint } from './geometry'
 
 const box = { left: 100, top: 50, width: 500 }
@@ -101,7 +101,7 @@ describe('addStroke', () => {
 
   it('adds the simplified stroke and keeps the earlier ones where they were', () => {
     const ink = { height: 400, strokes: [first] }
-    const next = addStroke(ink, [0, 0, 10, 10, 0, 20, 20, 0, 30])!
+    const next = addStroke(ink, [0, 0, 10, 10, 0, 20, 20, 0, 30], DEFAULT_STYLE)!
     expect(next.strokes).toEqual([first, [0, 0, 10, 20, 0, 30]])
     expect(next.strokes[0]).toBe(first)
     expect(next.height).toBe(400)
@@ -109,7 +109,7 @@ describe('addStroke', () => {
 
   it('grows the box without moving any point already drawn', () => {
     const ink = { height: 400, strokes: [first] }
-    const next = addStroke(ink, [500, 350, 50])!
+    const next = addStroke(ink, [500, 350, 50], DEFAULT_STYLE)!
     expect(next.height).toBe(650)
     expect(next.strokes[0]).toEqual(first)
   })
@@ -117,11 +117,40 @@ describe('addStroke', () => {
   it('reports a stroke past the limit as not fitting', () => {
     const full = { height: 400, strokes: [Array.from({ length: INK_MAX_POINTS }, (_, i) => [i % 1000, 5, 50]).flat()] }
     expect(pointCount(full)).toBe(INK_MAX_POINTS)
-    expect(addStroke(full, [1, 1, 50])).toBeNull()
+    expect(addStroke(full, [1, 1, 50], DEFAULT_STYLE)).toBeNull()
   })
 
   it('accepts a stroke that exactly reaches the limit', () => {
     const almost = { height: 400, strokes: [Array.from({ length: INK_MAX_POINTS - 1 }, (_, i) => [i % 1000, 5, 50]).flat()] }
-    expect(addStroke(almost, [1, 1, 50])?.strokes).toHaveLength(2)
+    expect(addStroke(almost, [1, 1, 50], DEFAULT_STYLE)?.strokes).toHaveLength(2)
+  })
+
+  const red = { color: '#d0443a', size: 12 }
+
+  it('adding a styled stroke to Tinta-only handwriting gives styles aligned with the strokes', () => {
+    const next = addStroke({ height: 400, strokes: [first] }, [500, 100, 50], red)!
+    expect(next.styles).toEqual([DEFAULT_STYLE, red])
+    expect(next.styles).toHaveLength(next.strokes.length)
+  })
+
+  it('adding a Tinta Medio stroke to Tinta-only handwriting keeps the #47 shape, with no styles key', () => {
+    const next = addStroke({ height: 400, strokes: [first] }, [500, 100, 50], DEFAULT_STYLE)!
+    expect(next).toEqual({ height: 400, strokes: [first, [500, 100, 50]] })
+    expect('styles' in next).toBe(false)
+  })
+
+  it('keeps the earlier styles when adding to styled handwriting', () => {
+    const next = addStroke({ height: 400, strokes: [first], styles: [red] }, [500, 100, 50], DEFAULT_STYLE)!
+    expect(next.styles).toEqual([red, DEFAULT_STYLE])
+  })
+
+  it('over styles that no longer line up, the earlier strokes become Tinta Medio', () => {
+    const mismatched = { height: 400, strokes: [first, [1, 1, 50]], styles: [red] }
+    expect(addStroke(mismatched, [500, 100, 50], red)!.styles).toEqual([DEFAULT_STYLE, DEFAULT_STYLE, red])
+  })
+
+  it('a styled stroke past the limit is still not kept', () => {
+    const full = { height: 400, strokes: [Array.from({ length: INK_MAX_POINTS }, (_, i) => [i % 1000, 5, 50]).flat()] }
+    expect(addStroke(full, [1, 1, 50], red)).toBeNull()
   })
 })

@@ -1,3 +1,5 @@
+import type { InkStyle, Pens } from '../types'
+
 // Handwriting box geometry and limits (#47, design D2, D3, D7; ADR 0013).
 // Points live in box coordinates: x in 0–INK_WIDTH, y in 0–height, so the same
 // handwriting fits every editor and Card width.
@@ -34,3 +36,27 @@ export const INK_ERASER_RADIUS = 14
 
 /** At most this many undo steps per editor session. */
 export const INK_UNDO_LIMIT = 50
+
+/** The pen widths (#51, design D2), as perfect-freehand sizes. Medio is #47's single width. */
+export const INK_SIZES = { fine: 4, medium: 7, bold: 12 } as const
+
+/** How a stroke without a style looks: Tinta, which follows the theme, at Medio. */
+export const DEFAULT_STYLE: InkStyle = { color: null, size: INK_SIZES.medium }
+
+/** A stored stroke width outside 1–40 makes a Backup damaged; any integer inside is kept, so a retune never breaks one. */
+export const INK_MIN_SIZE = 1
+export const INK_MAX_SIZE = 40
+
+/**
+ * The pens on a new device (#51, design D5): Tinta, then a blue, a red and a green, all Medio.
+ * Mid-lightness colors that read on both papers; tunable after trying them on a device.
+ */
+export const DEFAULT_PENS: Pens = {
+  chosen: 0,
+  pens: [
+    DEFAULT_STYLE,
+    { color: '#3a78c2', size: INK_SIZES.medium },
+    { color: '#d0443a', size: INK_SIZES.medium },
+    { color: '#2f9a5e', size: INK_SIZES.medium },
+  ],
+}

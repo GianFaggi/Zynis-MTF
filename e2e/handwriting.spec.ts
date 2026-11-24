@@ -1,8 +1,24 @@
-import { expect, test, type Page } from '@playwright/test'
-import { Pen, Touch, areaLabel, card, center, deskCard, deskScale, emptyPaper, seedDesk, storedData, wait, zoomInIfFar } from './helpers.ts'
+import { expect, test, type Locator, type Page } from '@playwright/test'
+import {
+  Pen,
+  Touch,
+  areaLabel,
+  card,
+  center,
+  deskCard,
+  deskScale,
+  emptyPaper,
+  exportBackup,
+  importBackup,
+  seedDesk,
+  storedData,
+  wait,
+  zoomInIfFar,
+} from './helpers.ts'
 
 // Handwriting (#47): the box in the Card editor, written with the mouse, a finger and a pen
 // (simulated through CDP), and a handwritten Card on the Desk under the usual gestures.
+// Pens (#51): choosing and editing them, each stroke keeping its color and width.
 
 test.use({ locale: 'es-AR' })
 
@@ -50,6 +66,20 @@ async function openCard(page: Page, id: string, isMobile: boolean) {
   if (isMobile) await deskCard(page, id).tap()
   else await deskCard(page, id).click()
   await expect(editor(page)).toBeVisible()
+}
+
+/** A pen button in the box's tray, by the start of its name ("Lápiz 2, Medio"). */
+function penButton(page: Page, name: string) {
+  return editor(page).getByRole('button', { name: new RegExp(`^${name},`) })
+}
+
+/** The `fill` of every committed stroke under `root` (`null` for Tinta). The box's live path has no `d` yet. */
+function strokeFills(root: Locator) {
+  return root.locator('path[d^="M"]').evaluateAll((paths) => paths.map((path) => path.getAttribute('fill')))
+}
+
+async function storedInk(page: Page, id: string) {
+  return (await storedData(page)).cards.find((candidate) => candidate.id === id)?.ink
 }
 
 test.describe('desktop', () => {
@@ -203,6 +233,95 @@ test.describe('desktop', () => {
     await expect(jar).toHaveAccessibleName('Frasco: 1 tarjeta. Abrir Mis logros')
     expect((await storedData(page)).cards[0].jarredAt).not.toBeNull()
   })
+
+  test('pens: edit Lápiz 2’s color and width, write with it, and find it all after a reload (#51)', async ({ page }) => {
+    await handwritingOn(page)
+    await seedDesk(page, { cards: [trip] })
+    await openCard(page, 'trip', false)
+    await editor(page).getByRole('button', { name: 'A mano' }).click()
+    await expect(penButton(page, 'Tinta')).toHaveAttribute('aria-pressed', 'true')
+
+    // One tap chooses, a second one on the chosen pen edits it.
+    const penEditor = page.getByRole('dialog', { name: 'Editar Lápiz 2' })
+    await penButton(page, 'Lápiz 2').click()
+    await expect(penEditor).toHaveCount(0)
+    await penButton(page, 'Lápiz 2').click()
+    await penEditor.getByLabel('Color').fill('#8a2be2')
+    await penEditor.getByRole('button', { name: 'Grueso' }).click()
+    await penEditor.getByRole('button', { name: 'Listo' }).click()
+    await expect(penEditor).toBeHidden()
+    await expect(editor(page)).toBeVisible()
+    await expect(penButton(page, 'Lápiz 2')).toHaveAccessibleName('Lápiz 2, Grueso')
+
+    await mouseStroke(page, await inBox(page, [[0.1, 0.2], [0.3, 0.5], [0.5, 0.2]]))
+    expect(await strokeFills(inkBox(page))).toEqual(['#8a2be2'])
+    await editor(page).getByRole('button', { name: 'Guardar' }).click()
+    await expect(editor(page)).toBeHidden()
+
+    await page.reload()
+    expect((await storedInk(page, 'trip'))!.styles).toEqual([{ color: '#8a2be2', size: 12 }])
+    await zoomInIfFar(page, await center(deskCard(page, 'trip')))
+    expect(await strokeFills(deskCard(page, 'trip').locator('[data-ink-view]'))).toEqual(['#8a2be2'])
+
+    // The pen is still chosen, with its new color and width, and the editor shows the stroke as drawn.
+    await openCard(page, 'trip', false)
+    expect(await strokeFills(inkBox(page))).toEqual(['#8a2be2'])
+    await expect(penButton(page, 'Lápiz 2')).toHaveAttribute('aria-pressed', 'true')
+    await expect(penButton(page, 'Lápiz 2')).toHaveAccessibleName('Lápiz 2, Grueso')
+    await expect(penButton(page, 'Lápiz 2').locator('[data-pen-dot]')).toHaveCSS('background-color', 'rgb(138, 43, 226)')
+
+    // Tinta draws with no fill of its own: it follows the theme.
+    await penButton(page, 'Tinta').click()
+    await mouseStroke(page, await inBox(page, [[0.1, 0.7], [0.5, 0.7]]))
+    expect(await strokeFills(inkBox(page))).toEqual(['#8a2be2', null])
+    expect((await storedInk(page, 'trip'))!.styles).toEqual([
+      { color: '#8a2be2', size: 12 },
+      { color: null, size: 7 },
+    ])
+  })
+
+  test('pens: Lápiz 3 with a pen’s pressure, back from the eraser, and through a Backup to a fresh device (#51)', async ({ page, browser, baseURL }) => {
+    await handwritingOn(page)
+    await seedDesk(page, { cards: [trip] })
+    await openCard(page, 'trip', false)
+    await editor(page).getByRole('button', { name: 'A mano' }).click()
+
+    await penButton(page, 'Lápiz 3').click()
+    const pen = await Pen.on(page)
+    await pen.stroke(await inBox(page, [[0.1, 0.3], [0.3, 0.5], [0.5, 0.3]]), { pressure: 0.9 })
+    let ink = (await storedInk(page, 'trip'))!
+    expect(ink.styles).toEqual([{ color: '#d0443a', size: 7 }])
+    expect(ink.strokes[0].filter((_, i) => i % 3 === 2)).toContain(90)
+
+    // The eraser on, then a tap on a pen: back to writing, with no editor.
+    const eraser = editor(page).getByRole('button', { name: 'Borrador' })
+    await eraser.click()
+    await expect(penButton(page, 'Lápiz 3')).toHaveAttribute('aria-pressed', 'false')
+    await penButton(page, 'Lápiz 4').click()
+    await expect(eraser).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByRole('dialog', { name: /^Editar/ })).toHaveCount(0)
+    await mouseStroke(page, await inBox(page, [[0.1, 0.7], [0.5, 0.7]]))
+    ink = (await storedInk(page, 'trip'))!
+    expect(ink.strokes).toHaveLength(2)
+    expect(ink.styles).toEqual([
+      { color: '#d0443a', size: 7 },
+      { color: '#2f9a5e', size: 7 },
+    ])
+    await editor(page).getByRole('button', { name: 'Guardar' }).click()
+    await expect(editor(page)).toBeHidden()
+
+    const { path } = await exportBackup(page)
+    const fresh = await browser.newContext({ baseURL, locale: 'es-AR' })
+    const other = await fresh.newPage()
+    await seedDesk(other, {})
+    await importBackup(other, path)
+    expect(await storedInk(other, 'trip')).toEqual(ink)
+    await zoomInIfFar(other, await center(deskCard(other, 'trip')))
+    expect(await strokeFills(deskCard(other, 'trip').locator('[data-ink-view]'))).toEqual(['#d0443a', '#2f9a5e'])
+    // The pens are a device setting: the Backup did not bring them.
+    expect(await other.evaluate(() => localStorage.getItem('mtf_pens'))).toBeNull()
+    await fresh.close()
+  })
 })
 
 test.describe('phone', () => {
@@ -236,6 +355,35 @@ test.describe('phone', () => {
     await openCard(page, 'trip', true)
     await touch.drag(c, d, { steps: 8 })
     expect(await storedStrokes(page, 'trip')).toHaveLength(3)
+  })
+
+  test('pens: choose Lápiz 3 with the finger, write with a finger and a pen, and come back from the eraser (#51)', async ({ page }) => {
+    await handwritingOn(page)
+    await seedDesk(page, { cards: [trip] })
+    await openCard(page, 'trip', true)
+    await editor(page).getByRole('button', { name: 'A mano' }).tap()
+    const touch = await Touch.on(page)
+    const pen = await Pen.on(page)
+    const red = { color: '#d0443a', size: 7 }
+
+    await penButton(page, 'Lápiz 3').tap()
+    await expect(penButton(page, 'Lápiz 3')).toHaveAttribute('aria-pressed', 'true')
+    const [a, b] = await inBox(page, [[0.1, 0.3], [0.5, 0.3]])
+    await touch.drag(a, b, { steps: 8 })
+    await pen.stroke(await inBox(page, [[0.1, 0.5], [0.5, 0.5]]), { pressure: 0.7 })
+    let ink = (await storedInk(page, 'trip'))!
+    expect(ink.styles).toEqual([red, red])
+    expect(ink.strokes[1].filter((_, i) => i % 3 === 2)).toContain(70)
+
+    const eraser = editor(page).getByRole('button', { name: 'Borrador' })
+    await eraser.tap()
+    await penButton(page, 'Tinta').tap()
+    await expect(eraser).toHaveAttribute('aria-pressed', 'false')
+    await pen.stroke(await inBox(page, [[0.1, 0.8], [0.5, 0.8]]))
+    ink = (await storedInk(page, 'trip'))!
+    expect(ink.strokes).toHaveLength(3)
+    expect(ink.styles).toEqual([red, red, { color: null, size: 7 }])
+    expect(await strokeFills(inkBox(page))).toEqual(['#d0443a', '#d0443a', null])
   })
 
   test('with the setting on, a handwritten Card still moves with press and hold, and the Desk still pinches', async ({ page }) => {

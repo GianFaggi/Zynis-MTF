@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { MtfData, SyncState } from '../types'
+import { DEFAULT_PENS } from '../ink/constants'
+import type { MtfData, Pens, SyncState } from '../types'
 import {
   AREA_JARS_KEY,
   ARRANGEMENT_KEY,
   DATA_KEY,
   HANDWRITING_KEY,
+  PENS_KEY,
   INSTALL_NUDGE_SEEN_KEY,
   LANGUAGE_KEY,
   RECOVERY_KEY_PREFIX,
@@ -26,6 +28,7 @@ import {
   loadData,
   clearSession,
   loadHandwriting,
+  loadPens,
   loadInstallNudgeSeen,
   loadLanguage,
   loadSession,
@@ -37,6 +40,7 @@ import {
   saveArrangement,
   saveData,
   saveHandwriting,
+  savePens,
   saveInstallNudgeSeen,
   saveLanguage,
   saveSession,
@@ -411,6 +415,66 @@ describe('Handwriting setting', () => {
     })
     expect(() => loadHandwriting()).not.toThrow()
     expect(loadHandwriting()).toBe(false)
+  })
+})
+
+describe('pens (#51)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const edited: Pens = {
+    chosen: 2,
+    pens: [
+      { color: null, size: 12 },
+      { color: '#123456', size: 4 },
+      { color: '#d0443a', size: 7 },
+      { color: '#2f9a5e', size: 12 },
+    ],
+  }
+
+  it('are the defaults until saved, then read back as saved', () => {
+    expect(loadPens()).toEqual(DEFAULT_PENS)
+    savePens(edited)
+    expect(JSON.parse(localStorage.getItem(PENS_KEY)!)).toEqual(edited)
+    expect(loadPens()).toEqual(edited)
+  })
+
+  it('ignores a stored Tinta color: Tinta always follows the theme', () => {
+    localStorage.setItem(PENS_KEY, JSON.stringify({ ...edited, pens: [{ color: '#ff0000', size: 4 }, ...edited.pens.slice(1)] }))
+    expect(loadPens().pens[0]).toEqual({ color: null, size: 4 })
+  })
+
+  it('reads a color in capitals as lowercase', () => {
+    localStorage.setItem(PENS_KEY, JSON.stringify({ ...edited, pens: [edited.pens[0], { color: '#ABCDEF', size: 4 }, ...edited.pens.slice(2)] }))
+    expect(loadPens().pens[1].color).toBe('#abcdef')
+  })
+
+  it.each([
+    ['unparseable', '{pens'],
+    ['not an object', '[1,2,3,4]'],
+    ['three pens', JSON.stringify({ ...edited, pens: edited.pens.slice(1) })],
+    ['five pens', JSON.stringify({ ...edited, pens: [...edited.pens, edited.pens[1]] })],
+    ['a color name', JSON.stringify({ ...edited, pens: [edited.pens[0], { color: 'red', size: 7 }, ...edited.pens.slice(2)] })],
+    ['a pen 2 without a color', JSON.stringify({ ...edited, pens: [edited.pens[0], { color: null, size: 7 }, ...edited.pens.slice(2)] })],
+    ['a width of 0', JSON.stringify({ ...edited, pens: [edited.pens[0], { color: '#123456', size: 0 }, ...edited.pens.slice(2)] })],
+    ['a width that is not whole', JSON.stringify({ ...edited, pens: [{ color: null, size: 7.5 }, ...edited.pens.slice(1)] })],
+    ['chosen out of range', JSON.stringify({ ...edited, chosen: 4 })],
+    ['chosen missing', JSON.stringify({ pens: edited.pens })],
+  ])('reads the defaults from a damaged value (%s), without throwing', (_, raw) => {
+    localStorage.setItem(PENS_KEY, raw)
+    expect(() => loadPens()).not.toThrow()
+    expect(loadPens()).toEqual(DEFAULT_PENS)
+  })
+
+  it('reads the defaults when storage refuses to read, without throwing', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    savePens(edited)
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('blocked', 'SecurityError')
+    })
+    expect(() => loadPens()).not.toThrow()
+    expect(loadPens()).toEqual(DEFAULT_PENS)
   })
 })
 

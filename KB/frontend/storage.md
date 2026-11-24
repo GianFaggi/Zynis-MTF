@@ -31,6 +31,7 @@ The shapes below are **final for schema version 1** and mirror `src/types/index.
 - Accounts (#36) need **no schema bump** and **no Backup change**: the session is one device key, `mtf_session` ([Keys](#keys)), never part of `mtf_data`. Signing in or out changes nothing in the data document.
 - Sync (#37) needs **no schema bump** and **no Backup change**: its state is one device key, `mtf_sync` (the cursor, the pending changes and their tombstones), plus at most one replaced Desk, `mtf_data_replaced_<epochMs>` ([Keys](#keys), [ADR 0012](../../docs/adr/0012-session-sync-of-opaque-records.md)). Neither is part of `mtf_data` or a Backup, and an Import leaves both alone. Sync reads and writes `data` only through `appStore`: a change it fetched is applied with `replaceData`, flagged so the outbox does not count it as a local change. Every entity already has the `uuid` id and `updatedAt` it needs.
 - Handwriting (#47) needs **no schema bump**: it is one optional field, `Card.ink` ([Entities](#entities-schema-version-1), [ADR 0013](../../docs/adr/0013-handwriting-as-optional-ink.md)). A missing `ink` means no handwriting, so every document, Backup and sync record from before it reads as is; sync records carry no schema version anyway, so the reading side must accept a Card without `ink` whatever the version. `setInk` writes it in one replacement per committed stroke, erase, clear or undo (never per pointer move); `closeCard` removes an `ink` with no strokes, like a blank Item. A Card holds at most `INK_MAX_POINTS` (12 000) points, so one Card cannot fill the shared quota. The Backup check accepts a Card with no `ink` and refuses one whose `ink` is not well formed (`height` an integer 1–2500, `strokes` a list of number lists whose length is a non-zero multiple of 3, finite numbers only; points outside the box are accepted, the renderer clamps them). The device setting that offers the handwriting box is one key, `mtf_handwriting` ([Keys](#keys)). An older deploy keeps `ink` (`{ ...card }` copies it) but deletes a handwriting-only Card when its editor closes (ADR 0013).
+- Pens (#51) need **no schema bump**: each stroke's style is one optional field, `Ink.styles`, a list parallel to `strokes` ([ADR 0014](../../docs/adr/0014-stroke-styles-parallel-list.md)). Every write goes through `withStyles` (`src/ink/style.ts`), which leaves `styles` out when every stroke is Tinta Medio, so Tinta-only handwriting keeps the #47 shape. Every read goes through `strokeStyles`, which treats a missing `styles`, **or one whose length differs from `strokes`**, as all Tinta Medio: that is what an older deploy leaves when it edits styled handwriting (an erase keeps `styles` longer than `strokes`, a new stroke drops it, a clear writes neither), so a color never lands on the wrong stroke. An erase in this version maps the strokes left back to their own styles. The Backup check accepts a missing `styles` and one of another length, and refuses a `styles` that is not a list, or an entry whose `color` is not `null` or `#rrggbb` (either case) or whose `size` is not an integer 1–40. The pens themselves are one device key, `mtf_pens` ([Keys](#keys)).
 
 ## Entities (schema version 1)
 
@@ -73,6 +74,12 @@ interface Card {
 interface Ink {            // #47, ADR 0013: box coordinates, the box is always INK_WIDTH (1000) wide
   height: number;          // box height in ink units: 400 new, +250 per growth, at most 2500
   strokes: number[][];     // each stroke flat [x, y, p, x, y, p, …], integers; x 0–1000, y 0–height, p pressure 0–100 (50 = none reported)
+  styles?: InkStyle[];     // #51, ADR 0014: styles[i] is strokes[i]'s; left out when all are Tinta Medio; read only through strokeStyles()
+}
+
+interface InkStyle {       // #51: how one stroke looks (also the shape of a pen in mtf_pens)
+  color: string | null;    // lowercase '#rrggbb'; null = Tinta, follows the theme
+  size: number;            // perfect-freehand size in box units, integer 1–40: Fino 4, Medio 7, Grueso 12
 }
 
 interface WinEvent {
@@ -110,6 +117,7 @@ interface MtfData {         // the whole `mtf_data` document
 | `mtf_sync` | `SyncState` as JSON: `{ owner, cursor, pending, held, claim, lastSyncAt }` (#37, [architecture.md](architecture.md#sync-37)). `owner` is the email the state belongs to (`null`: never synced, and nothing is recorded); `cursor` the last server `seq` merged; `pending` maps `kind:id` to `{ at, deleted? }` (a change, or a tombstone, not yet confirmed); `held` the fetched records for the Card open in the editor; `claim` the moment this Desk was set to become the Account's (Subir este, an Import while signed in, Recuperar); `lastSyncAt` when the last sync finished. Missing, invalid JSON or a wrong shape reads as never synced (`emptySync()`), so the next sync runs the first sign-in rule. A device key, not part of `mtf_data` or the Backup; an Import leaves it alone. **No schema bump** | #37 |
 | `mtf_data_replaced_<epochMs>` | `MtfData` as JSON: this device's Desk, kept just before "Usar el de la cuenta" replaced it, for "Recuperar el escritorio anterior". At most one: writing a new copy removes the older ones. Removed by a recovery, and at launch once older than 30 days. Restored through `upgradeDocument()`, so a copy made by an older version still opens. Not part of `mtf_data` or the Backup | #37 |
 | `mtf_handwriting` | `'1'` while "Escritura a mano" is on, `'0'` once turned off; missing or anything else reads as off. It only offers the handwriting box: handwriting a Card already has always shows. A device setting, not part of `mtf_data` or the Backup, not synced; an Import leaves it alone. **No schema bump** | #47 |
+| `mtf_pens` | `Pens` as JSON: `{ chosen, pens }`, the handwriting box's four pens (`InkStyle`s) and the index (0–3) of the chosen one. Missing, invalid JSON or malformed in any part (not four pens, a width that is not an integer 1–40, pens 2–4 without a `#rrggbb` color, `chosen` out of range) reads as the defaults (`DEFAULT_PENS`: Tinta, `#3a78c2`, `#d0443a`, `#2f9a5e`, all Medio, Tinta chosen). Tinta's color is read as `null` whatever is stored. Written on each choose or edit. A device setting, not part of `mtf_data` or the Backup, not synced; an Import leaves it alone. **No schema bump** | #51 |
 
 ## Storage layer API (`src/lib/storage.ts`)
 
@@ -131,6 +139,8 @@ interface MtfData {         // the whole `mtf_data` document
 | `saveAreaJars(on)` | Writes `'1'` or `'0'` |
 | `loadHandwriting(): boolean` | `true` only when `mtf_handwriting` is `'1'`; `false` when unset, `'0'`, anything else, or storage refuses to read |
 | `saveHandwriting(on)` | Writes `'1'` or `'0'` |
+| `loadPens(): Pens` | `DEFAULT_PENS` when unset, damaged in any part, or storage refuses to read; never throws. Tinta's color always `null`, colors lowercased |
+| `savePens(pens)` | Writes the four pens and the chosen one |
 | `loadSession(): StoredSession \| null` | `null` when unset, damaged or storage refuses to read: signed out, never a crash |
 | `saveSession(session)` | Writes `{ refreshToken, email }`, replacing the previous session |
 | `clearSession()` | Removes `mtf_session`; never throws |
@@ -161,7 +171,7 @@ A **Backup** is one JSON file, `mtf-backup-YYYY-MM-DD.json` (local date of the e
 }
 ```
 
-- `data.schemaVersion` is the only version number. Device settings (`mtf_language`, `mtf_theme`, `mtf_welcome_placed`, `mtf_install_nudge_seen`, `mtf_arrangement`, `mtf_area_jars`) are never in the file, and an Import leaves them as they were. Pretty-printed with 2 spaces.
+- `data.schemaVersion` is the only version number. Device settings (`mtf_language`, `mtf_theme`, `mtf_welcome_placed`, `mtf_install_nudge_seen`, `mtf_arrangement`, `mtf_area_jars`, `mtf_handwriting`, `mtf_pens`, plus the device keys `mtf_session` and `mtf_sync`) are never in the file, and an Import leaves them as they were. Pretty-printed with 2 spaces.
 - The pure functions live in `src/backup/backup.ts`: `backupFileName(date)`, `makeBackup(data, now)` and `readBackup(text)`. `src/backup/validate.ts` (`isValidData`) checks the entities; `src/backup/deliver.ts` shares or downloads the file.
 - **Reading a Backup** (`readBackup`) is stricter than `loadData()`, because the file comes from outside:
   - **not a Backup**: longer than 5 MB, not JSON, not an object, or `format !== 'mtf-backup'`

@@ -203,6 +203,29 @@ export class Pen {
   }
 }
 
+/**
+ * Exports through Settings (in Spanish) and returns the downloaded file's name and path. Desktop
+ * only: on the phone project Export opens the share sheet, which Chromium cannot drive.
+ */
+export async function exportBackup(page: Page) {
+  await page.getByRole('button', { name: 'Ajustes' }).click()
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Exportar copia' }).click()
+  const file = await download
+  await expect(page.getByRole('status')).toContainText('Copia lista')
+  await page.keyboard.press('Escape')
+  return { name: file.suggestedFilename(), path: (await file.path())! }
+}
+
+/** Imports a Backup file through Settings (in Spanish), confirming the replacement. */
+export async function importBackup(page: Page, path: string) {
+  await page.getByRole('button', { name: 'Ajustes' }).click()
+  await page.locator('input[type="file"]').setInputFiles(path)
+  await page.getByRole('button', { name: 'Reemplazar mis datos' }).click()
+  await expect(page.getByRole('dialog', { name: 'Ajustes' })).toBeHidden()
+  await expect(page.getByRole('status')).toContainText('Copia importada')
+}
+
 /** A Card's resolved Area color (`--b`), to compare with `cssColor(page, 'sand')`. */
 export function cardColor(page: Page, id: string): Promise<string> {
   return deskCard(page, id).evaluate((element) => getComputedStyle(element).getPropertyValue('--b').trim())
